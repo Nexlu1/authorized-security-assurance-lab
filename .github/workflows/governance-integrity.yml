@@ -1,0 +1,35 @@
+name: Governance integrity
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: governance-integrity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance-integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Compile trusted Python controls
+        run: python3 -m py_compile scripts/check_governance.py scripts/check_transition.py
+
+      - name: Run governance unit tests
+        working-directory: scripts
+        run: python3 -m unittest -v test_check_governance.py test_check_transition.py
+
+      - name: Validate canonical public governance state
+        run: python3 scripts/check_governance.py

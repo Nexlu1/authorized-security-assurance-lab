@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "authority": {
+    "canonical_source": "governance/AUTHORITY_STATE.json",
+    "markdown_documents_authoritative": false,
+    "rule": "Only this JSON file may define operational gate and activation state. Narrative files cannot grant, expand, or release authorization."
+  },
+  "gates": {
+    "G0": {
+      "status": "closed_not_approved"
+    },
+    "G1": {
+      "status": "closed_not_approved"
+    },
+    "G2": {
+      "status": "closed_not_approved"
+    },
+    "G3": {
+      "status": "closed_not_approved"
+    },
+    "G4": {
+      "status": "closed_not_approved"
+    },
+    "G5": {
+      "status": "closed_not_approved"
+    }
+  },
+  "activation": {
+    "phase0_hold": "active_activation_prohibited",
+    "g2_technical_security_testing_authorized": false
+  },
+  "target": {
+    "planned_product": "OWASP WebGoat",
+    "planned_release": "v2025.3",
+    "planned_image": "webgoat/webgoat:v2025.3",
+    "planned_runtime": "owned_local_computer_only",
+    "planned_webgoat_binding": "127.0.0.1:8080:8080",
+    "planned_webwolf_binding": "127.0.0.1:9090:9090",
+    "planned_exposure": "loopback_only",
+    "planned_data": "synthetic_only"
+  },
+  "prohibitions": [
+    "public or third-party targets without separate explicit authorization",
+    "real credentials or sensitive third-party data",
+    "denial of service or destructive activity",
+    "persistence or propagation",
+    "credential harvesting",
+    "uncontrolled scanning",
+    "technical vulnerability testing before explicit G2 approval"
+  ],
+  "status_definitions": {
+    "Recorded": "administratively preserved but not independently validated",
+    "Observed": "directly seen in a primary artifact, live state, or authoritative source",
+    "Externally verified": "checked against a named authoritative source at the recorded time",
+    "Reproduced": "independently repeated under the same bounded conditions",
+    "Validated": "evidence supports the proposition and material alternatives were checked",
+    "Remediated": "a corrective change was applied",
+    "Retested": "the original validation was repeated after remediation",
+    "Rejected": "evidence did not support the proposition",
+    "Uncertain": "evidence is incomplete; no definitive claim is made"
+  },
+  "evidence_register": "evidence/EVIDENCE_REGISTER.json",
+  "last_transition": null
+}

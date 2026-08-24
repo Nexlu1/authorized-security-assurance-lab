@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "candidate": "authorized-security-assurance-lab",
+  "generated_utc": "2026-08-23T10:00:00Z",
+  "file_count": 20,
+  "total_bytes": 85535,
+  "tree_sha256": "48500a00bade5b814fec39d94f80c6586dfa507e6fc14545162e5c34993a1aec",
+  "files": [
+    {
+      "path": ".github/workflows/governance-integrity.yml",
+      "size": 916,
+      "sha256": "b4d8dee3b750f4010d5a9aa3bcddc0c9c7efdcc4bfbc40cbff54fcad3202cd06"
+    },
+    {
+      "path": ".github/workflows/trusted-authority-guardian.yml",
+      "size": 1760,
+      "sha256": "e93a7b2c65d5dab05e479dedd3bab29230136be2938f7b1e4231a699767e912f"
+    },
+    {
+      "path": ".gitignore",
+      "size": 58,
+      "sha256": "931a71beae4e5f56086f33ea432d0f81580c488c7bc51bd86321103c91e266c1"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "size": 657,
+      "sha256": "b6234bddf030575bc8d0e454ca8073d46f5d2128933cd04e4dc4b6e6b64a38b4"
+    },
+    {
+      "path": "LICENSE",
+      "size": 1103,
+      "sha256": "a93869ac1ec504ef1d061cfe6a795f3408bd81c537c82dc163e3217efa8bc8a2"
+    },
+    {
+      "path": "README.md",
+      "size": 2334,
+      "sha256": "9be166e0857099c516e5687c7ea33fbb4148e2f92d2b445ec21b99dcc05470f0"
+    },
+    {
+      "path": "SECURITY.md",
+      "size": 534,
+      "sha256": "5c6d0cf629694f52c4282bc4678743788ec75fa81e1411ee87d972056f07e599"
+    },
+    {
+      "path": "docs/CONTAINMENT_BASELINE.md",
+      "size": 1565,
+      "sha256": "b96acf6966478142669753fbe80e008c55a203f578a1b4beb8b0e8fa28f8911a"
+    },
+    {
+      "path": "docs/PUBLIC_EVIDENCE_MODEL.md",
+      "size": 1416,
+      "sha256": "cd4c51a538712ba27affb69e012b24646f396b6aa8d093de93e50d24f0d54e64"
+    },
+    {
+      "path": "docs/REPOSITORY_ENFORCEMENT.md",
+      "size": 3104,
+      "sha256": "a30eee7a436ebc21c484637113c40247b3f031bbc748e5b61210a706c75f8b03"
+    },
+    {
+      "path": "docs/REVIEW_AND_TRANSITION_CONTROL.md",
+      "size": 3674,
+      "sha256": "1209353ae0a83586d68a86b70f58bbe1a3012e7eb7b1372e6fed5c0907954337"
+    },
+    {
+      "path": "docs/RULES_OF_ENGAGEMENT.md",
+      "size": 1418,
+      "sha256": "23df1cf450376fa876f6b93f47ecf3da1ca7b74a3806e9c2a0eea76e78421b5b"
+    },
+    {
+      "path": "docs/SCOPE_AND_AUTHORIZATION.md",
+      "size": 2290,
+      "sha256": "06026a35ebd62f93f22245b4d59c922392d3f8680c4d1722676baff226b81a7a"
+    },
+    {
+      "path": "docs/STANDARDS_BASELINE.md",
+      "size": 2661,
+      "sha256": "e40a6e8e122ec2f2075eae5a23472ea3552b3b4883fa61196e366ca6b7376d4b"
+    },
+    {
+      "path": "evidence/EVIDENCE_REGISTER.json",
+      "size": 295,
+      "sha256": "ac0a16492b840155fa555ca2a36028f216f6e032fa67d9f95ca728a901835d46"
+    },
+    {
+      "path": "governance/AUTHORITY_STATE.json",
+      "size": 2342,
+      "sha256": "f28ea7b474eee9999125732a0b70d26de2343a8c3d4add9a34e5e4650c051433"
+    },
+    {
+      "path": "scripts/check_governance.py",
+      "size": 14741,
+      "sha256": "7b4c4ad415a63944fd91b0a3edb47ed9c4990929e1bafa9b38c3821936708dbf"
+    },
+    {
+      "path": "scripts/check_transition.py",
+      "size": 23019,
+      "sha256": "8829060c760003002570a60d83be5db69de4e9c3b995b5ab8490e9ed5a6de6c0"
+    },
+    {
+      "path": "scripts/test_check_governance.py",
+      "size": 6732,
+      "sha256": "dcf89c2f0dd0d90930c0b4d2afc0ae0aa289fecda3a9850d1494a9cf2755224b"
+    },
+    {
+      "path": "scripts/test_check_transition.py",
+      "size": 14916,
+      "sha256": "66a2852f73782c407aa50a6bd8667fea8dfeaa3c6f1a7294ee111c19fe06207c"
+    }
+  ]
+}

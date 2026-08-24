@@ -1,0 +1,55 @@
+name: Trusted authority guardian
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: trusted-authority-guardian-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  trusted-authority-guardian:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted base only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch candidate commit as untrusted data only
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --no-tags --force https://github.com/${GITHUB_REPOSITORY}.git "refs/pull/${PR_NUMBER}/head"
+          CANDIDATE_REF="$(git rev-parse FETCH_HEAD)"
+          test "$CANDIDATE_REF" = "$EXPECTED_HEAD"
+          printf '%s\n' "$CANDIDATE_REF" > /tmp/public_candidate_ref
+
+      - name: Validate candidate using trusted prior-state code only
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          CANDIDATE_REF="$(cat /tmp/public_candidate_ref)"
+          python3 scripts/check_transition.py \
+            --previous-ref "$BASE_REF" \
+            --current-ref "$CANDIDATE_REF" \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "$PR_NUMBER"

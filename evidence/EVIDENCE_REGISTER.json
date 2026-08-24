@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "authority": {
+    "canonical_source": "evidence/EVIDENCE_REGISTER.json",
+    "markdown_view_authoritative": false,
+    "rule": "This JSON file is the append-only public evidence register. Existing entries may not be rewritten or reclassified."
+  },
+  "entries": []
+}
