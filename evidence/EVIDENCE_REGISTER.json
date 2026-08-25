@@ -5,5 +5,17 @@
     "markdown_view_authoritative": false,
     "rule": "This JSON file is the append-only public evidence register. Existing entries may not be rewritten or reclassified."
   },
-  "entries": []
+  "entries": [
+    {
+      "id": "E-0001",
+      "date_time": "2026-08-25T07:05:34Z",
+      "kind": "Owner authorization",
+      "observation": "Authority approval\nAuthorization digest: bb9788cc8b1a8ab71457accb4a0afd455aeb3d41c0866c8ebd5ae66c2795197c\nApprove gates: G0,G1\nG0 scope: public governance baseline only: repository controls, scope rules, evidence handling, standards references, and control structure; no target activation or technical security testing\nG1 scope: local OWASP WebGoat v2025.3 prerequisites, pinned-image acquisition, installation/startup, and containment validation only on an owned local computer with loopback-only bindings and synthetic data; no vulnerability exploitation, lesson solving, injection testing, authentication bypass, exploit chaining, code execution, privilege escalation, persistence, or other technical security testing\nNo other gate is approved by this comment.",
+      "source_method": "GitHub repository-owner issue comment",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/issues/2#issuecomment-5406759382",
+      "integrity": "GitHub API: same-repository OWNER association; created_at equals updated_at; semantic digest matched",
+      "status": "Observed",
+      "notes": "Approves G0 and G1 only; Phase-0 activation hold remains active; G2 technical security testing remains closed."
+    }
+  ]
 }
