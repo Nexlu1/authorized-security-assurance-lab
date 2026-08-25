@@ -21,7 +21,7 @@ Do not rely on the requested `docker run` command as proof of containment. Verif
 
 The lab must not use host-network mode, daemon `allow-direct-routing`, bridge `trusted_host_interfaces`, or another deliberate direct-routing configuration that defeats the intended local-only boundary.
 
-Sources rechecked 2026-08-23:
+Sources rechecked **2026-08-25** immediately before G1 activation preflight; current Docker port-publishing guidance continues to state that explicit `127.0.0.1` publishing restricts access to the Docker host and continues to carry the pre-28.0.0 same-L2 warning:
 
 - https://docs.docker.com/engine/network/port-publishing/
 - https://docs.docker.com/engine/network/drivers/host/
