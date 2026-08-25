@@ -36,7 +36,7 @@
     }
   },
   "activation": {
-    "phase0_hold": "active_activation_prohibited",
+    "phase0_hold": "released_activation_permitted",
     "g2_technical_security_testing_authorized": false
   },
   "target": {
@@ -71,14 +71,13 @@
   },
   "evidence_register": "evidence/EVIDENCE_REGISTER.json",
   "last_transition": {
-    "transition_id": "T-0001",
-    "kind": "owner_approval",
+    "transition_id": "T-0002",
+    "kind": "control_transition",
     "changed_authority_fields": [
-      "gates.G0",
-      "gates.G1"
+      "activation.phase0_hold"
     ],
-    "statement": "Authority approval\nAuthorization digest: bb9788cc8b1a8ab71457accb4a0afd455aeb3d41c0866c8ebd5ae66c2795197c\nApprove gates: G0,G1\nG0 scope: public governance baseline only: repository controls, scope rules, evidence handling, standards references, and control structure; no target activation or technical security testing\nG1 scope: local OWASP WebGoat v2025.3 prerequisites, pinned-image acquisition, installation/startup, and containment validation only on an owned local computer with loopback-only bindings and synthetic data; no vulnerability exploitation, lesson solving, injection testing, authentication bypass, exploit chaining, code execution, privilege escalation, persistence, or other technical security testing\nNo other gate is approved by this comment.",
-    "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/issues/2#issuecomment-5406759382",
-    "artifact_timestamp": "2026-08-25T07:05:34Z"
+    "statement": "Release the activation hold for the already approved G1 local lab scope; G2 remains closed.",
+    "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/9",
+    "artifact_timestamp": "2026-08-25T14:48:27Z"
   }
 }
