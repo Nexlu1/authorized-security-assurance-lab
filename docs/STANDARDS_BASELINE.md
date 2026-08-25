@@ -45,6 +45,8 @@ Source: https://owasp.org/www-project-web-security-testing-guide/v42/
 
 WebGoat is a deliberately insecure training application. The current latest formal release checked is **v2025.3**. Official guidance uses loopback-only Docker mappings and OWASP advises keeping the deliberately vulnerable target local/disconnected where practical.
 
+**Activation preflight recheck — 2026-08-25:** GitHub's official `WebGoat/WebGoat` `releases/latest` endpoint still resolves to `v2025.3`. Current OWASP guidance continues to describe WebGoat as deliberately insecure, binds it to localhost by default, and recommends disconnecting from the Internet while it is running.
+
 Sources:
 
 - https://github.com/WebGoat/WebGoat/releases

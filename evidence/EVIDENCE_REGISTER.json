@@ -27,6 +27,17 @@
       "integrity": "GitHub API: current pull request metadata",
       "status": "Observed",
       "notes": "Procedural release of the G1 activation hold only; G2 remains closed and technical security testing remains unauthorized."
+    },
+    {
+      "id": "E-0003",
+      "date_time": "2026-08-25T14:56:38Z",
+      "kind": "Activation preflight standards recheck",
+      "observation": "Official WebGoat releases/latest still resolves to v2025.3; current OWASP guidance continues to describe WebGoat as deliberately insecure, localhost-bound by default, and recommends disconnecting while it runs; current Docker port-publishing guidance continues to state that explicit 127.0.0.1 publishing restricts access to the Docker host and retains the pre-28.0.0 same-L2 warning.",
+      "source_method": "Authoritative public documentation recheck",
+      "artifact_url": "https://github.com/WebGoat/WebGoat/releases/tag/v2025.3",
+      "integrity": "GitHub WebGoat releases/latest API plus current OWASP WebGoat and Docker port-publishing documentation; source URLs recorded in docs/STANDARDS_BASELINE.md and docs/CONTAINMENT_BASELINE.md",
+      "status": "Externally verified",
+      "notes": "Pre-G1-activation source recheck only; no authority or scope change; G2 remains closed."
     }
   ]
 }
