@@ -16,6 +16,17 @@
       "integrity": "GitHub API: same-repository OWNER association; created_at equals updated_at; semantic digest matched",
       "status": "Observed",
       "notes": "Public owner-authenticated authorization artifact; G2 remains closed."
+    },
+    {
+      "id": "E-0002",
+      "date_time": "2026-08-25T14:48:27Z",
+      "kind": "Control transition",
+      "observation": "Release the activation hold for the already approved G1 local lab scope; G2 remains closed.",
+      "source_method": "GitHub protected pull request",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/9",
+      "integrity": "GitHub API: current pull request metadata",
+      "status": "Observed",
+      "notes": "Procedural release of the G1 activation hold only; G2 remains closed and technical security testing remains unauthorized."
     }
   ]
 }
