@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GOVERNANCE_TEST_FIXTURE_REF: 5909ed9303bc01aa79b480a71784ba5c9436faa5
+
 concurrency:
   group: governance-integrity-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -27,9 +30,18 @@ jobs:
       - name: Compile trusted Python controls
         run: python3 -m py_compile scripts/check_governance.py scripts/check_transition.py
 
+      - name: Stage immutable bootstrap fixtures for unit tests
+        run: |
+          git show "$GOVERNANCE_TEST_FIXTURE_REF:governance/AUTHORITY_STATE.json" > governance/AUTHORITY_STATE.json
+          git show "$GOVERNANCE_TEST_FIXTURE_REF:evidence/EVIDENCE_REGISTER.json" > evidence/EVIDENCE_REGISTER.json
+
       - name: Run governance unit tests
         working-directory: scripts
         run: python3 -m unittest -v test_check_governance.py test_check_transition.py
+
+      - name: Restore candidate canonical records
+        if: always()
+        run: git restore --source=HEAD --worktree -- governance/AUTHORITY_STATE.json evidence/EVIDENCE_REGISTER.json
 
       - name: Validate canonical public governance state
         run: python3 scripts/check_governance.py
