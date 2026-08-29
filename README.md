@@ -8,7 +8,7 @@ This repository is an independent personal project. It is **not** an OpenAI repo
 
 Technical security testing is authorized only when the canonical authority state permits it. The current canonical state keeps G2 technical security testing closed; narrative files cannot override that state.
 
-The currently planned G1 training route uses OWASP WebGoat in a local, loopback-only configuration with synthetic data. That route is optional evidence-building work, not a requirement to obtain OpenAI Daybreak access. Public or third-party targets remain outside scope unless separately and explicitly authorized.
+The currently planned G1 setup/activation route uses OWASP WebGoat in a local, loopback-only configuration with synthetic data. G1 permits only prerequisites, image acquisition, startup, and containment validation; it does **not** authorize WebGoat lesson solving or other technical security testing. This route is optional evidence-building setup work, not a requirement to obtain OpenAI Daybreak access. Public or third-party targets remain outside scope unless separately and explicitly authorized.
 
 ## Daybreak positioning
 
