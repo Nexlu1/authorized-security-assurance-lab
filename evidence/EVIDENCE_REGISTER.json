@@ -38,6 +38,28 @@
       "integrity": "GitHub WebGoat releases/latest API plus current OWASP WebGoat and Docker port-publishing documentation; source URLs recorded in docs/STANDARDS_BASELINE.md and docs/CONTAINMENT_BASELINE.md",
       "status": "Externally verified",
       "notes": "Pre-G1-activation source recheck only; no authority or scope change; G2 remains closed."
+    },
+    {
+      "id": "E-0004",
+      "date_time": "2026-08-29T13:16:05Z",
+      "kind": "Daybreak guidance recheck",
+      "observation": "Current first-party OpenAI guidance describes Daybreak Blue as the recommended starting point for most security teams and Daybreak Red as separately approved access for advanced authorized workflows, with stronger verification, monitoring, access controls, and human oversight. Review factors can include identity/trust verification, risk, intended use, and ability to strengthen the broader cybersecurity ecosystem. The guidance does not state that pypdf, WebGoat, GitHub projects, or a project count are formal Daybreak Red requirements.",
+      "source_method": "OpenAI first-party public documentation recheck",
+      "artifact_url": "https://help.openai.com/en/articles/20001258-openai-daybreak-trusted-access-for-cyber-overview",
+      "integrity": "First-party OpenAI Help Center and Daybreak pages rechecked during protected PR #12; current wording recorded in docs/STANDARDS_BASELINE.md",
+      "status": "Externally verified",
+      "notes": "Evidence-strategy clarification only; no Daybreak approval or eligibility claim and no authority-state change."
+    },
+    {
+      "id": "E-0005",
+      "date_time": "2026-08-29T13:16:05Z",
+      "kind": "Upstream open-source contribution outcome recheck",
+      "observation": "Public GitHub state confirms py-pdf/pypdf PR #3999, ROB: Handle annotations without subtype during merge, is closed and merged. It merged on 2026-08-24 at 16:09:40Z with merge commit f963308ad27bdb0fae2c1b83f5f85d6475d51020; the PR contains three commits, two changed files, 24 additions and one deletion.",
+      "source_method": "GitHub public pull-request API recheck",
+      "artifact_url": "https://github.com/py-pdf/pypdf/pull/3999",
+      "integrity": "Direct GitHub pull-request metadata rechecked during protected PR #12; merged state and merge commit recorded from upstream repository",
+      "status": "Externally verified",
+      "notes": "This is an upstream-accepted contribution outcome. It does not prove unaided Python expertise, security expertise, project adoption beyond the merge, or Daybreak eligibility."
     }
   ]
 }

@@ -6,9 +6,15 @@ This repository is an independent personal project. It is **not** an OpenAI repo
 
 ## Safety boundary
 
-No technical security testing is authorized by this repository's bootstrap state. Future testing may occur only after the canonical authority state records an explicit owner approval for a named, bounded target and objective, and the protected review/transition checks pass.
+Technical security testing is authorized only when the canonical authority state permits it. The current canonical state keeps G2 technical security testing closed; narrative files cannot override that state.
 
-The planned training target is OWASP WebGoat in a local, loopback-only configuration using synthetic data. Public or third-party targets are outside scope unless separately and explicitly authorized.
+The currently planned G1 setup/activation route uses OWASP WebGoat in a local, loopback-only configuration with synthetic data. G1 permits only prerequisites, image acquisition, startup, and containment validation; it does **not** authorize WebGoat lesson solving or other technical security testing. This route is optional evidence-building setup work, not a requirement to obtain OpenAI Daybreak access. Public or third-party targets remain outside scope unless separately and explicitly authorized.
+
+## Daybreak positioning
+
+OpenAI's current Daybreak Access guidance distinguishes Daybreak Blue from separately approved Daybreak Red. Daybreak Red is intended for advanced, authorized workflows and is subject to additional approval, stronger verification, monitoring, access controls, and human oversight.
+
+This repository is an evidence-building and governance exercise, **not an official OpenAI qualification checklist**. Open-source contributions, WebGoat exercises, GitHub controls, project counts, or other portfolio artifacts must not be described as formal Daybreak Red requirements or as proof of approval. Any eligibility or access claim must be checked against current first-party OpenAI guidance and the actual account/workspace entitlement.
 
 ## Why this repository is public
 
@@ -41,6 +47,6 @@ Key public control documents:
 - Self-amendment protection for trusted control code.
 - Explicit stop/fail-closed behavior.
 
-## Bootstrap and current state
+## Current state
 
-The initial public bootstrap deliberately starts with every operational gate closed and grants **no** technical-testing authority. Current operational status is always read from `governance/AUTHORITY_STATE.json`; this README cannot promote or override that state.
+The repository began with every operational gate closed. Current operational status is always read from `governance/AUTHORITY_STATE.json`; this README cannot promote or override that state.
