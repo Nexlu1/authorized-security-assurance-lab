@@ -29,25 +29,25 @@
       "repository": "gitleaks/gitleaks",
       "purpose": "secret detection in repository content and history",
       "license": "MIT",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "aquasecurity/trivy",
       "purpose": "vulnerability, misconfiguration, secret and software inventory scanning",
       "license": "Apache-2.0",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "anchore/syft",
       "purpose": "SBOM generation",
       "license": "Apache-2.0",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "anchore/grype",
       "purpose": "known-vulnerability scanning from files, images or SBOMs",
       "license": "Apache-2.0",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "google/osv-scanner",
