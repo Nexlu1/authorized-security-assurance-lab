@@ -36,7 +36,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --no-tags --force https://github.com/${GITHUB_REPOSITORY}.git "refs/pull/${PR_NUMBER}/head"
+          git fetch --no-tags --force "https://github.com/${GITHUB_REPOSITORY}.git" "refs/pull/${PR_NUMBER}/head"
           CANDIDATE_REF="$(git rev-parse FETCH_HEAD)"
           test "$CANDIDATE_REF" = "$EXPECTED_HEAD"
           printf '%s\n' "$CANDIDATE_REF" > /tmp/public_candidate_ref
