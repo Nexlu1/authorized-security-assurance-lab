@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "source_preference": "reuse mature free/open-source GitHub projects before writing local replacements",
+    "action_pin_policy": "pin GitHub Actions to immutable full commit SHA",
+    "binary_pin_policy": "pin releases/commits and record integrity material before operational use",
+    "scope_rule": "security-testing tools may only be used when the repository authority state permits the relevant activity"
+  },
+  "components": [
+    {
+      "repository": "ossf/scorecard",
+      "purpose": "repository security posture and supply-chain practice assessment",
+      "license": "Apache-2.0",
+      "status": "integrated_baseline"
+    },
+    {
+      "repository": "zizmorcore/zizmor",
+      "purpose": "GitHub Actions workflow security analysis",
+      "license": "MIT",
+      "status": "approved_next"
+    },
+    {
+      "repository": "rhysd/actionlint",
+      "purpose": "GitHub Actions workflow syntax and semantic linting",
+      "license": "MIT",
+      "status": "approved_next"
+    },
+    {
+      "repository": "gitleaks/gitleaks",
+      "purpose": "secret detection in repository content and history",
+      "license": "MIT",
+      "status": "approved_next"
+    },
+    {
+      "repository": "aquasecurity/trivy",
+      "purpose": "vulnerability, misconfiguration, secret and software inventory scanning",
+      "license": "Apache-2.0",
+      "status": "approved_next"
+    },
+    {
+      "repository": "anchore/syft",
+      "purpose": "SBOM generation",
+      "license": "Apache-2.0",
+      "status": "approved_next"
+    },
+    {
+      "repository": "anchore/grype",
+      "purpose": "known-vulnerability scanning from files, images or SBOMs",
+      "license": "Apache-2.0",
+      "status": "approved_next"
+    },
+    {
+      "repository": "google/osv-scanner",
+      "purpose": "dependency vulnerability and lockfile/SBOM analysis against OSV data",
+      "license": "Apache-2.0",
+      "status": "approved_optional_overlap"
+    },
+    {
+      "repository": "WebGoat/WebGoat",
+      "purpose": "deliberately insecure local-only training/test target",
+      "license": "GPL-2.0-or-later",
+      "status": "approved_target_subject_to_authority_gate"
+    },
+    {
+      "repository": "zaproxy/zaproxy",
+      "purpose": "web application security testing and automation against explicitly authorized targets",
+      "license": "Apache-2.0",
+      "status": "approved_lab_tool_subject_to_authority_gate"
+    }
+  ]
+}
