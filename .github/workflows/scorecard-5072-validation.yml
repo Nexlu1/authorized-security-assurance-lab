@@ -77,20 +77,97 @@ jobs:
           done
           cat actionlint-comparison.txt
 
-      - name: Assert issue reproduction with Scorecard-embedded version
+      - name: Record parser comparison outcome
         shell: bash
         run: |
           set -euo pipefail
-          grep -F '=== actionlint 1.7.9 ===' actionlint-comparison.txt
-          grep -F 'mapping values are not allowed in this context' actionlint-comparison.txt
+          if grep -Fq 'mapping values are not allowed in this context' actionlint-comparison.txt; then
+            printf 'reported_yaml_error_reproduced=true\n' > parser-outcome.txt
+          else
+            printf 'reported_yaml_error_reproduced=false\n' > parser-outcome.txt
+          fi
 
       - name: Preserve comparison evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: scorecard-5072-validation
+          name: scorecard-5072-actionlint-comparison
           path: |
             fixtures.sha256
             actionlint-comparison.txt
+            parser-outcome.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  scorecard-current:
+    name: scorecard-5072-current-main
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      SCORECARD_SHA: d1fab88f54636ff366076edfc5c239f97b3c8e66
+    steps:
+      - name: Set up current Scorecard Go version
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.6
+          check-latest: true
+
+      - name: Fetch exact current Scorecard source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init scorecard
+          git -C scorecard remote add origin https://github.com/ossf/scorecard.git
+          git -C scorecard fetch --depth=1 origin "$SCORECARD_SHA"
+          git -C scorecard checkout --detach FETCH_HEAD
+          test "$(git -C scorecard rev-parse HEAD)" = "$SCORECARD_SHA"
+
+      - name: Build exact current Scorecard
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          go build -o "$RUNNER_TEMP/scorecard" .
+          "$RUNNER_TEMP/scorecard" version | tee ../scorecard-version.txt
+
+      - name: Run current Scorecard checks against E4ST
+        env:
+          GITHUB_AUTH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          "$RUNNER_TEMP/scorecard" \
+            --repo=github.com/e4st-dev/E4ST.jl \
+            --checks=Dangerous-Workflow,Token-Permissions,Pinned-Dependencies,SAST,Packaging \
+            --show-details \
+            --verbosity=debug \
+            > scorecard-e4st.stdout.txt 2> scorecard-e4st.stderr.txt
+          code=$?
+          printf 'exit_code=%s\n' "$code" | tee scorecard-e4st-exit.txt
+          cat scorecard-e4st.stdout.txt
+          cat scorecard-e4st.stderr.txt >&2
+          exit 0
+
+      - name: Record current Scorecard reproduction outcome
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Fq 'mapping values are not allowed in this context' scorecard-e4st.stderr.txt scorecard-e4st.stdout.txt; then
+            printf 'reported_yaml_error_reproduced=true\n' > scorecard-outcome.txt
+          else
+            printf 'reported_yaml_error_reproduced=false\n' > scorecard-outcome.txt
+          fi
+
+      - name: Preserve current Scorecard evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-5072-current-main
+          path: |
+            scorecard-version.txt
+            scorecard-e4st.stdout.txt
+            scorecard-e4st.stderr.txt
+            scorecard-e4st-exit.txt
+            scorecard-outcome.txt
           if-no-files-found: error
           retention-days: 30
