@@ -56,6 +56,12 @@
       "status": "integrated_baseline"
     },
     {
+      "repository": "dependabot/dependabot-core",
+      "purpose": "GitHub Actions dependency update automation; executed by GitHub's hosted Dependabot service using the open-source core logic",
+      "license": "MIT",
+      "status": "integrated_baseline"
+    },
+    {
       "repository": "google/osv-scanner",
       "purpose": "dependency vulnerability and lockfile/SBOM analysis against OSV data",
       "license": "Apache-2.0",
