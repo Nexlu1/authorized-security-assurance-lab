@@ -37,7 +37,7 @@ jobs:
 
       - name: Run governance unit tests
         working-directory: scripts
-        run: python3 -m unittest -v test_check_governance.py test_check_transition.py
+        run: python3 -m unittest -v test_check_governance.py test_check_transition.py test_api_security.py
 
       - name: Restore candidate canonical records
         if: always()
