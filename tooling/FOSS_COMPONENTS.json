@@ -17,13 +17,13 @@
       "repository": "zizmorcore/zizmor",
       "purpose": "GitHub Actions workflow security analysis",
       "license": "MIT",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "rhysd/actionlint",
       "purpose": "GitHub Actions workflow syntax and semantic linting",
       "license": "MIT",
-      "status": "approved_next"
+      "status": "integrated_baseline"
     },
     {
       "repository": "gitleaks/gitleaks",
