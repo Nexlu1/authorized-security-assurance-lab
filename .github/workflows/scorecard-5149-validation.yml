@@ -1,0 +1,227 @@
+name: Validate Scorecard 5149 patch
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-scorecard-5149-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-scorecard-5149:
+    name: scorecard-5149-patch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      UPSTREAM_SHA: d1fab88f54636ff366076edfc5c239f97b3c8e66
+    steps:
+      - name: Set up Go used by current Scorecard main
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.6
+          check-latest: true
+
+      - name: Fetch exact OpenSSF Scorecard source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init scorecard
+          git -C scorecard remote add origin https://github.com/ossf/scorecard.git
+          git -C scorecard fetch --depth=1 origin "$UPSTREAM_SHA"
+          git -C scorecard checkout --detach FETCH_HEAD
+          test "$(git -C scorecard rev-parse HEAD)" = "$UPSTREAM_SHA"
+
+      - name: Apply minimal check-suite completeness fix and regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path("scorecard/clients/githubrepo/checkruns.go")
+          source = source_path.read_text(encoding="utf-8")
+
+          connection = re.compile(r"(CheckSuites struct \{\n)(\s*)(Nodes \[\]struct \{)")
+          match = connection.search(source)
+          if match is None:
+              raise SystemExit("CheckSuites connection shape not found")
+          indent = match.group(2)
+          replacement = (
+              match.group(1)
+              + indent + "PageInfo struct {\n"
+              + indent + "\tHasNextPage githubv4.Boolean\n"
+              + indent + "}\n"
+              + indent + match.group(3)
+          )
+          source = source[:match.start()] + replacement + source[match.end():]
+
+          parser = re.compile(
+              r"func parseCheckRuns\(data \*checkRunsGraphqlData\) checkRunsByRef \{.*?\n\}\n\nfunc checkRunsFrom",
+              re.DOTALL,
+          )
+          new_parser = r'''func parseCheckRuns(data *checkRunsGraphqlData) checkRunsByRef {
+          	checkCache := checkRunsByRef{}
+          	for _, commit := range data.Repository.Object.Commit.History.Nodes {
+          		for _, pr := range commit.AssociatedPullRequests.Nodes {
+          			var crs []clients.CheckRun
+          			allCheckSuitesLoaded := true
+          			for _, c := range pr.Commits.Nodes {
+          				if c.Commit.CheckSuites.PageInfo.HasNextPage {
+          					allCheckSuitesLoaded = false
+          					break
+          				}
+          				for _, checkRun := range c.Commit.CheckSuites.Nodes {
+          					crs = append(crs, clients.CheckRun{
+          						// the REST API returns lowercase. the graphQL API returns upper
+          						Status:     strings.ToLower(string(checkRun.Status)),
+          						Conclusion: strings.ToLower(string(checkRun.Conclusion)),
+          						App: clients.CheckRunApp{
+          							Slug: string(checkRun.App.Slug),
+          						},
+          					})
+          				}
+          			}
+          			if !allCheckSuitesLoaded {
+          				continue
+          			}
+          			headRef := string(pr.HeadRefOid)
+          			checkCache[headRef] = crs
+          		}
+          	}
+          	return checkCache
+          }
+
+          func checkRunsFrom'''
+          source, count = parser.subn(new_parser, source, count=1)
+          if count != 1:
+              raise SystemExit(f"parseCheckRuns replacement count: {count}")
+          source_path.write_text(source, encoding="utf-8")
+
+          test_path = Path("scorecard/clients/githubrepo/checkruns_test.go")
+          tests = test_path.read_text(encoding="utf-8")
+          old_import = 'import (\n\t"testing"\n'
+          new_import = 'import (\n\t"encoding/json"\n\t"testing"\n'
+          if old_import not in tests:
+              raise SystemExit("checkruns_test.go import block not found")
+          tests = tests.replace(old_import, new_import, 1)
+          tests += r'''
+
+          func checkRunsTestData(t *testing.T) *checkRunsGraphqlData {
+          	t.Helper()
+          	const fixture = `{
+          		"Repository": {
+          			"Object": {
+          				"Commit": {
+          					"History": {
+          						"Nodes": [{
+          							"AssociatedPullRequests": {
+          								"Nodes": [{
+          									"HeadRefOid": "head-sha",
+          									"Commits": {
+          										"Nodes": [{
+          											"Commit": {
+          												"CheckSuites": {
+          													"PageInfo": {"HasNextPage": false},
+          													"Nodes": [{
+          														"App": {"Slug": "github-actions"},
+          														"Conclusion": "SUCCESS",
+          														"Status": "COMPLETED"
+          													}]
+          												}
+          											}
+          										}]
+          									}
+          								}]
+          							}
+          						}]
+          					}
+          				}
+          			}
+          		}
+          	}`
+
+          	data := new(checkRunsGraphqlData)
+          	if err := json.Unmarshal([]byte(fixture), data); err != nil {
+          		t.Fatalf("json.Unmarshal: %v", err)
+          	}
+          	return data
+          }
+
+          func Test_parseCheckRuns_cachesCompletePage(t *testing.T) {
+          	t.Parallel()
+          	cache := parseCheckRuns(checkRunsTestData(t))
+          	runs, ok := cache["head-sha"]
+          	if !ok {
+          		t.Fatal("expected complete GraphQL page to be cached")
+          	}
+          	if len(runs) != 1 {
+          		t.Fatalf("expected 1 check run, got %d", len(runs))
+          	}
+          	if runs[0].Status != "completed" || runs[0].Conclusion != "success" || runs[0].App.Slug != "github-actions" {
+          		t.Errorf("unexpected cached check run: %+v", runs[0])
+          	}
+          }
+
+          func Test_parseCheckRuns_skipsTruncatedPage(t *testing.T) {
+          	t.Parallel()
+          	data := checkRunsTestData(t)
+          	data.Repository.Object.Commit.History.Nodes[0].AssociatedPullRequests.Nodes[0].Commits.Nodes[0].Commit.CheckSuites.PageInfo.HasNextPage = true
+          	cache := parseCheckRuns(data)
+          	if _, ok := cache["head-sha"]; ok {
+          		t.Fatal("truncated GraphQL check-suite page must remain a cache miss for REST fallback")
+          	}
+          }
+          '''
+          test_path.write_text(tests, encoding="utf-8")
+          PY
+
+          gofmt -w scorecard/clients/githubrepo/checkruns.go scorecard/clients/githubrepo/checkruns_test.go
+          git -C scorecard diff --check
+
+      - name: Run focused Scorecard regression tests
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./clients/githubrepo -run 'Test_(init_clearsErr|parseCheckRuns_)' -count=1
+
+      - name: Run complete githubrepo package tests
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./clients/githubrepo -count=1
+
+      - name: Preserve upstream-ready patch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C scorecard diff --check
+          git -C scorecard diff -- clients/githubrepo/checkruns.go clients/githubrepo/checkruns_test.go > scorecard-5149.patch
+          sha256sum scorecard-5149.patch > scorecard-5149.patch.sha256
+          {
+            printf 'upstream_sha=%s\n' "$UPSTREAM_SHA"
+            printf 'go_version=1.25.6\n'
+            printf 'targeted_test=go test ./clients/githubrepo -run Test_(init_clearsErr|parseCheckRuns_) -count=1\n'
+            printf 'package_test=go test ./clients/githubrepo -count=1\n'
+          } > scorecard-5149-validation.txt
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-5149-validation
+          path: |
+            scorecard-5149.patch
+            scorecard-5149.patch.sha256
+            scorecard-5149-validation.txt
+          if-no-files-found: error
+          retention-days: 30
