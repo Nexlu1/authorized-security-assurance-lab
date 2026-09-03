@@ -21,6 +21,10 @@ jobs:
     name: bandit
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      BANDIT_IMAGE: ghcr.io/pycqa/bandit/bandit@sha256:14e5efa97734fa21d7cbb4aaf2e2fae92a20d668ed389c7a74d4c6885fd02265
+      BANDIT_VERSION: 1.9.4
+      BANDIT_SOURCE_COMMIT: 92ae8b82fb422a639f0ed8d99e96cea769594e08
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,30 +36,25 @@ jobs:
         with:
           cosign-release: v2.2.2
 
-      - name: Verify upstream Bandit image and resolve immutable digest
-        id: bandit_image
+      - name: Verify pinned upstream Bandit image
         shell: bash
         run: |
           set -euo pipefail
-          floating='ghcr.io/pycqa/bandit/bandit:latest'
-          docker pull "$floating"
+          docker pull "$BANDIT_IMAGE"
 
-          cosign verify "$floating" \
-            --certificate-identity-regexp '^https://github.com/pycqa/bandit/.github/workflows/build-publish-image.yml@refs/(tags/1\.9\.4|heads/main)$' \
+          cosign verify "$BANDIT_IMAGE" \
+            --certificate-identity 'https://github.com/PyCQA/bandit/.github/workflows/build-publish-image.yml@refs/heads/main' \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             > bandit-signature-verification.json
 
-          image_ref="$(docker image inspect "$floating" --format '{{index .RepoDigests 0}}')"
-          test -n "$image_ref"
-          printf '%s\n' "$image_ref" | tee bandit-image-digest.txt
-          printf 'image_ref=%s\n' "$image_ref" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$BANDIT_IMAGE" | tee bandit-image-digest.txt
+          printf 'release=%s\nsource_commit=%s\n' \
+            "$BANDIT_VERSION" "$BANDIT_SOURCE_COMMIT" | tee bandit-source.txt
 
-          docker run --rm "$image_ref" --version | tee bandit-version.txt
-          grep -Eq '(^|[[:space:]])1\.9\.4($|[[:space:]])' bandit-version.txt
+          docker run --rm "$BANDIT_IMAGE" --version | tee bandit-version.txt
+          grep -Eq "(^|[[:space:]])${BANDIT_VERSION//./\\.}($|[[:space:]])" bandit-version.txt
 
       - name: Run complete Bandit evidence scan
-        env:
-          BANDIT_IMAGE: ${{ steps.bandit_image.outputs.image_ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -74,8 +73,6 @@ jobs:
 
       - name: Run Bandit enforcement gate
         id: bandit_gate
-        env:
-          BANDIT_IMAGE: ${{ steps.bandit_image.outputs.image_ref }}
         shell: bash
         run: |
           set +e
@@ -99,15 +96,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p bandit-evidence
-          cp bandit-signature-verification.json bandit-evidence/
-          cp bandit-image-digest.txt bandit-evidence/
-          cp bandit-version.txt bandit-evidence/
-          if test -f "$RUNNER_TEMP/bandit-out/bandit-all.json"; then
-            cp "$RUNNER_TEMP/bandit-out/bandit-all.json" bandit-evidence/
-          fi
-          if test -f "$RUNNER_TEMP/bandit-out/bandit-gate.json"; then
-            cp "$RUNNER_TEMP/bandit-out/bandit-gate.json" bandit-evidence/
-          fi
+          for file in \
+            bandit-signature-verification.json \
+            bandit-image-digest.txt \
+            bandit-source.txt \
+            bandit-version.txt
+          do
+            if test -f "$file"; then
+              cp "$file" bandit-evidence/
+            fi
+          done
+          for file in bandit-all.json bandit-gate.json
+          do
+            if test -f "$RUNNER_TEMP/bandit-out/$file"; then
+              cp "$RUNNER_TEMP/bandit-out/$file" bandit-evidence/
+            fi
+          done
 
       - name: Preserve Bandit evidence
         if: always()
