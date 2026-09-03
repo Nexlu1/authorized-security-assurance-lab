@@ -1,0 +1,205 @@
+name: Repository assurance
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-assurance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out full repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install verified Gitleaks v8.30.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location \
+            --output "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+          printf '%s  %s\n' \
+            '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
+            "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      - name: Scan repository history for secrets
+        id: gitleaks_scan
+        shell: bash
+        run: |
+          set +e
+          "$RUNNER_TEMP/gitleaks" git \
+            --redact \
+            --no-banner \
+            --report-format json \
+            --report-path gitleaks-results.json \
+            .
+          code=$?
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Preserve Gitleaks evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gitleaks-results
+          path: gitleaks-results.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce Gitleaks result
+        if: always()
+        env:
+          SCAN_EXIT: ${{ steps.gitleaks_scan.outputs.exit_code }}
+        shell: bash
+        run: test "$SCAN_EXIT" = "0"
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verified Trivy v0.74.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/trivy.tar.gz"
+          curl --fail --silent --show-error --location \
+            --output "$archive" \
+            "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz"
+          printf '%s  %s\n' \
+            '2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a' \
+            "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" trivy
+          "$RUNNER_TEMP/trivy" --version
+
+      - name: Scan vulnerabilities and misconfigurations
+        id: trivy_scan
+        shell: bash
+        run: |
+          set +e
+          "$RUNNER_TEMP/trivy" fs \
+            --scanners vuln,misconfig \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --format json \
+            --output trivy-results.json \
+            .
+          code=$?
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Preserve Trivy evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-results
+          path: trivy-results.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce Trivy result
+        if: always()
+        env:
+          SCAN_EXIT: ${{ steps.trivy_scan.outputs.exit_code }}
+        shell: bash
+        run: test "$SCAN_EXIT" = "0"
+
+  sbom-grype:
+    name: syft-grype
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verified Syft v1.51.1 and Grype v0.118.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          syft_archive="$RUNNER_TEMP/syft.tar.gz"
+          grype_archive="$RUNNER_TEMP/grype.tar.gz"
+
+          curl --fail --silent --show-error --location \
+            --output "$syft_archive" \
+            "https://github.com/anchore/syft/releases/download/v1.51.1/syft_1.51.1_linux_amd64.tar.gz"
+          printf '%s  %s\n' \
+            '8fcb33017a0dc1058298c923c436d19dfa68ae93968e0b423248542e3afb9fc3' \
+            "$syft_archive" | sha256sum --check --strict
+          tar -xzf "$syft_archive" -C "$RUNNER_TEMP" syft
+
+          curl --fail --silent --show-error --location \
+            --output "$grype_archive" \
+            "https://github.com/anchore/grype/releases/download/v0.118.0/grype_0.118.0_linux_amd64.tar.gz"
+          printf '%s  %s\n' \
+            '1d444c5e7360471815f7158f71935fcecc68a3c417d85c7344f770854300bba2' \
+            "$grype_archive" | sha256sum --check --strict
+          tar -xzf "$grype_archive" -C "$RUNNER_TEMP" grype
+
+          "$RUNNER_TEMP/syft" version
+          "$RUNNER_TEMP/grype" version
+
+      - name: Generate independent SBOM evidence with Syft
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/syft" . \
+            -o syft-json=sbom.syft.json \
+            -o spdx-json=sbom.spdx.json
+
+      - name: Scan Syft SBOM with Grype
+        id: grype_scan
+        shell: bash
+        run: |
+          set +e
+          "$RUNNER_TEMP/grype" "sbom:sbom.syft.json" \
+            --fail-on high \
+            -o json > grype-results.json
+          code=$?
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Preserve SBOM and Grype evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-grype-results
+          path: |
+            sbom.syft.json
+            sbom.spdx.json
+            grype-results.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce Grype result
+        if: always()
+        env:
+          SCAN_EXIT: ${{ steps.grype_scan.outputs.exit_code }}
+        shell: bash
+        run: test "$SCAN_EXIT" = "0"
