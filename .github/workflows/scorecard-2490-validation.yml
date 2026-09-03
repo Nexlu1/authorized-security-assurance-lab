@@ -1,0 +1,143 @@
+name: Validate Scorecard 2490 line offsets
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-scorecard-2490-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    name: scorecard-2490-reproduction
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SCORECARD_SHA: d1fab88f54636ff366076edfc5c239f97b3c8e66
+    steps:
+      - name: Set up current Scorecard Go version
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.6
+          check-latest: true
+
+      - name: Fetch exact current Scorecard source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init scorecard
+          git -C scorecard remote add origin https://github.com/ossf/scorecard.git
+          git -C scorecard fetch --depth=1 origin "$SCORECARD_SHA"
+          git -C scorecard checkout --detach FETCH_HEAD
+          test "$(git -C scorecard rev-parse HEAD)" = "$SCORECARD_SHA"
+
+      - name: Add focused issue 2490 regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scorecard/checks/raw/issue2490_test.go <<'EOF'
+          package raw
+
+          import (
+            "reflect"
+            "testing"
+
+            "github.com/rhysd/actionlint"
+
+            "github.com/ossf/scorecard/v5/checker"
+          )
+
+          func TestIssue2490WorkflowRunLineOffsets(t *testing.T) {
+            t.Parallel()
+            content := []byte(`on: push
+          jobs:
+            jobOne:
+              runs-on: ubuntu-latest
+              steps:
+                - run: |
+                    curl https://example.com | bash
+                - run: curl https://example.com | bash
+          `)
+
+            workflow, errs := actionlint.Parse(content)
+            if len(errs) != 0 || workflow == nil {
+              t.Fatalf("actionlint.Parse errors: %v", errs)
+            }
+            for _, job := range workflow.Jobs {
+              for _, step := range job.Steps {
+                execRun, ok := step.Exec.(*actionlint.ExecRun)
+                if !ok || execRun == nil || execRun.Run == nil {
+                  continue
+                }
+                t.Logf("run=%q RunPos=%v Run.Value.Pos=%v Step.Pos=%v", execRun.Run.Value, execRun.RunPos, execRun.Run.Pos, step.Pos)
+              }
+            }
+
+            var result checker.PinningDependenciesData
+            _, err := validateGitHubWorkflowIsFreeOfInsecureDownloads(
+              ".github/workflows/test.yaml", content, &result,
+            )
+            if err != nil {
+              t.Fatalf("validateGitHubWorkflowIsFreeOfInsecureDownloads: %v", err)
+            }
+
+            var got []uint
+            for _, dependency := range result.Dependencies {
+              if dependency.Type != checker.DependencyUseTypeDownloadThenRun {
+                continue
+              }
+              got = append(got, dependency.Location.Offset)
+              t.Logf("dependency offset=%d end=%d snippet=%q", dependency.Location.Offset, dependency.Location.EndOffset, dependency.Location.Snippet)
+            }
+            want := []uint{7, 8}
+            if !reflect.DeepEqual(got, want) {
+              t.Fatalf("downloadThenRun offsets = %v, want %v", got, want)
+            }
+          }
+          EOF
+          gofmt -w scorecard/checks/raw/issue2490_test.go
+          git -C scorecard diff --check
+
+      - name: Run current Scorecard reproduction
+        id: repro
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set +e
+          go test ./checks/raw -run TestIssue2490WorkflowRunLineOffsets -count=1 -v \
+            > ../issue2490-test.log 2>&1
+          code=$?
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          cat ../issue2490-test.log
+          exit 0
+
+      - name: Record reproduction outcome
+        env:
+          TEST_EXIT: ${{ steps.repro.outputs.exit_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'upstream_sha=%s\n' "$SCORECARD_SHA" > issue2490-outcome.txt
+          printf 'test_exit=%s\n' "$TEST_EXIT" >> issue2490-outcome.txt
+          if test "$TEST_EXIT" = "0"; then
+            printf 'issue_reproduced=false\n' >> issue2490-outcome.txt
+          else
+            printf 'issue_reproduced=true\n' >> issue2490-outcome.txt
+          fi
+
+      - name: Preserve reproduction evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-2490-reproduction
+          path: |
+            issue2490-test.log
+            issue2490-outcome.txt
+          if-no-files-found: error
+          retention-days: 30
