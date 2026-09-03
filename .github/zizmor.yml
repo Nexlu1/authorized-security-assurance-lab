@@ -1,0 +1,14 @@
+# Targeted suppression for the trusted guardian only.
+#
+# The guardian intentionally uses pull_request_target so the workflow and
+# validator executed for a pull request come from the trusted base branch,
+# not from candidate-controlled workflow code. The job checks out trusted
+# base code, uses read-only permissions, fetches the candidate commit only as
+# untrusted data, and validates it with the trusted prior-state validator.
+#
+# Keep this ignore line-specific. If the trigger moves or another dangerous
+# trigger is introduced, zizmor must report it again.
+rules:
+  dangerous-triggers:
+    ignore:
+      - trusted-authority-guardian.yml:3
