@@ -14,10 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  reproduce:
-    name: scorecard-2490-reproduction
+  validate:
+    name: scorecard-2490-patch
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       SCORECARD_SHA: d1fab88f54636ff366076edfc5c239f97b3c8e66
     steps:
@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > scorecard/checks/raw/issue2490_test.go <<'EOF'
+          cat > scorecard/checks/raw/pinned_dependencies_workflow_line_test.go <<'EOF'
           package raw
 
           import (
@@ -53,7 +53,7 @@ jobs:
             "github.com/ossf/scorecard/v5/checker"
           )
 
-          func TestIssue2490WorkflowRunLineOffsets(t *testing.T) {
+          func TestGitHubWorkflowRunLineOffsets(t *testing.T) {
             t.Parallel()
             content := []byte(`on: push
           jobs:
@@ -101,43 +101,150 @@ jobs:
             }
           }
           EOF
-          gofmt -w scorecard/checks/raw/issue2490_test.go
+          gofmt -w scorecard/checks/raw/pinned_dependencies_workflow_line_test.go
           git -C scorecard diff --check
 
-      - name: Run current Scorecard reproduction
+      - name: Confirm current issue reproduction
         id: repro
         working-directory: scorecard
         shell: bash
         run: |
           set +e
-          go test ./checks/raw -run TestIssue2490WorkflowRunLineOffsets -count=1 -v \
-            > ../issue2490-test.log 2>&1
+          go test ./checks/raw -run TestGitHubWorkflowRunLineOffsets -count=1 -v \
+            > ../issue2490-before.log 2>&1
           code=$?
           printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
-          cat ../issue2490-test.log
+          cat ../issue2490-before.log
           exit 0
 
-      - name: Record reproduction outcome
+      - name: Require current bug to reproduce before patching
         env:
           TEST_EXIT: ${{ steps.repro.outputs.exit_code }}
         shell: bash
+        run: test "$TEST_EXIT" != "0"
+
+      - name: Apply minimal source-aware offset fix
+        shell: bash
         run: |
           set -euo pipefail
-          printf 'upstream_sha=%s\n' "$SCORECARD_SHA" > issue2490-outcome.txt
-          printf 'test_exit=%s\n' "$TEST_EXIT" >> issue2490-outcome.txt
-          if test "$TEST_EXIT" = "0"; then
-            printf 'issue_reproduced=false\n' >> issue2490-outcome.txt
-          else
-            printf 'issue_reproduced=true\n' >> issue2490-outcome.txt
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
 
-      - name: Preserve reproduction evidence
+          path = Path("scorecard/checks/raw/pinned_dependencies.go")
+          source = path.read_text(encoding="utf-8")
+
+          marker = "func collectGitHubWorkflowScriptInsecureDownloads(c *checker.CheckRequest, r *checker.PinningDependenciesData) error {"
+          if marker not in source:
+              raise SystemExit("workflow download collector marker not found")
+
+          helper = r'''// getGitHubWorkflowRunScriptOffset returns the base line offset used when
+          // mapping parsed shell commands back to the workflow source. Block and folded
+          // scalars execute from lines after the run key, while inline scalars execute on
+          // the run key's line. The shell parser adds its own 1-based command offset.
+          func getGitHubWorkflowRunScriptOffset(content []byte, execRun *actionlint.ExecRun) uint {
+          	if execRun == nil || execRun.Run == nil {
+          		return checker.OffsetDefault
+          	}
+
+          	var startLine uint
+          	if execRun.RunPos != nil && execRun.RunPos.Line > 0 {
+          		startLine = uint(execRun.RunPos.Line)
+          	} else if execRun.Run.Pos != nil && execRun.Run.Pos.Line > 0 {
+          		startLine = uint(execRun.Run.Pos.Line)
+          	} else {
+          		return checker.OffsetDefault
+          	}
+
+          	if execRun.RunPos == nil || execRun.RunPos.Line < 1 || execRun.RunPos.Col < 1 {
+          		return startLine
+          	}
+          	lines := bytes.Split(content, []byte{'\n'})
+          	lineIndex := execRun.RunPos.Line - 1
+          	if lineIndex >= len(lines) {
+          		return startLine
+          	}
+          	line := lines[lineIndex]
+          	columnIndex := execRun.RunPos.Col - 1
+          	if columnIndex >= len(line) {
+          		return startLine
+          	}
+
+          	runSource := string(line[columnIndex:])
+          	colon := strings.IndexByte(runSource, ':')
+          	if colon < 0 {
+          		return startLine
+          	}
+          	value := strings.TrimSpace(runSource[colon+1:])
+          	if value == "" || strings.HasPrefix(value, "|") || strings.HasPrefix(value, ">") || strings.HasPrefix(value, "#") {
+          		return startLine
+          	}
+
+          	if startLine > 0 {
+          		return startLine - 1
+          	}
+          	return startLine
+          }
+
+          '''
+          source = source.replace(marker, helper + marker, 1)
+
+          old = '''\t\t\tif err := validateShellFile(pathfn, uint(execRun.Run.Pos.Line), uint(execRun.Run.Pos.Line),
+          \t\t\t\tscript, taintedFiles, pdata); err != nil {'''
+          new = '''\t\t\tstartLine := getGitHubWorkflowRunScriptOffset(content, execRun)
+          \t\t\tif err := validateShellFile(pathfn, startLine, startLine,
+          \t\t\t\tscript, taintedFiles, pdata); err != nil {'''
+          if old not in source:
+              raise SystemExit("workflow shell validation call not found")
+          source = source.replace(old, new, 1)
+          path.write_text(source, encoding="utf-8")
+          PY
+          gofmt -w scorecard/checks/raw/pinned_dependencies.go scorecard/checks/raw/pinned_dependencies_workflow_line_test.go
+          git -C scorecard diff --check
+
+      - name: Run fixed issue 2490 regression
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./checks/raw -run TestGitHubWorkflowRunLineOffsets -count=1 -v \
+            | tee ../issue2490-after.log
+
+      - name: Run complete raw-check package tests
+        working-directory: scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./checks/raw -count=1 | tee ../raw-package-test.log
+
+      - name: Preserve upstream-ready patch and validation evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C scorecard add -N checks/raw/pinned_dependencies_workflow_line_test.go
+          git -C scorecard diff --check
+          git -C scorecard diff -- \
+            checks/raw/pinned_dependencies.go \
+            checks/raw/pinned_dependencies_workflow_line_test.go \
+            > scorecard-2490.patch
+          sha256sum scorecard-2490.patch > scorecard-2490.patch.sha256
+          {
+            printf 'upstream_sha=%s\n' "$SCORECARD_SHA"
+            printf 'go_version=1.25.6\n'
+            printf 'reproduction_expected_offsets=7,8\n'
+          } > scorecard-2490-validation.txt
+
+      - name: Upload validation evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: scorecard-2490-reproduction
+          name: scorecard-2490-validation
           path: |
-            issue2490-test.log
-            issue2490-outcome.txt
-          if-no-files-found: error
+            issue2490-before.log
+            issue2490-after.log
+            raw-package-test.log
+            scorecard-2490.patch
+            scorecard-2490.patch.sha256
+            scorecard-2490-validation.txt
+          if-no-files-found: warn
           retention-days: 30
