@@ -4,6 +4,7 @@ import argparse
 from copy import deepcopy
 from datetime import datetime
 import hashlib
+from http.client import HTTPException, HTTPSConnection
 import json
 import os
 import re
@@ -11,8 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 
 from check_governance import MAX_JSON_BYTES, validate, valid_rfc3339
 
@@ -30,6 +30,9 @@ ISSUE_COMMENT_RE = re.compile(
     r"^https://github\.com/([^/]+)/([^/]+)/(issues|pull)/(\d+)#issuecomment-(\d+)$"
 )
 PR_URL_RE = re.compile(r"^https://github\.com/([^/]+)/([^/]+)/pull/(\d+)$")
+GITHUB_API_PATH_RE = re.compile(
+    r"^/repos/[^/]+/[^/]+/(?:issues/comments/\d+|pulls/\d+)$"
+)
 ZERO_SHA_RE = re.compile(r"^0{40}$")
 
 OWNER_SOURCE = "GitHub repository-owner issue comment"
@@ -105,19 +108,38 @@ def changed_files(previous_ref: str, current_ref: str) -> tuple[set[str], list[s
 def api_get(url: str, token: str | None, purpose: str) -> tuple[Any | None, list[str]]:
     if not token:
         return None, [f"GITHUB_TOKEN is required to authenticate {purpose}"]
-    request = Request(url, headers={
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        return None, [f"GitHub {purpose} API URL is invalid: {exc}"]
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "api.github.com"
+        or parsed.query
+        or parsed.fragment
+        or not GITHUB_API_PATH_RE.fullmatch(parsed.path)
+    ):
+        return None, [
+            f"GitHub {purpose} API URL is outside the approved HTTPS api.github.com endpoint set"
+        ]
+    headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
         "User-Agent": "authorized-security-assurance-governance",
         "X-GitHub-Api-Version": "2022-11-28",
-    })
+    }
+    connection = HTTPSConnection("api.github.com", timeout=15)
     try:
-        with urlopen(request, timeout=15) as response:
-            return json.loads(response.read().decode("utf-8")), []
-    except HTTPError as exc:
-        return None, [f"GitHub {purpose} API returned HTTP {exc.code}"]
-    except (URLError, TimeoutError, OSError, UnicodeError, json.JSONDecodeError) as exc:
+        connection.request("GET", parsed.path, headers=headers)
+        response = connection.getresponse()
+        body = response.read()
+        if response.status < 200 or response.status >= 300:
+            return None, [f"GitHub {purpose} API returned HTTP {response.status}"]
+        return loads_strict(body.decode("utf-8")), []
+    except (HTTPException, TimeoutError, OSError, UnicodeError, json.JSONDecodeError, ValueError, RecursionError) as exc:
         return None, [f"GitHub {purpose} API verification failed: {exc}"]
+    finally:
+        connection.close()
 
 
 def comment_api_url(repository: str, artifact_url: str) -> tuple[str | None, list[str]]:

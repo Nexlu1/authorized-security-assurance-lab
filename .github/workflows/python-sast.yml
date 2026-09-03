@@ -1,0 +1,130 @@
+name: Python SAST
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-sast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bandit:
+    name: bandit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      BANDIT_IMAGE: ghcr.io/pycqa/bandit/bandit@sha256:14e5efa97734fa21d7cbb4aaf2e2fae92a20d668ed389c7a74d4c6885fd02265
+      BANDIT_VERSION: 1.9.4
+      BANDIT_SOURCE_COMMIT: 92ae8b82fb422a639f0ed8d99e96cea769594e08
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install cosign using Bandit's upstream-pinned action
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v2.2.2
+
+      - name: Verify pinned upstream Bandit image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$BANDIT_IMAGE"
+
+          cosign verify "$BANDIT_IMAGE" \
+            --certificate-identity 'https://github.com/PyCQA/bandit/.github/workflows/build-publish-image.yml@refs/heads/main' \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            > bandit-signature-verification.json
+
+          printf '%s\n' "$BANDIT_IMAGE" | tee bandit-image-digest.txt
+          printf 'release=%s\nsource_commit=%s\n' \
+            "$BANDIT_VERSION" "$BANDIT_SOURCE_COMMIT" | tee bandit-source.txt
+
+          docker run --rm "$BANDIT_IMAGE" --version | tee bandit-version.txt
+          grep -Eq "(^|[[:space:]])${BANDIT_VERSION//./\\.}($|[[:space:]])" bandit-version.txt
+
+      - name: Run complete Bandit evidence scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bandit-out"
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/src:ro" \
+            --volume "$RUNNER_TEMP/bandit-out:/out" \
+            "$BANDIT_IMAGE" \
+            -r /src/scripts \
+            --ignore-nosec \
+            --severity-level all \
+            --confidence-level all \
+            --format json \
+            --output /out/bandit-all.json \
+            --exit-zero
+
+      - name: Run Bandit enforcement gate
+        id: bandit_gate
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/src:ro" \
+            --volume "$RUNNER_TEMP/bandit-out:/out" \
+            "$BANDIT_IMAGE" \
+            -r /src/scripts \
+            --ignore-nosec \
+            --severity-level medium \
+            --confidence-level medium \
+            --format json \
+            --output /out/bandit-gate.json
+          code=$?
+          printf 'exit_code=%s\n' "$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Collect Bandit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bandit-evidence
+          for file in \
+            bandit-signature-verification.json \
+            bandit-image-digest.txt \
+            bandit-source.txt \
+            bandit-version.txt
+          do
+            if test -f "$file"; then
+              cp "$file" bandit-evidence/
+            fi
+          done
+          for file in bandit-all.json bandit-gate.json
+          do
+            if test -f "$RUNNER_TEMP/bandit-out/$file"; then
+              cp "$RUNNER_TEMP/bandit-out/$file" bandit-evidence/
+            fi
+          done
+
+      - name: Preserve Bandit evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bandit-results
+          path: bandit-evidence
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce Bandit result
+        if: always()
+        env:
+          SCAN_EXIT: ${{ steps.bandit_gate.outputs.exit_code }}
+        shell: bash
+        run: test "$SCAN_EXIT" = "0"
