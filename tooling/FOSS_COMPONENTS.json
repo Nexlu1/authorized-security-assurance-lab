@@ -50,6 +50,12 @@
       "status": "integrated_baseline"
     },
     {
+      "repository": "PyCQA/bandit",
+      "purpose": "Python static security analysis of trusted control scripts",
+      "license": "Apache-2.0",
+      "status": "integrated_baseline"
+    },
+    {
       "repository": "google/osv-scanner",
       "purpose": "dependency vulnerability and lockfile/SBOM analysis against OSV data",
       "license": "Apache-2.0",
