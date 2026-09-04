@@ -60,6 +60,94 @@
       "integrity": "Direct GitHub pull-request metadata rechecked during protected PR #12; merged state and merge commit recorded from upstream repository",
       "status": "Externally verified",
       "notes": "This is an upstream-accepted contribution outcome. It does not prove unaided Python expertise, security expertise, project adoption beyond the merge, or Daybreak eligibility."
+    },
+    {
+      "id": "E-0006",
+      "date_time": "2026-09-03T06:38:06Z",
+      "kind": "FOSS workflow-security assurance and remediation",
+      "observation": "Protected PR #14 integrated actionlint and zizmor and corrected two actionlint/ShellCheck SC2086 quoting findings instead of suppressing them. The intentional pull_request_target exception remained line-scoped so moved or additional dangerous triggers would be reported again.",
+      "source_method": "GitHub protected pull-request history and repository CI",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/14",
+      "integrity": "Merged PR #14; merge commit 2b7949d134c40faad107928a4537a8adc78cbdd2; candidate head adec8f74f089a377b7797e1e44fddef910fd22c3",
+      "status": "Validated",
+      "notes": "Demonstrates FOSS-first workflow analysis plus correction of real findings; non-authority evidence and not a penetration-testing claim."
+    },
+    {
+      "id": "E-0007",
+      "date_time": "2026-09-03T06:51:50Z",
+      "kind": "FOSS repository and supply-chain assurance",
+      "observation": "Protected PR #15 integrated verified Gitleaks, Trivy, Syft and Grype workflows with versioned release acquisition, published SHA-256 checks, read-only permissions and evidence preservation before enforcement.",
+      "source_method": "GitHub protected pull-request history and repository CI",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/15",
+      "integrity": "Merged PR #15; merge commit abb312e29c9bb40d0d46d1e048a894cd3d1078c7; candidate head 42c50a93492853bd47d73806daf0068f36f452fd",
+      "status": "Validated",
+      "notes": "Demonstrates reusable FOSS supply-chain controls; scanner success is not a guarantee that future dependencies are safe."
+    },
+    {
+      "id": "E-0008",
+      "date_time": "2026-09-03T07:09:27Z",
+      "kind": "SAST finding remediation and retest",
+      "observation": "Protected PR #16 recorded an initial Bandit MEDIUM-severity/HIGH-confidence B310 finding in scripts/check_transition.py, replaced generic URL opening with a fixed api.github.com HTTPS transport plus strict scheme/host/path/query/fragment validation, added regression tests, and retested to 0 MEDIUM and 0 HIGH findings while preserving nine LOW subprocess warnings.",
+      "source_method": "GitHub protected pull-request history, signed Bandit workflow and retained scan evidence",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/16",
+      "integrity": "Merged PR #16; merge commit f71543b61059a7d0e32ef45233b86214c082175c; candidate head 4928ba783383f24007ee5d5873dfa8dacdb2df7d",
+      "status": "Retested",
+      "notes": "A concrete security finding-to-fix-to-retest chain. It does not by itself establish general penetration-testing competence."
+    },
+    {
+      "id": "E-0009",
+      "date_time": "2026-09-03T07:21:58Z",
+      "kind": "Dependency-update security remediation and live verification",
+      "observation": "The Dependabot integration was retained only after zizmor caused an explicit seven-day release cooldown to be added; GitHub then completed a live hosted Dependabot job on main, and the subsequent OpenSSF Scorecard run no longer emitted a Dependency-Update-Tool finding.",
+      "source_method": "GitHub protected PRs #17-#18, hosted Dependabot run and subsequent Scorecard evidence",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/18",
+      "integrity": "Merged PR #18; merge commit be3c62e6131e06445236e618ad5ac0058b02be65; candidate head 7f64408c50245ea4cbffb2e49e1529de51fbc454",
+      "status": "Validated",
+      "notes": "Shows finding-driven configuration hardening followed by live verification; automated dependency updates remain review-required."
+    },
+    {
+      "id": "E-0010",
+      "date_time": "2026-09-03T16:39:08Z",
+      "kind": "Generated adversarial API-boundary regression testing",
+      "observation": "Protected PR #23 added deterministic standard-library generated inputs covering hundreds of malformed scheme, host, path, query and fragment combinations; rejected cases were required to fail before any network connection, while valid allowlisted endpoints remained bound to fixed api.github.com HTTPS.",
+      "source_method": "GitHub protected pull-request history and deterministic unit tests",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/23",
+      "integrity": "Merged PR #23; merge commit c1fd35f8a5ad99804664f5807b8f2a489a7b46c4; candidate head 989cf21612fbb6a234e353d911bfe3971d2273d6",
+      "status": "Validated",
+      "notes": "Generated boundary coverage was achieved without adding an unnecessary property-testing dependency; no real network vulnerability testing occurred."
+    },
+    {
+      "id": "E-0011",
+      "date_time": "2026-09-04T06:54:12Z",
+      "kind": "Controlled exact-SHA FOSS donor intake",
+      "observation": "Protected PR #24 created a passive donor-intake bench that fetches exact public GitHub commits into disposable workspaces, fingerprints Git objects, neutralizes tracked symlinks before scanners, preserves licence/dependency metadata, runs Gitleaks/Trivy/Syft/Grype, and records PASS/STUDY/HOLD decisions without executing donor code or writing to third-party repositories.",
+      "source_method": "GitHub protected pull-request history and donor-intake workflow",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/24",
+      "integrity": "Merged PR #24; merge commit 70abc98eb16e03410e06cf44f535a88af1ad65e8; candidate head 06e200800b8b2fc15c5287cca7dbb0b4b103eb98",
+      "status": "Validated",
+      "notes": "Green passive scanning is explicitly not integration approval; real dependency and toolchain problems produced HOLD decisions."
+    },
+    {
+      "id": "E-0012",
+      "date_time": "2026-09-04T07:16:44Z",
+      "kind": "Second controlled FOSS donor-intake batch",
+      "observation": "Protected PR #25 applied the exact-SHA passive intake process to llama.cpp, llama-cpp-windows-manager, NetForensicAI and WinSW and reconciled the earlier liteq status to HOLD after dependency-vulnerability findings.",
+      "source_method": "GitHub protected pull-request history and donor-intake workflow",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/25",
+      "integrity": "Merged PR #25; merge commit 8db55192118ce7ac161d5a24b576d3f6bbaae9a2; candidate head c16a301393c0aae1dd9852b7aaea670df73c644a",
+      "status": "Validated",
+      "notes": "Extends reusable GitHub/FOSS intake evidence; passive intake still does not execute or approve donor integration."
+    },
+    {
+      "id": "E-0013",
+      "date_time": "2026-09-04T08:31:01Z",
+      "kind": "Isolated executable donor build qualification",
+      "observation": "Protected PR #26 qualified exact pinned Windows donor builds: llama.cpp configure, Release compile, main CTest, executable hashing and receipt generation passed; llama-cpp-windows-manager compiled successfully twice but remained TEST HOLD after the same NativeProcessRunnerStopsProcessWhenResultConsumerFails timeout occurred twice with 806/807 tests passing each run. No failing test was suppressed or weakened.",
+      "source_method": "GitHub protected pull-request history and isolated build-qualification workflow",
+      "artifact_url": "https://github.com/Nexlu1/authorized-security-assurance-lab/pull/26",
+      "integrity": "Merged PR #26; merge commit baa5d65a43b75a93a6ff2776b75bc9785b65b6bd; candidate head ea12f6461fdd41681c7f27929c0fd96921d6280d",
+      "status": "Validated",
+      "notes": "Preserves both PASS and unresolved HOLD outcomes. Build success is not target-project integration approval and is not vulnerability-testing evidence."
     }
   ]
 }
