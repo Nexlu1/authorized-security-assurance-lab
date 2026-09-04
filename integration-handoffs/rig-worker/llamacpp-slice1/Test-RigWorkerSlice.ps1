@@ -65,6 +65,9 @@ Assert-True ($buildSource.Contains('BUILD_SHARED_LIBS=OFF')) 'Qualified static-b
 Assert-True ($buildSource.Contains('LLAMA_BUILD_BORINGSSL=ON')) 'Qualified BoringSSL build setting is missing.'
 Assert-True ($buildSource.Contains('remote remove origin')) 'Donor Git remote removal control is missing.'
 Assert-True ($buildSource.Contains('RIG_WORKER_LLAMA_SOURCE.json')) 'Owned-source marker control is missing.'
+Assert-True ($buildSource.Contains('Assert-PinnedSourceWorktree')) 'Pinned donor worktree verification is missing.'
+Assert-True ($buildSource.Contains('status --porcelain=v1 --untracked-files=all --ignored=matching')) 'Worktree verification does not cover tracked, untracked and ignored changes.'
+Assert-True ($buildSource.Contains('Refusing to build a modified donor worktree')) 'Modified-worktree refusal path is missing.'
 
 Assert-True ($manageSource.Contains("'--host', '127.0.0.1'")) 'Server launcher is not explicitly loopback-only.'
 Assert-True ($manageSource.Contains("'--offline'")) 'Server launcher is not explicitly offline.'
@@ -79,5 +82,9 @@ Assert-True (-not $manageSource.Contains('--hf-repo')) 'Slice 1 must not enable 
 Assert-True ($manageSource.Contains('Get-VerifiedStateProcess')) 'Verified PID/executable management control is missing.'
 Assert-True ($manageSource.Contains('Refusing to manage it')) 'PID-reuse refusal path is missing.'
 Assert-True ($manageSource.Contains("[System.IO.Path]::GetExtension(`$resolvedModel) -ne '.gguf'")) 'Local GGUF-only input guard is missing.'
+Assert-True ($manageSource.Contains('[System.Diagnostics.ProcessStartInfo]::new()')) 'Real argument-vector process launch is missing.'
+Assert-True ($manageSource.Contains('ArgumentList.Add')) 'Process argument boundaries are not protected by ProcessStartInfo.ArgumentList.'
+Assert-True ($manageSource.Contains("Environment['LLAMA_API_KEY']")) 'API key is not bound directly to the child environment.'
+Assert-True (-not $manageSource.Contains('Start-Process')) 'Start-Process must not be used for the llama-server argument vector.'
 
 Write-Host 'Rig Worker llama.cpp Slice 1 static safety checks passed.'
