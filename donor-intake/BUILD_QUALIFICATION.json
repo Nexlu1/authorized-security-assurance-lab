@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "third_party_write": false,
+    "secrets_available_to_donor": false,
+    "execute_donor_code": true,
+    "publish_compiled_donor_binaries": false,
+    "qualification_is_not_target_project_integration": true
+  },
+  "candidates": [
+    {
+      "id": "llamacpp-windows-manager",
+      "repository": "alekk89/llama-cpp-windows-manager",
+      "sha": "a48a8b9dca99736792096de66446fdf7d28bf585",
+      "platform": "windows-2025",
+      "qualification": "upstream code-shape, locked restore/build, test coverage, format, docs and vulnerability checks; no publish or installer"
+    },
+    {
+      "id": "llamacpp-windows-cpu",
+      "repository": "ggml-org/llama.cpp",
+      "sha": "0ef4d560e12c1a46470265c1abd31dd47c777d23",
+      "platform": "windows-2025",
+      "qualification": "upstream Windows x64 static CPU/server CMake configuration, Release build and ctest main label; no model download or release packaging"
+    }
+  ]
+}
