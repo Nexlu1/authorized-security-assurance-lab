@@ -58,15 +58,27 @@ jobs:
                   raise SystemExit(f'policy mismatch for {key}')
 
           expected = {
-              'netforensicai-evidence-core': ('Sh3n0bi/NetForensicAI', '70cd1b98a4433ab6fe2db6280799d33673acea9e'),
-              'winsw-service-supervision': ('winsw/winsw', '1d0ee4a91bad596d5e7e9c360f2b39ef54674674'),
+              'netforensicai-evidence-core': (
+                  'Sh3n0bi/NetForensicAI',
+                  '70cd1b98a4433ab6fe2db6280799d33673acea9e',
+                  'ubuntu-24.04 / Python 3.12',
+              ),
+              'winsw-service-supervision': (
+                  'winsw/winsw',
+                  '1d0ee4a91bad596d5e7e9c360f2b39ef54674674',
+                  'windows-2022 / .NET 7',
+              ),
           }
           found = {}
           for candidate in doc.get('candidates', []):
               cid = candidate.get('id')
               if cid in found:
                   raise SystemExit(f'duplicate candidate id: {cid}')
-              found[cid] = (candidate.get('repository'), candidate.get('sha'))
+              found[cid] = (
+                  candidate.get('repository'),
+                  candidate.get('sha'),
+                  candidate.get('platform'),
+              )
           if found != expected:
               raise SystemExit(f'manifest candidates differ from executable jobs: {found!r}')
           print('batch 2 manifest matches executable qualification jobs')
@@ -171,12 +183,14 @@ jobs:
               f.write('\n')
           PY
 
-      - name: Preserve text qualification evidence only
+      - name: Preserve allowlisted text qualification evidence only
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: build-netforensicai-evidence-core-receipt
-          path: evidence/
+          path: |
+            evidence/qualification.json
+            evidence/package-hashes.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -284,11 +298,13 @@ jobs:
           }
           $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath evidence/qualification.json -Encoding utf8
 
-      - name: Preserve text qualification evidence only
+      - name: Preserve allowlisted text qualification evidence only
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: build-winsw-service-supervision-receipt
-          path: evidence/
+          path: |
+            evidence/qualification.json
+            evidence/compiled-executables.json
           if-no-files-found: error
           retention-days: 30
