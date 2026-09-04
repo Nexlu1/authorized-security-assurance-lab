@@ -35,7 +35,7 @@ No technical testing in this document expands those boundaries.
 | Second FOSS donor intake | **PROVED** | PR #25, main commit `8db55192118ce7ac161d5a24b576d3f6bbaae9a2` | The same controlled intake process was applied to additional real projects, including PASS/HOLD differentiation | Target-project adoption or runtime qualification |
 | Executable donor qualification | **PROVED / MIXED RESULT PRESERVED** | PR #26, merge commit `baa5d65a43b75a93a6ff2776b75bc9785b65b6bd` | Exact pinned `llama.cpp` Windows build/test qualified PASS; `llama-cpp-windows-manager` build passed but remained TEST HOLD after the same timing-sensitive test failed twice; no failing test was suppressed | Full qualification of the HOLD donor or evidence of vulnerability testing |
 | G1 local security-lab governance | **PROVED** | Authority state + PRs #8–#10 | Authenticated owner authorization and controlled loopback-only WebGoat activation/containment scope exist | Actual vulnerability testing; G2 remains closed |
-| G1 live containment on the current rig | **PARTIAL / NOT YET CLOSED HERE** | Earlier setup record: Docker installed, virtualization enabled, WSL installed; reboot/live WebGoat containment still required confirmation | Preparation toward a safe local target | That WebGoat is currently running, contained, or ready for G2 |
+| G1 live containment on the current rig | **UNCONFIRMED / NO PUBLIC PROOF** | No sanitized public runtime artifact currently records the rig's Docker/WSL/reboot/WebGoat state | Only the planned G1 target and containment requirements are public | Docker/WSL current state, WebGoat startup, containment, or readiness for G2 |
 | Full controlled vulnerability cycle | **MISSING** | No completed record yet | — | We do not yet have one complete target → finding → impact → remediation → retest evidence chain from a deliberately vulnerable owned/local target |
 | Independent external cybersecurity assessment | **MISSING / OPTIONAL EVIDENCE** | None claimed | — | This repository does not claim independent professional certification or assessor endorsement |
 
@@ -90,8 +90,8 @@ While G2 is closed, the project may still:
 - inspect source without executing vulnerability tests;
 - prepare non-executing ZAP Automation Framework plans;
 - prepare evidence schemas and receipt templates;
-- verify Docker/WSL/tool installation state and G1 containment only;
-- prove that planned WebGoat bindings are loopback-only;
+- obtain a fresh local observation of Docker/WSL/reboot state without publishing it as evidence unless G4 permits publication;
+- verify G1 containment only within the already approved local activation scope;
 - prepare explicit G2 scope, stop conditions and evidence requirements for later owner review.
 
 ## Non-claims
@@ -102,7 +102,8 @@ A strong technical portfolio may support a broader trust/readiness case, but onl
 
 ## Exact next technical gate
 
-1. Reconcile whether the rig has completed the WSL-required reboot and whether Docker now starts normally.
+1. Obtain a fresh local observation of the rig's reboot/WSL/Docker state; do not infer it from unpublished notes.
 2. Under existing G1 only, acquire/start WebGoat v2025.3 with loopback-only bindings and prove containment, then stop it; no vulnerability probing.
 3. Prepare an explicit minimal G2 proposal around one local WebGoat finding/remediation/retest cycle using ZAP Automation Framework and upstream reporting/SARIF.
 4. Do not execute G2 until the owner explicitly approves that gate through the existing authority mechanism.
+5. Do not publish new lab evidence to this public repository while G4 remains closed.
