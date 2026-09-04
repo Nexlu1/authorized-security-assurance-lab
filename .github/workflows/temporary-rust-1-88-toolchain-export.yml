@@ -1,4 +1,4 @@
-name: Temporary Rust 1.88 toolchain export
+name: Temporary Rust 1.98 toolchain export
 
 on:
   push:
@@ -16,39 +16,40 @@ jobs:
     steps:
       - name: Install exact minimal Rust toolchain
         run: |
-          rustup toolchain install 1.88.0 --profile minimal
-          rustup run 1.88.0 rustc -Vv
-          rustup run 1.88.0 cargo -V
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup run 1.98.0 rustc -Vv
+          rustup run 1.98.0 cargo -V
 
       - name: Package exact toolchain directory
         run: |
-          SYSROOT="$(rustup run 1.88.0 rustc --print sysroot)"
+          SYSROOT="$(rustup run 1.98.0 rustc --print sysroot)"
           BASENAME="$(basename "$SYSROOT")"
           PARENT="$(dirname "$SYSROOT")"
-          tar --zstd -cf rust-1.88.0-x86_64-unknown-linux-gnu.tar.zst -C "$PARENT" "$BASENAME"
-          sha256sum rust-1.88.0-x86_64-unknown-linux-gnu.tar.zst > RUST_1_88_0_TOOLCHAIN_SHA256.txt
+          tar --zstd -cf rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst -C "$PARENT" "$BASENAME"
+          sha256sum rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst > RUST_1_98_0_TOOLCHAIN_SHA256.txt
           python3 - <<'PY'
           import hashlib, json, pathlib, subprocess
-          p=pathlib.Path('rust-1.88.0-x86_64-unknown-linux-gnu.tar.zst')
+          p=pathlib.Path('rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst')
           receipt={
             'schema':'mcr-rust-toolchain-export-receipt-v1',
-            'toolchain':'1.88.0-x86_64-unknown-linux-gnu',
+            'toolchain':'1.98.0-x86_64-unknown-linux-gnu',
             'bytes':p.stat().st_size,
             'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
-            'rustc':subprocess.check_output(['rustup','run','1.88.0','rustc','-Vv'],text=True),
-            'cargo':subprocess.check_output(['rustup','run','1.88.0','cargo','-V'],text=True).strip(),
+            'rustc':subprocess.check_output(['rustup','run','1.98.0','rustc','-Vv'],text=True),
+            'cargo':subprocess.check_output(['rustup','run','1.98.0','cargo','-V'],text=True).strip(),
+            'selection_reason':'Rust 1.98.0 is current stable on 2026-09-04; rusqlite 0.40.1 uses std::cfg_select!, stabilized in Rust 1.95.0, so the former 1.88.0 qualification pin is incompatible.'
           }
-          pathlib.Path('RUST_1_88_0_TOOLCHAIN_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
+          pathlib.Path('RUST_1_98_0_TOOLCHAIN_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
           PY
 
       - name: Upload exact toolchain
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: rust-1-88-0-linux-toolchain
+          name: rust-1-98-0-linux-toolchain
           path: |
-            rust-1.88.0-x86_64-unknown-linux-gnu.tar.zst
-            RUST_1_88_0_TOOLCHAIN_SHA256.txt
-            RUST_1_88_0_TOOLCHAIN_EXPORT_RECEIPT.json
+            rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst
+            RUST_1_98_0_TOOLCHAIN_SHA256.txt
+            RUST_1_98_0_TOOLCHAIN_EXPORT_RECEIPT.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 3
