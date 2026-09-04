@@ -1,0 +1,126 @@
+name: G1 Podman WebGoat helper assurance
+
+on:
+  pull_request:
+    paths:
+      - scripts/Invoke-G1PodmanWebGoat.ps1
+      - .github/workflows/g1-podman-webgoat-helper-assurance.yml
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/Invoke-G1PodmanWebGoat.ps1
+      - .github/workflows/g1-podman-webgoat-helper-assurance.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-podman-webgoat-helper-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  powershell51-and-supply-chain:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse helper with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = (Resolve-Path 'scripts/Invoke-G1PodmanWebGoat.ps1').Path
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw "PowerShell parser reported $($errors.Count) error(s)."
+          }
+          Write-Host 'Windows PowerShell 5.1 parse: PASS'
+
+      - name: Enforce G1/FOSS source invariants
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $content = Get-Content -LiteralPath 'scripts/Invoke-G1PodmanWebGoat.ps1' -Raw
+
+          $required = @(
+            "`$PodmanVersion = '6.1.1'",
+            "8303f2e25b675ea7f82099d615c60969aec15870",
+            "91d0e8ea0846c0151d531c88c329bb2729387231e4d1e42306a8e3ae9d09fc8a",
+            "podman-installer-windows-amd64.msi",
+            "MACHINE_PROVIDER=wsl",
+            "'--provider','wsl'",
+            "'--rootful=false'",
+            "'--user-mode-networking=false'",
+            "'--update-connection=false'",
+            "'--import-native-ca=false'",
+            "'--tls-verify=true'",
+            "c3ed45a733377bc7313b93f57ff518254d81380f",
+            "network','create','--internal'",
+            "127.0.0.1:8080:8080",
+            "127.0.0.1:9090:9090",
+            "Test-NetConnection",
+            "manifest_digest",
+            "No HTTP application request or vulnerability test was performed"
+          )
+          foreach ($needle in $required) {
+            if (-not $content.Contains($needle)) { throw "Missing required G1 invariant: $needle" }
+          }
+
+          $forbidden = @(
+            'docker.exe',
+            'docker run',
+            'docker pull',
+            '0.0.0.0:8080',
+            '0.0.0.0:9090',
+            'zap-full-scan',
+            'zap-baseline',
+            'activeScan',
+            '--privileged',
+            '--network host'
+          )
+          foreach ($needle in $forbidden) {
+            if ($content.ToLowerInvariant().Contains($needle.ToLowerInvariant())) {
+              throw "Forbidden G1 helper capability/text is present: $needle"
+            }
+          }
+
+          # Network access inside this helper is limited to one explicit installer
+          # download and Podman's own explicit image/machine acquisition commands.
+          $iwrCount = ([regex]::Matches($content, 'Invoke-WebRequest')).Count
+          if ($iwrCount -ne 1) { throw "Expected exactly one Invoke-WebRequest path; found $iwrCount." }
+
+          Write-Host 'G1/FOSS source invariants: PASS'
+
+      - name: Exercise non-mutating Plan action
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $text = (& .\scripts\Invoke-G1PodmanWebGoat.ps1 -Action Plan | Out-String)
+          foreach ($needle in @('G1 only','G2 CLOSED','Podman 6.1.1','provider=wsl','rootless','127.0.0.1:8080:8080','127.0.0.1:9090:9090')) {
+            if ($text -notmatch [regex]::Escape($needle)) { throw "Plan output missing: $needle" }
+          }
+          Write-Host 'Non-mutating Plan action: PASS'
+
+      - name: Verify exact upstream Podman MSI identity
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $uri = 'https://github.com/podman-container-tools/podman/releases/download/v6.1.1/podman-installer-windows-amd64.msi'
+          $expected = '91d0e8ea0846c0151d531c88c329bb2729387231e4d1e42306a8e3ae9d09fc8a'
+          $path = Join-Path $env:RUNNER_TEMP 'podman-installer-windows-amd64-v6.1.1.msi'
+          Invoke-WebRequest -UseBasicParsing -Uri $uri -OutFile $path
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Podman MSI SHA-256 mismatch: $actual" }
+          $sig = Get-AuthenticodeSignature -FilePath $path
+          Write-Host "Authenticode status: $($sig.Status)"
+          if ($sig.SignerCertificate) { Write-Host "Signer: $($sig.SignerCertificate.Subject)" }
+          if ([string]$sig.Status -ne 'Valid') { throw "Podman MSI signature status is $($sig.Status)." }
+          Write-Host 'Podman v6.1.1 MSI identity/signature: PASS'
