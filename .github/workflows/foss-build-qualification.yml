@@ -23,8 +23,83 @@ env:
   GIT_TERMINAL_PROMPT: '0'
 
 jobs:
+  prepare:
+    name: validate-build-qualification-manifest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out qualification controls only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require manifest to match executable qualification jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          doc = json.loads(Path('donor-intake/BUILD_QUALIFICATION.json').read_text(encoding='utf-8'))
+          if doc.get('schema_version') != 1:
+              raise SystemExit('unsupported build qualification schema')
+
+          policy = doc.get('policy', {})
+          required_policy = {
+              'third_party_write': False,
+              'secrets_available_to_donor': False,
+              'execute_donor_code': True,
+              'publish_compiled_donor_binaries': False,
+              'qualification_is_not_target_project_integration': True,
+          }
+          for key, expected in required_policy.items():
+              if policy.get(key) is not expected:
+                  raise SystemExit(f'build qualification policy mismatch: {key}')
+
+          expected = {
+              'llamacpp-windows-manager': {
+                  'repository': 'alekk89/llama-cpp-windows-manager',
+                  'sha': 'a48a8b9dca99736792096de66446fdf7d28bf585',
+                  'platform': 'windows-2025',
+              },
+              'llamacpp-windows-cpu': {
+                  'repository': 'ggml-org/llama.cpp',
+                  'sha': '0ef4d560e12c1a46470265c1abd31dd47c777d23',
+                  'platform': 'windows-2025',
+              },
+          }
+
+          candidates = doc.get('candidates')
+          if not isinstance(candidates, list):
+              raise SystemExit('candidates must be a list')
+          by_id = {}
+          for candidate in candidates:
+              if not isinstance(candidate, dict) or not candidate.get('id'):
+                  raise SystemExit('every candidate must be an object with an id')
+              candidate_id = candidate['id']
+              if candidate_id in by_id:
+                  raise SystemExit(f'duplicate candidate id: {candidate_id}')
+              by_id[candidate_id] = candidate
+
+          if set(by_id) != set(expected):
+              raise SystemExit(f'manifest candidate set {sorted(by_id)} does not match executable qualification jobs {sorted(expected)}')
+
+          for candidate_id, required in expected.items():
+              candidate = by_id[candidate_id]
+              for field, expected_value in required.items():
+                  if candidate.get(field) != expected_value:
+                      raise SystemExit(
+                          f'{candidate_id}: manifest {field}={candidate.get(field)!r} does not match build job {expected_value!r}'
+                      )
+
+          print('Build qualification manifest is exactly bound to the executable jobs.')
+          PY
+
   windows-manager:
     name: build-llamacpp-windows-manager
+    needs: prepare
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: windows-2025
     timeout-minutes: 40
@@ -151,6 +226,7 @@ jobs:
 
   llamacpp-windows-cpu:
     name: build-llamacpp-windows-x64-cpu
+    needs: prepare
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: windows-2025
     timeout-minutes: 45
