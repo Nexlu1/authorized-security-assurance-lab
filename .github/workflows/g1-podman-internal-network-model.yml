@@ -120,13 +120,32 @@ jobs:
           done
           echo 'non-loopback host reachability=REJECTED AS EXPECTED'
 
-          # Stop and prove the published port closes.
+          # Stop and prove the forwarding listener itself is gone, not merely that
+          # an HTTP request fails after the backend disappears.
           podman rm -f -t0 "$container"
-          if curl --fail --silent --connect-timeout 1 --max-time 2 \
-            "http://127.0.0.1:${port}/testimage-id" >/dev/null 2>&1; then
-            echo 'HOLD: loopback service remained reachable after container removal' >&2
+          ss -ltn > "$RUNNER_TEMP/post-stop-listeners.txt"
+          if grep -E "(127\.0\.0\.1|0\.0\.0\.0|\*):${port}[[:space:]]" "$RUNNER_TEMP/post-stop-listeners.txt"; then
+            echo 'HOLD: published TCP listener remained after container removal' >&2
+            cat "$RUNNER_TEMP/post-stop-listeners.txt" >&2
             exit 1
           fi
+
+          PORT="$port" python3 - <<'PY'
+          import os
+          import socket
+
+          port = int(os.environ['PORT'])
+          sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+          sock.settimeout(1.5)
+          try:
+              sock.connect(('127.0.0.1', port))
+          except OSError:
+              print('post-stop raw TCP connect=REJECTED AS EXPECTED')
+          else:
+              raise SystemExit('HOLD: raw TCP connection still succeeds after container removal')
+          finally:
+              sock.close()
+          PY
           echo 'post-stop port closure=PASS'
 
           podman network rm "$network"
@@ -139,7 +158,7 @@ jobs:
           PASS here proves only a supplemental Linux/rootless Podman behavior model:
           an internal bridge can coexist with an explicit 127.0.0.1 host publish,
           the container lacks an IPv4 default route, non-loopback host addresses do
-          not reach the published service, and cleanup closes the port.
+          not reach the published service, and cleanup removes the TCP listener.
 
           It does NOT prove the Windows/WSL runtime. Windows/WSL remains separately
           bound to upstream podman-machine-os networking tests and must pass a fresh
