@@ -1,4 +1,4 @@
-name: Temporary Rust 1.98 toolchain export
+name: Temporary Rust 1.98 qualification toolchain export
 
 on:
   push:
@@ -14,42 +14,47 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Install exact minimal Rust toolchain
+      - name: Install exact Rust qualification toolchain
         run: |
-          rustup toolchain install 1.98.0 --profile minimal
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
           rustup run 1.98.0 rustc -Vv
           rustup run 1.98.0 cargo -V
+          rustup run 1.98.0 rustfmt -V
+          rustup run 1.98.0 cargo-clippy -V
 
       - name: Package exact toolchain directory
         run: |
           SYSROOT="$(rustup run 1.98.0 rustc --print sysroot)"
           BASENAME="$(basename "$SYSROOT")"
           PARENT="$(dirname "$SYSROOT")"
-          tar --zstd -cf rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst -C "$PARENT" "$BASENAME"
-          sha256sum rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst > RUST_1_98_0_TOOLCHAIN_SHA256.txt
+          tar --zstd -cf rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst -C "$PARENT" "$BASENAME"
+          sha256sum rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst > RUST_1_98_0_QUALIFICATION_TOOLCHAIN_SHA256.txt
           python3 - <<'PY'
           import hashlib, json, pathlib, subprocess
-          p=pathlib.Path('rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst')
+          p=pathlib.Path('rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst')
           receipt={
-            'schema':'mcr-rust-toolchain-export-receipt-v1',
+            'schema':'mcr-rust-qualification-toolchain-export-receipt-v1',
             'toolchain':'1.98.0-x86_64-unknown-linux-gnu',
+            'components':['rustc','cargo','rustdoc','rustfmt','clippy'],
             'bytes':p.stat().st_size,
             'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
             'rustc':subprocess.check_output(['rustup','run','1.98.0','rustc','-Vv'],text=True),
             'cargo':subprocess.check_output(['rustup','run','1.98.0','cargo','-V'],text=True).strip(),
-            'selection_reason':'Rust 1.98.0 is current stable on 2026-09-04; rusqlite 0.40.1 uses std::cfg_select!, stabilized in Rust 1.95.0, so the former 1.88.0 qualification pin is incompatible.'
+            'rustfmt':subprocess.check_output(['rustup','run','1.98.0','rustfmt','-V'],text=True).strip(),
+            'clippy':subprocess.check_output(['rustup','run','1.98.0','cargo-clippy','-V'],text=True).strip(),
+            'selection_reason':'Rust 1.98.0 is the corrected qualification pin; the former 1.88.0 pin cannot compile rusqlite 0.40.1 because that dependency uses std::cfg_select!.'
           }
-          pathlib.Path('RUST_1_98_0_TOOLCHAIN_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
+          pathlib.Path('RUST_1_98_0_QUALIFICATION_TOOLCHAIN_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
           PY
 
-      - name: Upload exact toolchain
+      - name: Upload exact qualification toolchain
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: rust-1-98-0-linux-toolchain
+          name: rust-1-98-0-linux-qualification-toolchain
           path: |
-            rust-1.98.0-x86_64-unknown-linux-gnu.tar.zst
-            RUST_1_98_0_TOOLCHAIN_SHA256.txt
-            RUST_1_98_0_TOOLCHAIN_EXPORT_RECEIPT.json
+            rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst
+            RUST_1_98_0_QUALIFICATION_TOOLCHAIN_SHA256.txt
+            RUST_1_98_0_QUALIFICATION_TOOLCHAIN_EXPORT_RECEIPT.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 3
