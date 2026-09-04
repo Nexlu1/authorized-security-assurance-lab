@@ -1,0 +1,277 @@
+name: FOSS build qualification
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'donor-intake/BUILD_QUALIFICATION.json'
+      - 'docs/FOSS_BUILD_QUALIFICATION.md'
+      - '.github/workflows/foss-build-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foss-build-qualification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ''
+  GITHUB_TOKEN: ''
+  GIT_TERMINAL_PROMPT: '0'
+
+jobs:
+  windows-manager:
+    name: build-llamacpp-windows-manager
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - name: Acquire exact public donor source
+        id: acquire
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init donor
+          git -C donor remote add origin https://github.com/alekk89/llama-cpp-windows-manager.git
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin a48a8b9dca99736792096de66446fdf7d28bf585
+          git -C donor checkout --detach FETCH_HEAD
+          if ((git -C donor rev-parse HEAD).Trim() -ne 'a48a8b9dca99736792096de66446fdf7d28bf585') { throw 'donor SHA mismatch' }
+          git -C donor remote remove origin
+          if (git -C donor remote) { throw 'donor repository still has a Git remote' }
+
+      - name: Setup exact .NET SDK from upstream global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: donor/global.json
+
+      - name: Check upstream code shape
+        id: shape
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\check-code-shape.ps1
+
+      - name: Locked restore and build
+        id: build
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\build-app.ps1 -Restore -LockedRestore
+
+      - name: Run upstream tests and coverage gate
+        id: tests
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\test-coverage.ps1
+
+      - name: Verify upstream formatting
+        id: format
+        working-directory: donor
+        shell: pwsh
+        run: dotnet format LocalLlmConsole.sln --verify-no-changes --verbosity minimal
+
+      - name: Check Git diff whitespace
+        id: diff
+        working-directory: donor
+        shell: pwsh
+        run: git diff --check
+
+      - name: Validate upstream documentation
+        id: docs
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\test-docs.ps1
+
+      - name: Run upstream package vulnerability audit
+        id: vuln
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\test-vulnerabilities.ps1
+
+      - name: Hash compiled executables without uploading them
+        id: hashes
+        if: ${{ always() && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $rows = @()
+          Get-ChildItem donor -Recurse -File -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object {
+            $rows += [pscustomobject]@{
+              path = $_.FullName.Substring((Resolve-Path donor).Path.Length + 1).Replace('\\','/')
+              size = $_.Length
+              sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          }
+          $rows | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath evidence/compiled-executables.json -Encoding utf8
+
+      - name: Record qualification receipt
+        if: always()
+        shell: pwsh
+        env:
+          ACQUIRE: ${{ steps.acquire.outcome }}
+          SHAPE: ${{ steps.shape.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          FORMAT: ${{ steps.format.outcome }}
+          DIFF: ${{ steps.diff.outcome }}
+          DOCS: ${{ steps.docs.outcome }}
+          VULN: ${{ steps.vuln.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $receipt = [ordered]@{
+            schema_version = 1
+            donor = 'alekk89/llama-cpp-windows-manager'
+            sha = 'a48a8b9dca99736792096de66446fdf7d28bf585'
+            runner = 'windows-2025'
+            binary_uploaded = $false
+            upstream_write_credentials = $false
+            steps = [ordered]@{
+              acquire = $env:ACQUIRE
+              code_shape = $env:SHAPE
+              build_locked = $env:BUILD
+              tests_coverage = $env:TESTS
+              format = $env:FORMAT
+              diff_check = $env:DIFF
+              docs = $env:DOCS
+              vulnerability_audit = $env:VULN
+            }
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath evidence/qualification.json -Encoding utf8
+
+      - name: Preserve text qualification evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-llamacpp-windows-manager-receipt
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  llamacpp-windows-cpu:
+    name: build-llamacpp-windows-x64-cpu
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - name: Acquire exact public donor source
+        id: acquire
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init donor
+          git -C donor remote add origin https://github.com/ggml-org/llama.cpp.git
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin 0ef4d560e12c1a46470265c1abd31dd47c777d23
+          git -C donor checkout --detach FETCH_HEAD
+          if ((git -C donor rev-parse HEAD).Trim() -ne '0ef4d560e12c1a46470265c1abd31dd47c777d23') { throw 'donor SHA mismatch' }
+          git -C donor remote remove origin
+          if (git -C donor remote) { throw 'donor repository still has a Git remote' }
+
+      - name: Record Windows build tool versions
+        id: tools
+        working-directory: donor
+        shell: pwsh
+        run: |
+          cmake --version
+          ninja --version
+          clang --version
+
+      - name: Configure upstream x64 static CPU/server build
+        id: configure
+        working-directory: donor
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S . -B build `
+            -G "Ninja Multi-Config" `
+            -DCMAKE_TOOLCHAIN_FILE=cmake/x64-windows-llvm.cmake `
+            -DGGML_NATIVE=OFF `
+            -DGGML_OPENMP_FETCH=ON `
+            -DLLAMA_BUILD_SERVER=ON `
+            -DGGML_RPC=ON `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DLLAMA_BUILD_BORINGSSL=ON
+
+      - name: Build Release
+        id: build
+        working-directory: donor
+        shell: pwsh
+        run: cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Run upstream main CTest suite
+        id: tests
+        working-directory: donor
+        shell: pwsh
+        run: |
+          Push-Location build
+          try {
+            ctest -L main -C Release --verbose --timeout 900
+          }
+          finally {
+            Pop-Location
+          }
+
+      - name: Hash selected compiled executables without uploading them
+        id: hashes
+        if: ${{ always() && steps.build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $targets = @(
+            'donor/build/bin/Release/llama-server.exe',
+            'donor/build/bin/Release/llama-cli.exe'
+          )
+          $rows = @()
+          foreach ($target in $targets) {
+            if (Test-Path -LiteralPath $target -PathType Leaf) {
+              $item = Get-Item -LiteralPath $target
+              $rows += [pscustomobject]@{
+                path = $target.Replace('\\','/')
+                size = $item.Length
+                sha256 = (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant()
+              }
+            }
+          }
+          if ($rows.Count -eq 0) { throw 'expected llama.cpp executables were not found after a successful build' }
+          $rows | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath evidence/compiled-executables.json -Encoding utf8
+
+      - name: Record qualification receipt
+        if: always()
+        shell: pwsh
+        env:
+          ACQUIRE: ${{ steps.acquire.outcome }}
+          TOOLS: ${{ steps.tools.outcome }}
+          CONFIGURE: ${{ steps.configure.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $receipt = [ordered]@{
+            schema_version = 1
+            donor = 'ggml-org/llama.cpp'
+            sha = '0ef4d560e12c1a46470265c1abd31dd47c777d23'
+            runner = 'windows-2025'
+            configuration = 'upstream x64-cpu-static with server/RPC/OpenMP fetch/BoringSSL'
+            model_downloaded = $false
+            binary_uploaded = $false
+            upstream_write_credentials = $false
+            steps = [ordered]@{
+              acquire = $env:ACQUIRE
+              tools = $env:TOOLS
+              configure = $env:CONFIGURE
+              build = $env:BUILD
+              ctest_main = $env:TESTS
+            }
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath evidence/qualification.json -Encoding utf8
+
+      - name: Preserve text qualification evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-llamacpp-windows-x64-cpu-receipt
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
