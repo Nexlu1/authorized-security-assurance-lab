@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "third_party_write": false,
+    "secrets_available_to_donor": false,
+    "execute_donor_code": true,
+    "publish_compiled_donor_artifacts": false,
+    "qualification_is_not_target_project_integration": true
+  },
+  "candidate": {
+    "id": "llamacpp-windows-manager-model-runtime-safety",
+    "repository": "alekk89/llama-cpp-windows-manager",
+    "sha": "a48a8b9dca99736792096de66446fdf7d28bf585",
+    "platform": "windows-2025",
+    "scope": [
+      "LocalLlmConsole.Tests.DownloadSafetyTests",
+      "LocalLlmConsole.Tests.RuntimePackageInstallationTests"
+    ],
+    "qualification": "locked restore/build, focused model-download and runtime-package safety tests, upstream package vulnerability audit; excludes unrelated benchmark and UI tests"
+  }
+}
