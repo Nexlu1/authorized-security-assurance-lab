@@ -1,0 +1,147 @@
+name: G1 Podman internal-network model
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/g1-podman-internal-network-model.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-podman-internal-model-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rootless-internal-loopback-model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Record runner Podman identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          podman --version
+          podman info --format json > "$RUNNER_TEMP/podman-info.json"
+          python3 - <<'PY'
+          import json, os
+          path = os.path.join(os.environ['RUNNER_TEMP'], 'podman-info.json')
+          info = json.load(open(path, encoding='utf-8'))
+          print('host.os=', info.get('host', {}).get('os'))
+          print('host.arch=', info.get('host', {}).get('arch'))
+          print('host.security.rootless=', info.get('host', {}).get('security', {}).get('rootless'))
+          if not info.get('host', {}).get('security', {}).get('rootless'):
+              raise SystemExit('HOLD: hosted-runner Podman is not rootless')
+          PY
+
+      - name: Qualify internal bridge plus explicit loopback publish
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          network="g1-internal-model-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          container="g1-http-model-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          port=38080
+          image='quay.io/libpod/testimage:20241011'
+
+          cleanup() {
+            podman rm -f -t0 "$container" >/dev/null 2>&1 || true
+            podman network rm -f "$network" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          cleanup
+
+          podman pull "$image"
+          podman image inspect "$image" --format '{{json .RepoDigests}}' | tee "$RUNNER_TEMP/testimage-repodigests.json"
+
+          podman network create --internal "$network"
+          podman network inspect "$network" > "$RUNNER_TEMP/network-inspect.json"
+          python3 - <<'PY'
+          import json, os
+          data = json.load(open(os.path.join(os.environ['RUNNER_TEMP'], 'network-inspect.json'), encoding='utf-8'))
+          item = data[0] if isinstance(data, list) else data
+          if item.get('internal') is not True:
+              raise SystemExit(f"HOLD: network is not internal: {item.get('internal')!r}")
+          print('network.internal=PASS')
+          PY
+
+          podman run -d \
+            --name "$container" \
+            --network "$network" \
+            -p "127.0.0.1:${port}:80" \
+            "$image" \
+            /bin/busybox-extras httpd -f -p 80
+
+          # Upstream podman-machine-os uses the same test image/httpd pattern.
+          for _ in $(seq 1 20); do
+            if curl --fail --silent --show-error --max-time 2 \
+              "http://127.0.0.1:${port}/testimage-id" > "$RUNNER_TEMP/loopback-response.txt"; then
+              break
+            fi
+            sleep 0.5
+          done
+          test -s "$RUNNER_TEMP/loopback-response.txt"
+          echo 'host loopback publish=PASS'
+
+          # The host listener itself must be bound to loopback, never wildcard.
+          ss -ltn > "$RUNNER_TEMP/listeners.txt"
+          grep -E "127\.0\.0\.1:${port}[[:space:]]" "$RUNNER_TEMP/listeners.txt"
+          if grep -E "(0\.0\.0\.0|\*):${port}[[:space:]]" "$RUNNER_TEMP/listeners.txt"; then
+            echo 'HOLD: wildcard host listener observed' >&2
+            exit 1
+          fi
+          echo 'host listener loopback-only=PASS'
+
+          # Internal bridge must not give the container an IPv4 default route.
+          podman exec "$container" cat /proc/net/route > "$RUNNER_TEMP/container-ipv4-routes.txt"
+          if awk 'NR > 1 && $2 == "00000000" { found=1 } END { exit(found ? 0 : 1) }' \
+            "$RUNNER_TEMP/container-ipv4-routes.txt"; then
+            echo 'HOLD: container has an IPv4 default route on internal network' >&2
+            cat "$RUNNER_TEMP/container-ipv4-routes.txt" >&2
+            exit 1
+          fi
+          echo 'container no-default-route=PASS'
+
+          # Every non-loopback global IPv4 of the hosted runner must fail to reach
+          # a service published only on 127.0.0.1.
+          mapfile -t host_ips < <(ip -4 -o addr show scope global | awk '{split($4,a,"/"); print a[1]}')
+          if ((${#host_ips[@]} == 0)); then
+            echo 'HOLD: no non-loopback host IPv4 found for negative reachability test' >&2
+            exit 1
+          fi
+          for host_ip in "${host_ips[@]}"; do
+            echo "negative host-IP probe: ${host_ip}:${port}"
+            if curl --fail --silent --show-error --connect-timeout 1 --max-time 2 \
+              "http://${host_ip}:${port}/testimage-id" >/dev/null 2>&1; then
+              echo "HOLD: non-loopback host IP unexpectedly reached loopback-only publish: ${host_ip}" >&2
+              exit 1
+            fi
+          done
+          echo 'non-loopback host reachability=REJECTED AS EXPECTED'
+
+          # Stop and prove the published port closes.
+          podman rm -f -t0 "$container"
+          if curl --fail --silent --connect-timeout 1 --max-time 2 \
+            "http://127.0.0.1:${port}/testimage-id" >/dev/null 2>&1; then
+            echo 'HOLD: loopback service remained reachable after container removal' >&2
+            exit 1
+          fi
+          echo 'post-stop port closure=PASS'
+
+          podman network rm "$network"
+          trap - EXIT
+
+      - name: Explain evidential boundary
+        shell: bash
+        run: |
+          cat <<'EOF'
+          PASS here proves only a supplemental Linux/rootless Podman behavior model:
+          an internal bridge can coexist with an explicit 127.0.0.1 host publish,
+          the container lacks an IPv4 default route, non-loopback host addresses do
+          not reach the published service, and cleanup closes the port.
+
+          It does NOT prove the Windows/WSL runtime. Windows/WSL remains separately
+          bound to upstream podman-machine-os networking tests and must pass a fresh
+          local G1 containment qualification before any runtime evidence is promoted.
+          EOF
