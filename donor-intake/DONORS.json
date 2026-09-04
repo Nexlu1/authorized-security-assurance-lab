@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "source": "public GitHub repositories only",
+    "third_party_write": false,
+    "execute_donor_code_during_intake": false,
+    "pin_exact_commit_before_scan": true,
+    "integration_requires_separate_target_project_review": true
+  },
+  "donors": [
+    {
+      "id": "goqite",
+      "repository": "maragudk/goqite",
+      "sha": "71a935991bf7971440a7e09f50d2fca5fbb73eb8",
+      "expected_license": "MIT",
+      "target_project": "ECO",
+      "purpose": "Go-native persistent SQLite queue and background-job patterns",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "gopsutil",
+      "repository": "shirou/gopsutil",
+      "sha": "7d254a02800683e5a322b09e1843d3399f66f307",
+      "expected_license": "BSD-3-Clause",
+      "target_project": "ECO / Rig Worker",
+      "purpose": "Go-native CPU, RAM, disk, process and network measurements including Windows",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "progressbar",
+      "repository": "schollz/progressbar",
+      "sha": "e5dd4f362c639eb8b1636a3b9650e241fb8922f8",
+      "expected_license": "MIT",
+      "target_project": "ECO support tooling / engineering CLI",
+      "purpose": "Lightweight truthful terminal progress display for support and engineering tools",
+      "status": "QUALIFY"
+    }
+  ]
+}
