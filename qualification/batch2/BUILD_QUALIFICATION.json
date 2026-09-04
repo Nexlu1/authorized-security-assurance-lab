@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "third_party_write": false,
+    "secrets_available_to_donor": false,
+    "execute_donor_code": true,
+    "publish_compiled_donor_artifacts": false,
+    "qualification_is_not_target_project_integration": true
+  },
+  "candidates": [
+    {
+      "id": "netforensicai-evidence-core",
+      "repository": "Sh3n0bi/NetForensicAI",
+      "sha": "70cd1b98a4433ab6fe2db6280799d33673acea9e",
+      "platform": "ubuntu-24.04 / Python 3.12",
+      "target_project": "ECO / Dossier",
+      "qualification": "Focused upstream evidence, audit, export, hashing, store, case, finding, timeline, pipeline and report tests plus sdist/wheel metadata build check; optional AI and network services excluded"
+    },
+    {
+      "id": "winsw-service-supervision",
+      "repository": "winsw/winsw",
+      "sha": "1d0ee4a91bad596d5e7e9c360f2b39ef54674674",
+      "platform": "windows-2022 / .NET 7",
+      "target_project": "Rig Worker / KOMB",
+      "qualification": "Upstream v3 source restored and tested with dotnet test; no service installation, package publication or release build"
+    }
+  ]
+}
