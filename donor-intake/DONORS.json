@@ -55,7 +55,8 @@
       "expected_license": "MIT",
       "target_project": "Rig Worker",
       "purpose": "Primary local inference engine and OpenAI-compatible server foundation",
-      "status": "QUALIFY"
+      "status": "QUALIFY_BUILD_CORE_ONLY",
+      "decision_note": "Passive intake verified the MIT source and no real leaked credentials. Whole-repository scans found known vulnerabilities in optional Python tooling plus Docker-policy findings, so do not treat the entire repository as a clean dependency set. Qualify only the native Windows x64 CPU/server build and tests first, then evaluate GPU backends separately."
     },
     {
       "id": "llamacpp-windows-manager",
@@ -64,7 +65,8 @@
       "expected_license": "MIT",
       "target_project": "Rig Worker",
       "purpose": "Windows llama.cpp runtime, GGUF model, launch-profile, multi-server supervision, metrics and local automation patterns",
-      "status": "QUALIFY"
+      "status": "QUALIFY_BUILD",
+      "decision_note": "Strong architecture fit. Passive intake found no secret findings, no Trivy vulnerability/misconfiguration findings and no Grype vulnerability matches in the scanned source tree. Proceed to isolated upstream-style Windows build/test qualification without publishing an executable."
     },
     {
       "id": "netforensicai",
@@ -73,7 +75,8 @@
       "expected_license": "MIT",
       "target_project": "ECO / Dossier",
       "purpose": "Immutable evidence copies, SHA-256 provenance, hash-chained custody, deterministic evidence citations and verified case export patterns",
-      "status": "QUALIFY"
+      "status": "ADAPT_QUALIFY_TEST",
+      "decision_note": "Passive runtime-source review is favourable; secret findings were deliberate synthetic fixtures and the detected vulnerable packages were repository CI actions rather than the evidence runtime. Adapt patterns rather than copy wholesale: ECO needs stricter audit-write failure handling, stronger concurrent ID allocation and stronger immutability controls. Qualify upstream tests separately before target-project adaptation."
     },
     {
       "id": "winsw",
@@ -82,7 +85,8 @@
       "expected_license": "MIT",
       "target_project": "Rig Worker / KOMB",
       "purpose": "Mature Windows service wrapper and process-supervision patterns",
-      "status": "QUALIFY"
+      "status": "USE_UPSTREAM_QUALIFY",
+      "decision_note": "Prefer using WinSW as a separate upstream service wrapper rather than copying its implementation. Passive findings were concentrated in repository-maintenance GitHub action dependencies, not the service-wrapper code. Qualify the intended upstream build/release path before operational use."
     }
   ]
 }
