@@ -52,8 +52,8 @@ function Get-ContainerIdIfPresent {
 
 function Get-ImageMetadata {
     $result = Invoke-Docker -Arguments @('image', 'inspect', $Image)
-    $items = $result.Output | ConvertFrom-Json
-    if ($null -eq $items -or $items.Count -lt 1) {
+    $items = @($result.Output | ConvertFrom-Json)
+    if ($items.Count -lt 1) {
         throw "Docker returned no metadata for $Image."
     }
     $item = $items[0]
@@ -84,8 +84,8 @@ function Assert-NoPortConflict {
 
 function Get-ContainerInspection {
     $result = Invoke-Docker -Arguments @('inspect', $ContainerName)
-    $items = $result.Output | ConvertFrom-Json
-    if ($null -eq $items -or $items.Count -ne 1) {
+    $items = @($result.Output | ConvertFrom-Json)
+    if ($items.Count -ne 1) {
         throw 'Expected exactly one container inspection result.'
     }
     return $items[0]
@@ -175,7 +175,7 @@ function Assert-PortsClosedAfterStop {
 }
 
 function Write-Receipt {
-    param([Parameter(Mandatory = $true)][hashtable]$Receipt)
+    param([Parameter(Mandatory = $true)][System.Collections.IDictionary]$Receipt)
 
     New-Item -ItemType Directory -Force -Path $EvidenceDirectory | Out-Null
     $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssfffZ')
@@ -300,7 +300,7 @@ try {
         throw 'Docker run returned an empty container ID.'
     }
     $started = $true
-    $receipt.container_id = $containerId
+    $receipt['container_id'] = $containerId
 
     $inspection = Get-ContainerInspection
     if (-not [bool]$inspection.State.Running) {
@@ -312,40 +312,40 @@ try {
     Assert-ListenersAreLoopbackOnly -Listeners $listeners
     $tcp = Wait-ForTcpAvailability
 
-    $receipt.observed_bindings = [ordered]@{
+    $receipt['observed_bindings'] = [ordered]@{
         '8080/tcp' = @($inspection.NetworkSettings.Ports.'8080/tcp')
         '9090/tcp' = @($inspection.NetworkSettings.Ports.'9090/tcp')
     }
-    $receipt.host_listeners = @($listeners | ForEach-Object {
+    $receipt['host_listeners'] = @($listeners | ForEach-Object {
         [ordered]@{
             LocalAddress = [string]$_.LocalAddress
             LocalPort = [int]$_.LocalPort
             OwningProcess = [int]$_.OwningProcess
         }
     })
-    $receipt.loopback_tcp_available = $tcp
-    $receipt.result = 'PASS'
+    $receipt['loopback_tcp_available'] = $tcp
+    $receipt['result'] = 'PASS'
 } catch {
-    $receipt.error = $_.Exception.Message
+    $receipt['error'] = $_.Exception.Message
     throw
 } finally {
     if ($started) {
         try {
             Stop-ControlledContainer
             Assert-PortsClosedAfterStop
-            $receipt.post_stop_ports_closed = $true
+            $receipt['post_stop_ports_closed'] = $true
         } catch {
-            $receipt.post_stop_ports_closed = $false
-            $receipt.stop_error = $_.Exception.Message
-            $receipt.result = 'HOLD'
+            $receipt['post_stop_ports_closed'] = $false
+            $receipt['stop_error'] = $_.Exception.Message
+            $receipt['result'] = 'HOLD'
         }
     }
-    $receipt.receipt_written_utc = (Get-Date).ToUniversalTime().ToString('o')
+    $receipt['receipt_written_utc'] = (Get-Date).ToUniversalTime().ToString('o')
     $path = Write-Receipt -Receipt $receipt
     Write-Output "G1 containment receipt: $path"
 }
 
-if ($receipt.result -ne 'PASS') {
+if ($receipt['result'] -ne 'PASS') {
     throw 'G1 containment verification did not reach PASS. Review the local receipt.'
 }
 
