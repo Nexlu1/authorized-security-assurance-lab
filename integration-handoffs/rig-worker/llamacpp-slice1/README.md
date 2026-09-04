@@ -17,11 +17,13 @@ We deliberately do **not** vendor thousands of llama.cpp source files into this 
 Included:
 
 - exact-SHA llama.cpp source acquisition;
+- refusal to build reused donor source if Git reports tracked, staged, extra untracked, or ignored worktree changes;
 - Windows x64 CPU/static `llama-server` + `llama-cli` build using the already-qualified configuration;
 - upstream `main` CTest execution by default;
 - local build receipt with SHA-256 hashes;
 - localhost-only server launch;
-- API-key authentication through an inherited environment variable, not a command-line argument;
+- API-key authentication through the child environment, not a command-line argument;
+- process launch through a real argument vector so paths containing spaces remain intact;
 - offline runtime mode;
 - Web UI disabled;
 - localhost-only CORS;
@@ -67,7 +69,7 @@ To rebuild only the known build directory:
 .\Build-RigWorkerLlamaCpp.ps1 -Workspace 'D:\RigWorker' -CleanBuild
 ```
 
-The script refuses to reuse an existing `llama.cpp-source` directory unless it contains the Rig Worker ownership marker and the exact pinned Git commit. It also removes the donor Git remote after acquisition.
+The script refuses to reuse an existing `llama.cpp-source` directory unless it contains a valid Rig Worker ownership marker, is still on the exact pinned commit, has no Git remote, and has no worktree differences except that marker. It does not silently reset or discard local files.
 
 The local receipt is written to:
 
@@ -83,7 +85,7 @@ Generate a strong key in the current PowerShell process without typing a literal
 $env:RIG_WORKER_API_KEY = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
 ```
 
-The controller copies that value into `LLAMA_API_KEY` only while creating the child process, then restores/removes the parent variable. The key is not written into the runtime state file and is not placed on the process command line.
+The controller places that value directly into the new child process environment as `LLAMA_API_KEY`. It does not modify the parent process's `LLAMA_API_KEY`, write the key into the runtime state file, or place the key on the child command line.
 
 ## Start
 
@@ -103,7 +105,9 @@ Slice 1 starts `llama-server` with:
 - `--offline`
 - `--no-webui`
 - `--cors-origins localhost`
-- authentication inherited through `LLAMA_API_KEY`
+- authentication through child-environment `LLAMA_API_KEY`
+
+The process is launched with `System.Diagnostics.ProcessStartInfo.ArgumentList`, so model and log paths remain single arguments even when they contain spaces.
 
 No GPU backend or GPU-layer count is forced in this slice.
 
