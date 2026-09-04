@@ -35,6 +35,47 @@ function Invoke-Checked {
     }
 }
 
+function Assert-PinnedSourceWorktree {
+    param(
+        [Parameter(Mandatory = $true)][string]$GitPath,
+        [Parameter(Mandatory = $true)][string]$SourcePath,
+        [Parameter(Mandatory = $true)][string]$MarkerPath,
+        [Parameter(Mandatory = $true)][string]$MarkerName,
+        [Parameter(Mandatory = $true)][string]$ExpectedSha
+    )
+
+    if (-not (Test-Path -LiteralPath $MarkerPath -PathType Leaf)) {
+        throw "Rig Worker donor ownership marker is missing: $MarkerPath"
+    }
+
+    try {
+        $marker = Get-Content -LiteralPath $MarkerPath -Raw -Encoding utf8 | ConvertFrom-Json
+    }
+    catch {
+        throw "Rig Worker donor ownership marker is unreadable: $MarkerPath. $($_.Exception.Message)"
+    }
+    if ($marker.repository -ne 'ggml-org/llama.cpp' -or $marker.commit_sha -ne $ExpectedSha) {
+        throw "Rig Worker donor ownership marker does not match the pinned repository and commit."
+    }
+
+    $statusLines = @(& $GitPath -C $SourcePath status --porcelain=v1 --untracked-files=all --ignored=matching)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Could not inspect the donor worktree before build.'
+    }
+
+    $allowedMarkerLine = "?? $MarkerName"
+    $unexpected = @($statusLines | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne $allowedMarkerLine
+    })
+    if ($unexpected.Count -gt 0) {
+        throw "Refusing to build a modified donor worktree. Unexpected Git status: $($unexpected -join '; ')"
+    }
+
+    if (-not ($statusLines -contains $allowedMarkerLine)) {
+        throw 'Rig Worker ownership marker is not the sole recorded worktree difference; refusing to build.'
+    }
+}
+
 $git = Require-Command 'git'
 $cmake = Require-Command 'cmake'
 $ninja = Require-Command 'ninja'
@@ -90,6 +131,13 @@ $remainingRemotes = (& $git -C $sourcePath remote | Out-String).Trim()
 if ($remainingRemotes) {
     throw "Donor source must not retain a Git remote after acquisition. Found: $remainingRemotes"
 }
+
+Assert-PinnedSourceWorktree `
+    -GitPath $git `
+    -SourcePath $sourcePath `
+    -MarkerPath $sourceMarker `
+    -MarkerName $SourceMarkerName `
+    -ExpectedSha $DonorSha
 
 if ($CleanBuild -and (Test-Path -LiteralPath $buildPath)) {
     Remove-Item -LiteralPath $buildPath -Recurse -Force
