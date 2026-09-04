@@ -123,12 +123,13 @@ jobs:
           import pathlib
           import subprocess
 
-          root = pathlib.Path('donor')
           raw = subprocess.check_output(['git', '-C', 'donor', 'ls-files', '-s', '-z'])
           hashes = []
+          entries = {}
           extensions = collections.Counter()
           total = 0
           submodules = 0
+          symlinks = 0
 
           for record in raw.split(b'\0'):
               if not record:
@@ -137,6 +138,8 @@ jobs:
               mode, object_sha, stage = metadata.decode('ascii').split()
               name = path_bytes.decode('utf-8', 'surrogateescape')
               path = pathlib.PurePosixPath(name)
+              if path.is_absolute() or '..' in path.parts:
+                  raise SystemExit(f'unsafe tracked path: {name!r}')
               suffix = path.suffix.lower() or '<none>'
               extensions[suffix] += 1
 
@@ -151,16 +154,20 @@ jobs:
                   # without following them on the runner filesystem.
                   data = subprocess.check_output(['git', '-C', 'donor', 'cat-file', '-p', object_sha])
                   kind = 'symlink' if mode == '120000' else 'blob'
+                  if kind == 'symlink':
+                      symlinks += 1
 
               total += len(data)
-              hashes.append({
+              entry = {
                   'path': name,
                   'mode': mode,
                   'kind': kind,
                   'git_object_sha': object_sha,
                   'size': len(data),
                   'sha256': hashlib.sha256(data).hexdigest(),
-              })
+              }
+              hashes.append(entry)
+              entries[name] = entry
 
           hashes.sort(key=lambda item: item['path'])
           meta = {
@@ -174,18 +181,62 @@ jobs:
               'tracked_entry_count': len(hashes),
               'tracked_blob_bytes': total,
               'gitlink_count': submodules,
+              'symlink_count': symlinks,
               'extensions': dict(extensions.most_common()),
               'donor_code_executed': False,
           }
           pathlib.Path('evidence/source-metadata.json').write_text(json.dumps(meta, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           pathlib.Path('evidence/source-tree.sha256.json').write_text(json.dumps(hashes, indent=2, sort_keys=True) + '\n', encoding='utf-8')
 
+          preserved = []
+          policy_errors = []
           for filename in ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'NOTICE', 'NOTICE.md', 'COPYING', 'COPYING.md', 'go.mod', 'go.sum'):
-              src = root / filename
-              if src.is_file():
-                  (pathlib.Path('evidence/source-files') / filename).write_bytes(src.read_bytes())
+              entry = entries.get(filename)
+              if entry is None:
+                  continue
+              if entry['mode'] not in ('100644', '100755') or entry['kind'] != 'blob':
+                  policy_errors.append(f'{filename} is {entry["kind"]} mode {entry["mode"]}; refusing to follow or preserve it as a regular file')
+                  continue
+              data = subprocess.check_output(['git', '-C', 'donor', 'cat-file', '-p', entry['git_object_sha']])
+              (pathlib.Path('evidence/source-files') / filename).write_bytes(data)
+              preserved.append({
+                  'path': filename,
+                  'git_object_sha': entry['git_object_sha'],
+                  'sha256': hashlib.sha256(data).hexdigest(),
+                  'size': len(data),
+              })
+
+          pathlib.Path('evidence/preserved-metadata-files.json').write_text(
+              json.dumps({'preserved': preserved, 'policy_errors': policy_errors}, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          if policy_errors:
+              raise SystemExit('; '.join(policy_errors))
           PY
           git -C donor archive --format=tar "$DONOR_SHA" | sha256sum | awk '{print $1}' > evidence/git-archive.sha256
+
+      - name: Neutralize tracked symlinks before passive scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          entries = json.loads(pathlib.Path('evidence/source-tree.sha256.json').read_text(encoding='utf-8'))
+          root = pathlib.Path('donor')
+          for entry in entries:
+              if entry.get('kind') != 'symlink':
+                  continue
+              rel = pathlib.PurePosixPath(entry['path'])
+              if rel.is_absolute() or '..' in rel.parts:
+                  raise SystemExit(f'unsafe symlink path in fingerprint: {entry["path"]!r}')
+              target = root.joinpath(*rel.parts)
+              if not os.path.islink(target):
+                  raise SystemExit(f'expected tracked symlink was not a symlink after checkout: {entry["path"]!r}')
+              target.unlink()
+          PY
 
       - name: Remove Git metadata before passive scanners
         shell: bash
@@ -262,6 +313,8 @@ jobs:
           cat > evidence/INTAKE_BOUNDARY.txt <<'EOF'
           Passive FOSS donor intake only.
           Donor source was downloaded at the exact recorded Git commit and parsed by scanners.
+          Tracked symlinks were fingerprinted from Git objects and removed before passive scanners ran.
+          Preserved metadata files were read from exact regular Git blobs, never through filesystem symlinks.
           No donor application, build script, test suite, binary, installer, workflow, hook or other donor code was executed.
           No third-party GitHub write action was performed.
           Scanner success is not integration approval.
