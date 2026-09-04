@@ -1,0 +1,29 @@
+name: Temporary MCR verifier R2 regression
+
+on:
+  push:
+    branches:
+      - temporary/mcr-verifier-r2-test-20260904
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Check out test branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Windows PowerShell 5.1 regression
+        shell: powershell
+        run: .\tools\mcr_verifier_list_regression.ps1
+
+      - name: PowerShell 7 regression
+        shell: pwsh
+        run: .\tools\mcr_verifier_list_regression.ps1
