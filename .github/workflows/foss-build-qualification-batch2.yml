@@ -1,0 +1,271 @@
+name: FOSS build qualification batch 2
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'qualification/batch2/**'
+      - '.github/workflows/foss-build-qualification-batch2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foss-build-qualification-batch2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ''
+  GITHUB_TOKEN: ''
+  GIT_TERMINAL_PROMPT: '0'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PIP_NO_INPUT: '1'
+
+jobs:
+  validate:
+    name: validate-batch2-manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out qualification controls only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require manifest to match executable qualification jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          doc = json.loads(Path('qualification/batch2/BUILD_QUALIFICATION.json').read_text(encoding='utf-8'))
+          if doc.get('schema_version') != 1:
+              raise SystemExit('unsupported schema_version')
+          policy = doc.get('policy', {})
+          required_policy = {
+              'third_party_write': False,
+              'secrets_available_to_donor': False,
+              'execute_donor_code': True,
+              'publish_compiled_donor_artifacts': False,
+              'qualification_is_not_target_project_integration': True,
+          }
+          for key, expected in required_policy.items():
+              if policy.get(key) is not expected:
+                  raise SystemExit(f'policy mismatch for {key}')
+
+          expected = {
+              'netforensicai-evidence-core': ('Sh3n0bi/NetForensicAI', '70cd1b98a4433ab6fe2db6280799d33673acea9e'),
+              'winsw-service-supervision': ('winsw/winsw', '1d0ee4a91bad596d5e7e9c360f2b39ef54674674'),
+          }
+          found = {}
+          for candidate in doc.get('candidates', []):
+              cid = candidate.get('id')
+              if cid in found:
+                  raise SystemExit(f'duplicate candidate id: {cid}')
+              found[cid] = (candidate.get('repository'), candidate.get('sha'))
+          if found != expected:
+              raise SystemExit(f'manifest candidates differ from executable jobs: {found!r}')
+          print('batch 2 manifest matches executable qualification jobs')
+          PY
+
+  netforensicai:
+    name: qualify-netforensicai-evidence-core
+    needs: validate
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Acquire exact public donor source
+        id: acquire
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init donor
+          git -C donor remote add origin https://github.com/Sh3n0bi/NetForensicAI.git
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin 70cd1b98a4433ab6fe2db6280799d33673acea9e
+          git -C donor checkout --detach FETCH_HEAD
+          test "$(git -C donor rev-parse HEAD)" = '70cd1b98a4433ab6fe2db6280799d33673acea9e'
+          git -C donor remote remove origin
+          test -z "$(git -C donor remote)"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+          cache: false
+
+      - name: Install core package and pytest only
+        id: install
+        working-directory: donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e '.[dev]'
+
+      - name: Run focused evidence and case-control tests
+        id: tests
+        working-directory: donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest -q \
+            tests/test_evidence.py \
+            tests/test_audit.py \
+            tests/test_export.py \
+            tests/test_hashing.py \
+            tests/test_store.py \
+            tests/test_cases.py \
+            tests/test_findings.py \
+            tests/test_timeline.py \
+            tests/test_pipeline.py \
+            tests/test_reports.py
+
+      - name: Build and validate Python packages
+        id: package
+        working-directory: donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
+          mkdir -p ../evidence
+          sha256sum dist/* > ../evidence/package-hashes.sha256
+          rm -rf dist
+
+      - name: Record qualification receipt
+        if: always()
+        shell: bash
+        env:
+          ACQUIRE: ${{ steps.acquire.outcome }}
+          INSTALL: ${{ steps.install.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          PACKAGE: ${{ steps.package.outcome }}
+        run: |
+          mkdir -p evidence
+          python3 - <<'PY'
+          import json, os
+          receipt = {
+              'schema_version': 1,
+              'donor': 'Sh3n0bi/NetForensicAI',
+              'sha': '70cd1b98a4433ab6fe2db6280799d33673acea9e',
+              'runner': 'ubuntu-24.04',
+              'python': '3.12',
+              'scope': 'evidence/audit/export/hash/store/case/finding/timeline/pipeline/report plus package build',
+              'optional_ai_services_executed': False,
+              'network_intel_services_executed': False,
+              'package_artifacts_uploaded': False,
+              'upstream_write_credentials': False,
+              'steps': {
+                  'acquire': os.environ.get('ACQUIRE'),
+                  'install': os.environ.get('INSTALL'),
+                  'focused_tests': os.environ.get('TESTS'),
+                  'package_build_check': os.environ.get('PACKAGE'),
+              },
+          }
+          with open('evidence/qualification.json', 'w', encoding='utf-8') as f:
+              json.dump(receipt, f, indent=2, sort_keys=True)
+              f.write('\n')
+          PY
+
+      - name: Preserve text qualification evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-netforensicai-evidence-core-receipt
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
+
+  winsw:
+    name: qualify-winsw-service-supervision
+    needs: validate
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Acquire exact public donor source
+        id: acquire
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init donor
+          git -C donor remote add origin https://github.com/winsw/winsw.git
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin 1d0ee4a91bad596d5e7e9c360f2b39ef54674674
+          git -C donor checkout --detach FETCH_HEAD
+          if ((git -C donor rev-parse HEAD).Trim() -ne '1d0ee4a91bad596d5e7e9c360f2b39ef54674674') { throw 'donor SHA mismatch' }
+          git -C donor remote remove origin
+          if (git -C donor remote) { throw 'donor repository still has a Git remote' }
+
+      - name: Set up .NET 7
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Record .NET environment
+        id: tools
+        shell: pwsh
+        run: dotnet --info
+
+      - name: Run upstream test route
+        id: tests
+        working-directory: donor/src
+        shell: pwsh
+        run: dotnet test
+
+      - name: Hash built executables without uploading them
+        id: hashes
+        if: ${{ always() && steps.tests.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $rows = @()
+          Get-ChildItem donor\src -Recurse -File -Filter *.exe -ErrorAction SilentlyContinue | ForEach-Object {
+            $rows += [pscustomobject]@{
+              path = $_.FullName.Substring((Resolve-Path donor).Path.Length + 1).Replace('\\','/')
+              size = $_.Length
+              sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          }
+          $rows | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath evidence/compiled-executables.json -Encoding utf8
+
+      - name: Record qualification receipt
+        if: always()
+        shell: pwsh
+        env:
+          ACQUIRE: ${{ steps.acquire.outcome }}
+          TOOLS: ${{ steps.tools.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $receipt = [ordered]@{
+            schema_version = 1
+            donor = 'winsw/winsw'
+            sha = '1d0ee4a91bad596d5e7e9c360f2b39ef54674674'
+            runner = 'windows-2022'
+            dotnet = '7.0.x'
+            service_installation_attempted = $false
+            package_published = $false
+            binary_uploaded = $false
+            upstream_write_credentials = $false
+            steps = [ordered]@{
+              acquire = $env:ACQUIRE
+              tools = $env:TOOLS
+              dotnet_test = $env:TESTS
+            }
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath evidence/qualification.json -Encoding utf8
+
+      - name: Preserve text qualification evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-winsw-service-supervision-receipt
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30
