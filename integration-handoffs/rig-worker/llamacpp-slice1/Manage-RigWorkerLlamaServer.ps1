@@ -203,18 +203,19 @@ switch ($Action) {
             $arguments += @('--ctx-size', $ContextSize.ToString())
         }
 
-        $oldLlamaApiKey = $env:LLAMA_API_KEY
-        try {
-            $env:LLAMA_API_KEY = $apiKey
-            $process = Start-Process -FilePath $resolvedServer -ArgumentList $arguments -PassThru -WindowStyle Hidden
+        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = $resolvedServer
+        $startInfo.WorkingDirectory = Split-Path -Parent $resolvedServer
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        foreach ($argument in $arguments) {
+            [void]$startInfo.ArgumentList.Add([string]$argument)
         }
-        finally {
-            if ($null -eq $oldLlamaApiKey) {
-                Remove-Item Env:LLAMA_API_KEY -ErrorAction SilentlyContinue
-            }
-            else {
-                $env:LLAMA_API_KEY = $oldLlamaApiKey
-            }
+        $startInfo.Environment['LLAMA_API_KEY'] = $apiKey
+
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        if (-not $process) {
+            throw 'Failed to create the llama-server child process.'
         }
 
         Start-Sleep -Milliseconds 750
@@ -242,7 +243,7 @@ switch ($Action) {
             offline = $true
             web_ui = $false
             cors_origins = 'localhost'
-            authentication = 'LLAMA_API_KEY inherited from RIG_WORKER_API_KEY; key intentionally omitted from state'
+            authentication = 'LLAMA_API_KEY supplied directly in the child environment from RIG_WORKER_API_KEY; key intentionally omitted from state'
             log_path = $logPath
         }
         $state | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $statePath -Encoding utf8
