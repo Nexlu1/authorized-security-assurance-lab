@@ -1,0 +1,125 @@
+name: Build Rig Worker portable demo R1
+
+on:
+  push:
+    branches:
+      - rig-worker-portable-demo-r1
+    paths:
+      - 'portable-demo/**'
+      - '.github/workflows/build-rig-worker-portable-demo-r1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-portable-demo:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - name: Check out package source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate launcher syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'portable-demo/RigWorkerDemo.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'Rig Worker demo launcher contains PowerShell syntax errors.'
+          }
+
+      - name: Assemble verified portable package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packageName = 'Rig_Worker_Local_AI_Demo_R1_Windows_x64'
+          $outRoot = Join-Path $PWD 'out'
+          $packageRoot = Join-Path $outRoot $packageName
+          $downloadRoot = Join-Path $outRoot 'downloads'
+          $extractRoot = Join-Path $outRoot 'llama-extracted'
+          New-Item -ItemType Directory -Force $packageRoot, $downloadRoot, $extractRoot | Out-Null
+          Copy-Item 'portable-demo/START_RIG_WORKER_DEMO.cmd' $packageRoot
+          Copy-Item 'portable-demo/RigWorkerDemo.ps1' $packageRoot
+          Copy-Item 'portable-demo/README_FIRST.txt' $packageRoot
+          New-Item -ItemType Directory -Force (Join-Path $packageRoot 'bin'), (Join-Path $packageRoot 'LICENSES') | Out-Null
+
+          $llamaUrl = 'https://github.com/ggml-org/llama.cpp/releases/download/b10621/llama-b10621-bin-win-cpu-x64.zip'
+          $llamaZip = Join-Path $downloadRoot 'llama-b10621-bin-win-cpu-x64.zip'
+          $llamaExpected = '0e8b65e650e369f70f8307d890508886f171ef4fb00facccddd4a1b7ffdaca51'
+          Invoke-WebRequest -Uri $llamaUrl -OutFile $llamaZip -UseBasicParsing
+          $llamaActual = (Get-FileHash -LiteralPath $llamaZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($llamaActual -ne $llamaExpected) {
+            throw "llama.cpp release ZIP SHA-256 mismatch: $llamaActual"
+          }
+          Expand-Archive -LiteralPath $llamaZip -DestinationPath $extractRoot -Force
+          $server = Get-ChildItem $extractRoot -Recurse -File -Filter 'llama-server.exe' | Select-Object -First 1
+          if (-not $server) { throw 'Official llama.cpp archive did not contain llama-server.exe.' }
+          Copy-Item (Join-Path $server.Directory.FullName '*') (Join-Path $packageRoot 'bin') -Recurse -Force
+          if (-not (Test-Path (Join-Path $packageRoot 'bin/llama-server.exe'))) {
+            throw 'Portable package did not receive llama-server.exe.'
+          }
+
+          Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/ggml-org/llama.cpp/b10621/LICENSE' -OutFile (Join-Path $packageRoot 'LICENSES/llama.cpp-MIT.txt') -UseBasicParsing
+          Invoke-WebRequest -Uri 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/raw/df5bf01389a39c743ab467d734bf501681e041c5/LICENSE' -OutFile (Join-Path $packageRoot 'LICENSES/Qwen-Apache-2.0.txt') -UseBasicParsing
+
+          @'
+          RIG WORKER LOCAL AI DEMO R1 - SOURCE PROVENANCE
+          =================================================
+
+          llama.cpp
+          Repository: https://github.com/ggml-org/llama.cpp
+          Official release family: v0.3.0
+          Binary release tag: b10621
+          Binary asset: llama-b10621-bin-win-cpu-x64.zip
+          Asset SHA-256: 0e8b65e650e369f70f8307d890508886f171ef4fb00facccddd4a1b7ffdaca51
+          Licence: MIT
+
+          Demo model (downloaded on first run; not redistributed inside this ZIP)
+          Repository: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF
+          Pinned revision: df5bf01389a39c743ab467d734bf501681e041c5
+          File: qwen2.5-0.5b-instruct-q4_k_m.gguf
+          Expected SHA-256: 74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db
+          Licence: Apache-2.0
+
+          Runtime behaviour
+          - Windows x64 CPU build
+          - web interface served locally by llama-server
+          - server binds only to 127.0.0.1
+          - server starts with --offline after the model is present
+          - no paid AI service or cloud inference account is required
+          '@ | Set-Content -LiteralPath (Join-Path $packageRoot 'SOURCE_PROVENANCE.txt') -Encoding utf8
+
+          $manifestPath = Join-Path $packageRoot 'PACKAGE_MANIFEST_SHA256.txt'
+          $packagePrefix = $packageRoot.TrimEnd('\') + '\'
+          $rows = Get-ChildItem $packageRoot -Recurse -File | Where-Object { $_.FullName -ne $manifestPath } | Sort-Object FullName | ForEach-Object {
+            $relative = $_.FullName.Substring($packagePrefix.Length).Replace('\','/')
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $relative"
+          }
+          $rows | Set-Content -LiteralPath $manifestPath -Encoding ascii
+
+          $finalZip = Join-Path $outRoot ($packageName + '.zip')
+          Compress-Archive -Path (Join-Path $packageRoot '*') -DestinationPath $finalZip -CompressionLevel Optimal -Force
+          $finalHash = (Get-FileHash -LiteralPath $finalZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$finalHash  $($packageName).zip" | Set-Content -LiteralPath (Join-Path $outRoot 'DOWNLOAD_SHA256.txt') -Encoding ascii
+          Write-Host "PACKAGE=$finalZip"
+          Write-Host "SHA256=$finalHash"
+
+      - name: Upload usable demo ZIP
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Rig-Worker-Local-AI-Demo-R1-Windows-x64
+          path: |
+            out/Rig_Worker_Local_AI_Demo_R1_Windows_x64.zip
+            out/DOWNLOAD_SHA256.txt
+          if-no-files-found: error
+          retention-days: 30
