@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "target_project": "Rig Worker",
+  "slice": "llamacpp-core-1",
+  "integration_mode": "external supervised engine",
+  "donor": {
+    "repository": "ggml-org/llama.cpp",
+    "commit_sha": "0ef4d560e12c1a46470265c1abd31dd47c777d23",
+    "license": "MIT"
+  },
+  "qualification": {
+    "status": "PASS",
+    "runner": "windows-2025",
+    "configuration": "x64 CPU static; llama-server; RPC; LLVM OpenMP fetch; BoringSSL; GGML_NATIVE=OFF",
+    "tests": "ctest -L main -C Release --verbose --timeout 900",
+    "artifact_receipt_digest": "sha256:eac63fdef65447cbd365266b8a209fef8149383131bdae0700de7c888f674ba2",
+    "reference_build_outputs": {
+      "llama-server.exe": {
+        "size_bytes": 18782208,
+        "sha256": "9d539b75578dc67ebcb28c9f0ae042925e94e1bd282ce6cf638297431529b4c1"
+      },
+      "llama-cli.exe": {
+        "size_bytes": 18980864,
+        "sha256": "6754506336c330a96cdfce7b6fb036fe031038b25d4b266485a527c0e008798c"
+      }
+    },
+    "reference_hash_note": "Reference hashes are from the qualified GitHub Windows runner build. Local builds may differ when the toolchain or build environment differs and must receive their own receipt hashes."
+  },
+  "runtime_policy": {
+    "bind_host": "127.0.0.1",
+    "default_port": 8080,
+    "authentication": "required; RIG_WORKER_API_KEY is copied into LLAMA_API_KEY only for the child process",
+    "offline_runtime": true,
+    "web_ui": false,
+    "cors_origins": "localhost",
+    "automatic_model_download": false,
+    "forced_gpu_backend": false,
+    "forced_gpu_layers": false
+  },
+  "boundaries": {
+    "model_path_is_user_supplied": true,
+    "api_key_is_not_written_to_disk": true,
+    "api_key_is_not_put_on_process_command_line": true,
+    "pid_is_verified_against_executable_before_stop": true,
+    "donor_source_is_not_vendored_into_this_repository": true,
+    "target_repo_pending": true
+  }
+}
