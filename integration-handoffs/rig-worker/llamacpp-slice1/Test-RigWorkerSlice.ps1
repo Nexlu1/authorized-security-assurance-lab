@@ -28,7 +28,7 @@ function Assert-NoParseErrors {
     [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors.Count -gt 0) {
         $details = ($errors | ForEach-Object { $_.Message }) -join '; '
-        throw "PowerShell syntax errors in $Path: $details"
+        throw "PowerShell syntax errors in ${Path}: $details"
     }
 }
 
