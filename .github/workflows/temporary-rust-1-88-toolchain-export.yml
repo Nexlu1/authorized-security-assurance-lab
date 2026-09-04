@@ -1,4 +1,4 @@
-name: Temporary Rust 1.98 qualification toolchain export
+name: Temporary Rust 1.98 Windows cross-build support export
 
 on:
   push:
@@ -14,47 +14,57 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Install exact Rust qualification toolchain
+      - name: Install exact Rust Windows GNU target
         run: |
-          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup target add --toolchain 1.98.0 x86_64-pc-windows-gnu
           rustup run 1.98.0 rustc -Vv
-          rustup run 1.98.0 cargo -V
-          rustup run 1.98.0 rustfmt -V
-          rustup run 1.98.0 cargo-clippy -V
+          rustup run 1.98.0 rustc --print target-list | grep '^x86_64-pc-windows-gnu$'
 
-      - name: Package exact toolchain directory
+      - name: Download and verify exact LLVM-MinGW cross toolchain
+        run: |
+          curl --fail --location --retry 4 \
+            --output llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz \
+            https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz
+          echo 'cee8d2ce3da5145ce4dc882e70d0b0719a783d53a99752c60948fc0659975a65  llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz' | sha256sum --check
+
+      - name: Package Rust target and emit receipt
         run: |
           SYSROOT="$(rustup run 1.98.0 rustc --print sysroot)"
-          BASENAME="$(basename "$SYSROOT")"
-          PARENT="$(dirname "$SYSROOT")"
-          tar --zstd -cf rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst -C "$PARENT" "$BASENAME"
-          sha256sum rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst > RUST_1_98_0_QUALIFICATION_TOOLCHAIN_SHA256.txt
+          tar --zstd -cf rust-1.98.0-x86_64-pc-windows-gnu-target.tar.zst \
+            -C "$SYSROOT/lib/rustlib" x86_64-pc-windows-gnu
+          sha256sum rust-1.98.0-x86_64-pc-windows-gnu-target.tar.zst > WINDOWS_CROSS_SUPPORT_SHA256.txt
+          sha256sum llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz >> WINDOWS_CROSS_SUPPORT_SHA256.txt
           python3 - <<'PY'
           import hashlib, json, pathlib, subprocess
-          p=pathlib.Path('rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst')
+          rust_target=pathlib.Path('rust-1.98.0-x86_64-pc-windows-gnu-target.tar.zst')
+          llvm=pathlib.Path('llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz')
           receipt={
-            'schema':'mcr-rust-qualification-toolchain-export-receipt-v1',
-            'toolchain':'1.98.0-x86_64-unknown-linux-gnu',
-            'components':['rustc','cargo','rustdoc','rustfmt','clippy'],
-            'bytes':p.stat().st_size,
-            'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),
+            'schema':'mcr-windows-cross-build-support-export-receipt-v1',
+            'rust_toolchain':'1.98.0',
+            'rust_target':'x86_64-pc-windows-gnu',
+            'rust_target_archive':rust_target.name,
+            'rust_target_archive_bytes':rust_target.stat().st_size,
+            'rust_target_archive_sha256':hashlib.sha256(rust_target.read_bytes()).hexdigest(),
+            'llvm_mingw_release':'20260826',
+            'llvm_mingw_asset':llvm.name,
+            'llvm_mingw_bytes':llvm.stat().st_size,
+            'llvm_mingw_sha256':hashlib.sha256(llvm.read_bytes()).hexdigest(),
             'rustc':subprocess.check_output(['rustup','run','1.98.0','rustc','-Vv'],text=True),
-            'cargo':subprocess.check_output(['rustup','run','1.98.0','cargo','-V'],text=True).strip(),
-            'rustfmt':subprocess.check_output(['rustup','run','1.98.0','rustfmt','-V'],text=True).strip(),
-            'clippy':subprocess.check_output(['rustup','run','1.98.0','cargo-clippy','-V'],text=True).strip(),
-            'selection_reason':'Rust 1.98.0 is the corrected qualification pin; the former 1.88.0 pin cannot compile rusqlite 0.40.1 because that dependency uses std::cfg_select!.'
+            'qualification_boundary':'Cross-build support only. A produced PE executable is not Windows-qualified until executed and tested on target Windows.'
           }
-          pathlib.Path('RUST_1_98_0_QUALIFICATION_TOOLCHAIN_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
+          pathlib.Path('WINDOWS_CROSS_BUILD_SUPPORT_EXPORT_RECEIPT.json').write_text(json.dumps(receipt,indent=2))
           PY
 
-      - name: Upload exact qualification toolchain
+      - name: Upload exact Windows cross-build support
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: rust-1-98-0-linux-qualification-toolchain
+          name: rust-1-98-windows-cross-build-support
           path: |
-            rust-1.98.0-x86_64-unknown-linux-gnu-rustfmt-clippy.tar.zst
-            RUST_1_98_0_QUALIFICATION_TOOLCHAIN_SHA256.txt
-            RUST_1_98_0_QUALIFICATION_TOOLCHAIN_EXPORT_RECEIPT.json
+            rust-1.98.0-x86_64-pc-windows-gnu-target.tar.zst
+            llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz
+            WINDOWS_CROSS_SUPPORT_SHA256.txt
+            WINDOWS_CROSS_BUILD_SUPPORT_EXPORT_RECEIPT.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 3
