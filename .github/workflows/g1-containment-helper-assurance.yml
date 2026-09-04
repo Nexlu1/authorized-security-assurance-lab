@@ -1,0 +1,103 @@
+name: G1 containment helper assurance
+
+on:
+  pull_request:
+    paths:
+      - scripts/Invoke-G1WebGoatContainment.ps1
+      - .github/workflows/g1-containment-helper-assurance.yml
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/Invoke-G1WebGoatContainment.ps1
+      - .github/workflows/g1-containment-helper-assurance.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g1-containment-helper-assurance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  powershell51-static-assurance:
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Parse with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = (Resolve-Path 'scripts/Invoke-G1WebGoatContainment.ps1').Path
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw "PowerShell parser reported $($errors.Count) error(s)."
+          }
+          Write-Host 'Windows PowerShell 5.1 parse: PASS'
+
+      - name: Enforce G1 safety invariants
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $content = Get-Content -LiteralPath 'scripts/Invoke-G1WebGoatContainment.ps1' -Raw
+
+          $required = @(
+            "webgoat/webgoat:v2025.3",
+            "127.0.0.1:8080:8080",
+            "127.0.0.1:9090:9090",
+            "G1 startup and containment validation only; no vulnerability testing",
+            "G2 = 'CLOSED",
+            "Get-NetTCPConnection",
+            "Test-NetConnection",
+            "docker_server_version",
+            "post_stop_ports_closed"
+          )
+          foreach ($needle in $required) {
+            if (-not $content.Contains($needle)) {
+              throw "Required G1 safety invariant is missing: $needle"
+            }
+          }
+
+          $forbidden = @(
+            '0.0.0.0:8080',
+            '0.0.0.0:9090',
+            'Invoke-WebRequest',
+            'Invoke-RestMethod',
+            'curl ',
+            'wget ',
+            'zap-baseline',
+            'zap-full-scan',
+            'activeScan'
+          )
+          foreach ($needle in $forbidden) {
+            if ($content.Contains($needle)) {
+              throw "Forbidden G1 helper capability/text is present: $needle"
+            }
+          }
+
+          $pullMatches = [regex]::Matches($content, "Invoke-Docker -Arguments @\('pull', \$Image\)")
+          if ($pullMatches.Count -ne 1) {
+            throw "Expected exactly one explicit image pull path (Acquire); found $($pullMatches.Count)."
+          }
+
+          Write-Host 'G1 source safety invariants: PASS'
+
+      - name: Exercise non-mutating Plan action
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $text = (& .\scripts\Invoke-G1WebGoatContainment.ps1 -Action Plan | Out-String)
+          if ($text -notmatch 'G1 only') { throw 'Plan output did not preserve the G1-only authority boundary.' }
+          if ($text -notmatch '127\.0\.0\.1:8080:8080') { throw 'Plan output is missing the WebGoat loopback binding.' }
+          if ($text -notmatch '127\.0\.0\.1:9090:9090') { throw 'Plan output is missing the WebWolf loopback binding.' }
+          if ($text -notmatch 'CLOSED') { throw 'Plan output did not state that G2 is closed.' }
+          Write-Host 'Non-mutating Plan action: PASS'
