@@ -1,0 +1,330 @@
+name: FOSS donor intake
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'donor-intake/**'
+      - 'docs/FOSS_DONOR_INTAKE.md'
+      - '.github/workflows/foss-donor-intake.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foss-donor-intake-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out intake controls only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate donor manifest and create matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+
+          with open('donor-intake/DONORS.json', encoding='utf-8') as f:
+              doc = json.load(f)
+
+          if doc.get('schema_version') != 1:
+              raise SystemExit('unsupported donor manifest schema')
+          if doc.get('policy', {}).get('third_party_write') is not False:
+              raise SystemExit('third_party_write must remain false')
+          if doc.get('policy', {}).get('execute_donor_code_during_intake') is not False:
+              raise SystemExit('donor execution must remain disabled during passive intake')
+
+          items = []
+          seen = set()
+          for donor in doc.get('donors', []):
+              donor_id = donor.get('id', '')
+              repository = donor.get('repository', '')
+              sha = donor.get('sha', '')
+              if not re.fullmatch(r'[a-z0-9][a-z0-9-]*', donor_id):
+                  raise SystemExit(f'invalid donor id: {donor_id!r}')
+              if donor_id in seen:
+                  raise SystemExit(f'duplicate donor id: {donor_id}')
+              seen.add(donor_id)
+              if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
+                  raise SystemExit(f'invalid repository: {repository!r}')
+              if not re.fullmatch(r'[0-9a-f]{40}', sha):
+                  raise SystemExit(f'{donor_id}: exact 40-character commit SHA required')
+              items.append({
+                  'id': donor_id,
+                  'repository': repository,
+                  'sha': sha,
+                  'expected_license': donor.get('expected_license', ''),
+                  'target_project': donor.get('target_project', ''),
+                  'purpose': donor.get('purpose', ''),
+              })
+
+          if not items:
+              raise SystemExit('donor manifest is empty')
+
+          matrix = json.dumps({'include': items}, separators=(',', ':'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write(f'matrix={matrix}\n')
+          PY
+
+  passive-intake:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    name: donor-${{ matrix.id }}
+    steps:
+      - name: Acquire exact donor source without credentials
+        env:
+          DONOR_REPOSITORY: ${{ matrix.repository }}
+          DONOR_SHA: ${{ matrix.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init donor
+          git -C donor remote add origin "https://github.com/${DONOR_REPOSITORY}.git"
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin "$DONOR_SHA"
+          git -C donor checkout --detach FETCH_HEAD
+          test "$(git -C donor rev-parse HEAD)" = "$DONOR_SHA"
+
+      - name: Fingerprint exact source tree
+        env:
+          DONOR_ID: ${{ matrix.id }}
+          DONOR_REPOSITORY: ${{ matrix.repository }}
+          DONOR_SHA: ${{ matrix.sha }}
+          EXPECTED_LICENSE: ${{ matrix.expected_license }}
+          TARGET_PROJECT: ${{ matrix.target_project }}
+          PURPOSE: ${{ matrix.purpose }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/source-files
+          python3 - <<'PY'
+          import collections
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import subprocess
+
+          raw = subprocess.check_output(['git', '-C', 'donor', 'ls-files', '-s', '-z'])
+          hashes = []
+          entries = {}
+          extensions = collections.Counter()
+          total = 0
+          submodules = 0
+          symlinks = 0
+
+          for record in raw.split(b'\0'):
+              if not record:
+                  continue
+              metadata, path_bytes = record.split(b'\t', 1)
+              mode, object_sha, stage = metadata.decode('ascii').split()
+              name = path_bytes.decode('utf-8', 'surrogateescape')
+              path = pathlib.PurePosixPath(name)
+              if path.is_absolute() or '..' in path.parts:
+                  raise SystemExit(f'unsafe tracked path: {name!r}')
+              suffix = path.suffix.lower() or '<none>'
+              extensions[suffix] += 1
+
+              if mode == '160000':
+                  # A gitlink names a submodule commit rather than a source blob.
+                  # Do not initialize or execute it during passive intake.
+                  data = object_sha.encode('ascii')
+                  kind = 'gitlink'
+                  submodules += 1
+              else:
+                  # Read the exact Git blob. This fingerprints symlink payloads
+                  # without following them on the runner filesystem.
+                  data = subprocess.check_output(['git', '-C', 'donor', 'cat-file', '-p', object_sha])
+                  kind = 'symlink' if mode == '120000' else 'blob'
+                  if kind == 'symlink':
+                      symlinks += 1
+
+              total += len(data)
+              entry = {
+                  'path': name,
+                  'mode': mode,
+                  'kind': kind,
+                  'git_object_sha': object_sha,
+                  'size': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+              hashes.append(entry)
+              entries[name] = entry
+
+          hashes.sort(key=lambda item: item['path'])
+          meta = {
+              'schema_version': 1,
+              'donor_id': os.environ['DONOR_ID'],
+              'repository': os.environ['DONOR_REPOSITORY'],
+              'commit_sha': os.environ['DONOR_SHA'],
+              'expected_license': os.environ['EXPECTED_LICENSE'],
+              'target_project': os.environ['TARGET_PROJECT'],
+              'purpose': os.environ['PURPOSE'],
+              'tracked_entry_count': len(hashes),
+              'tracked_blob_bytes': total,
+              'gitlink_count': submodules,
+              'symlink_count': symlinks,
+              'extensions': dict(extensions.most_common()),
+              'donor_code_executed': False,
+          }
+          pathlib.Path('evidence/source-metadata.json').write_text(json.dumps(meta, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          pathlib.Path('evidence/source-tree.sha256.json').write_text(json.dumps(hashes, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
+          preserved = []
+          policy_errors = []
+          for filename in ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'NOTICE', 'NOTICE.md', 'COPYING', 'COPYING.md', 'go.mod', 'go.sum'):
+              entry = entries.get(filename)
+              if entry is None:
+                  continue
+              if entry['mode'] not in ('100644', '100755') or entry['kind'] != 'blob':
+                  policy_errors.append(f'{filename} is {entry["kind"]} mode {entry["mode"]}; refusing to follow or preserve it as a regular file')
+                  continue
+              data = subprocess.check_output(['git', '-C', 'donor', 'cat-file', '-p', entry['git_object_sha']])
+              (pathlib.Path('evidence/source-files') / filename).write_bytes(data)
+              preserved.append({
+                  'path': filename,
+                  'git_object_sha': entry['git_object_sha'],
+                  'sha256': hashlib.sha256(data).hexdigest(),
+                  'size': len(data),
+              })
+
+          pathlib.Path('evidence/preserved-metadata-files.json').write_text(
+              json.dumps({'preserved': preserved, 'policy_errors': policy_errors}, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          if policy_errors:
+              raise SystemExit('; '.join(policy_errors))
+          PY
+          git -C donor archive --format=tar "$DONOR_SHA" | sha256sum | awk '{print $1}' > evidence/git-archive.sha256
+
+      - name: Neutralize tracked symlinks before passive scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          entries = json.loads(pathlib.Path('evidence/source-tree.sha256.json').read_text(encoding='utf-8'))
+          root = pathlib.Path('donor')
+          for entry in entries:
+              if entry.get('kind') != 'symlink':
+                  continue
+              rel = pathlib.PurePosixPath(entry['path'])
+              if rel.is_absolute() or '..' in rel.parts:
+                  raise SystemExit(f'unsafe symlink path in fingerprint: {entry["path"]!r}')
+              target = root.joinpath(*rel.parts)
+              if not os.path.islink(target):
+                  raise SystemExit(f'expected tracked symlink was not a symlink after checkout: {entry["path"]!r}')
+              target.unlink()
+          PY
+
+      - name: Remove Git metadata before passive scanners
+        shell: bash
+        run: rm -rf donor/.git
+
+      - name: Install verified intake scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          gitleaks_archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          trivy_archive="$RUNNER_TEMP/trivy.tar.gz"
+          syft_archive="$RUNNER_TEMP/syft.tar.gz"
+          grype_archive="$RUNNER_TEMP/grype.tar.gz"
+
+          curl --fail --silent --show-error --location --output "$gitleaks_archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' "$gitleaks_archive" | sha256sum --check --strict
+          tar -xzf "$gitleaks_archive" -C "$RUNNER_TEMP" gitleaks
+
+          curl --fail --silent --show-error --location --output "$trivy_archive" \
+            "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz"
+          printf '%s  %s\n' '2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a' "$trivy_archive" | sha256sum --check --strict
+          tar -xzf "$trivy_archive" -C "$RUNNER_TEMP" trivy
+
+          curl --fail --silent --show-error --location --output "$syft_archive" \
+            "https://github.com/anchore/syft/releases/download/v1.51.1/syft_1.51.1_linux_amd64.tar.gz"
+          printf '%s  %s\n' '8fcb33017a0dc1058298c923c436d19dfa68ae93968e0b423248542e3afb9fc3' "$syft_archive" | sha256sum --check --strict
+          tar -xzf "$syft_archive" -C "$RUNNER_TEMP" syft
+
+          curl --fail --silent --show-error --location --output "$grype_archive" \
+            "https://github.com/anchore/grype/releases/download/v0.118.0/grype_0.118.0_linux_amd64.tar.gz"
+          printf '%s  %s\n' '1d444c5e7360471815f7158f71935fcecc68a3c417d85c7344f770854300bba2' "$grype_archive" | sha256sum --check --strict
+          tar -xzf "$grype_archive" -C "$RUNNER_TEMP" grype
+
+          "$RUNNER_TEMP/gitleaks" version
+          "$RUNNER_TEMP/trivy" --version
+          "$RUNNER_TEMP/syft" version
+          "$RUNNER_TEMP/grype" version
+
+      - name: Scan source for secrets
+        id: gitleaks
+        shell: bash
+        run: |
+          set +e
+          "$RUNNER_TEMP/gitleaks" dir donor --redact --no-banner --report-format json --report-path evidence/gitleaks.json
+          code=$?
+          printf '%s\n' "$code" > evidence/gitleaks-exit-code.txt
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+          exit 0
+
+      - name: Scan vulnerabilities, misconfiguration and licences
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/trivy" fs \
+            --scanners vuln,misconfig,license \
+            --license-full \
+            --format json \
+            --output evidence/trivy.json \
+            donor
+
+      - name: Generate SBOM and vulnerability review
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/syft" donor \
+            -o syft-json=evidence/sbom.syft.json \
+            -o spdx-json=evidence/sbom.spdx.json
+          "$RUNNER_TEMP/grype" "sbom:evidence/sbom.syft.json" -o json > evidence/grype.json
+
+      - name: Record passive-intake boundary
+        shell: bash
+        run: |
+          cat > evidence/INTAKE_BOUNDARY.txt <<'EOF'
+          Passive FOSS donor intake only.
+          Donor source was downloaded at the exact recorded Git commit and parsed by scanners.
+          Tracked symlinks were fingerprinted from Git objects and removed before passive scanners ran.
+          Preserved metadata files were read from exact regular Git blobs, never through filesystem symlinks.
+          No donor application, build script, test suite, binary, installer, workflow, hook or other donor code was executed.
+          No third-party GitHub write action was performed.
+          Scanner success is not integration approval.
+          EOF
+
+      - name: Preserve donor intake evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: donor-${{ matrix.id }}-intake
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 30

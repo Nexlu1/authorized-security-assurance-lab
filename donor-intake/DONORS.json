@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "source": "public GitHub repositories only",
+    "third_party_write": false,
+    "execute_donor_code_during_intake": false,
+    "pin_exact_commit_before_scan": true,
+    "integration_requires_separate_target_project_review": true
+  },
+  "donors": [
+    {
+      "id": "goqite",
+      "repository": "maragudk/goqite",
+      "sha": "71a935991bf7971440a7e09f50d2fca5fbb73eb8",
+      "expected_license": "MIT",
+      "target_project": "ECO",
+      "purpose": "Go-native persistent SQLite queue and background-job patterns",
+      "status": "HOLD",
+      "decision_note": "Passive scan clean, but current donor requires Go 1.25 while ECO main declares Go 1.23. Do not force a toolchain upgrade solely for this donor."
+    },
+    {
+      "id": "liteq",
+      "repository": "khepin/liteq",
+      "sha": "ed648f234d9475ef9d38047c42717f368115784a",
+      "expected_license": "MIT",
+      "target_project": "ECO",
+      "purpose": "Go 1.23-compatible persistent SQLite job queue with retries, delayed jobs, deduplication, visibility timeouts and cancellable workers",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "gopsutil",
+      "repository": "shirou/gopsutil",
+      "sha": "7d254a02800683e5a322b09e1843d3399f66f307",
+      "expected_license": "BSD-3-Clause",
+      "target_project": "ECO / Rig Worker",
+      "purpose": "Go-native CPU, RAM, disk, process and network measurements including Windows",
+      "status": "HOLD",
+      "decision_note": "Passive intake found GO-2026-5024 / CVE-2026-39824 in direct golang.org/x/sys v0.41.0 dependency; fixed version is v0.44.0. Requalify a safe upstream revision before integration."
+    },
+    {
+      "id": "progressbar",
+      "repository": "schollz/progressbar",
+      "sha": "e5dd4f362c639eb8b1636a3b9650e241fb8922f8",
+      "expected_license": "MIT",
+      "target_project": "ECO support tooling / engineering CLI",
+      "purpose": "Lightweight terminal progress display for support and engineering tools",
+      "status": "STUDY",
+      "decision_note": "Passive scan clean, but current module declares Go 1.25 and this is terminal UI rather than ECO core GUI. Do not add to ECO core merely for progress reporting."
+    }
+  ]
+}
