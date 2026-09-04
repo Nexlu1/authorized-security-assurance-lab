@@ -31,7 +31,7 @@ function Invoke-Checked {
     )
     & $FilePath @ArgumentList
     if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE: $FilePath $($ArgumentList -join ' ')"
+        throw "Command failed with exit code ${LASTEXITCODE}: $FilePath $($ArgumentList -join ' ')"
     }
 }
 
@@ -174,7 +174,7 @@ $receipt = [ordered]@{
 }
 $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding utf8
 
-Write-Host "Qualified llama.cpp donor source built successfully."
+Write-Host 'Qualified llama.cpp donor source built successfully.'
 Write-Host "Source SHA: $DonorSha"
 Write-Host "Server: $serverPath"
 Write-Host "Receipt: $receiptPath"
