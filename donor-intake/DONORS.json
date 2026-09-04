@@ -25,7 +25,8 @@
       "expected_license": "MIT",
       "target_project": "ECO",
       "purpose": "Go 1.23-compatible persistent SQLite job queue with retries, delayed jobs, deduplication, visibility timeouts and cancellable workers",
-      "status": "QUALIFY"
+      "status": "HOLD",
+      "decision_note": "Architectural fit is strong, but passive intake found known golang.org/x/mod and golang.org/x/sys dependency vulnerabilities. The fixed x/mod version requires Go 1.25, so do not import this dependency into ECO Go 1.23. Study/adapt the small MIT design only through a separate target-project review."
     },
     {
       "id": "gopsutil",
@@ -46,6 +47,42 @@
       "purpose": "Lightweight terminal progress display for support and engineering tools",
       "status": "STUDY",
       "decision_note": "Passive scan clean, but current module declares Go 1.25 and this is terminal UI rather than ECO core GUI. Do not add to ECO core merely for progress reporting."
+    },
+    {
+      "id": "llamacpp",
+      "repository": "ggml-org/llama.cpp",
+      "sha": "0ef4d560e12c1a46470265c1abd31dd47c777d23",
+      "expected_license": "MIT",
+      "target_project": "Rig Worker",
+      "purpose": "Primary local inference engine and OpenAI-compatible server foundation",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "llamacpp-windows-manager",
+      "repository": "alekk89/llama-cpp-windows-manager",
+      "sha": "a48a8b9dca99736792096de66446fdf7d28bf585",
+      "expected_license": "MIT",
+      "target_project": "Rig Worker",
+      "purpose": "Windows llama.cpp runtime, GGUF model, launch-profile, multi-server supervision, metrics and local automation patterns",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "netforensicai",
+      "repository": "Sh3n0bi/NetForensicAI",
+      "sha": "70cd1b98a4433ab6fe2db6280799d33673acea9e",
+      "expected_license": "MIT",
+      "target_project": "ECO / Dossier",
+      "purpose": "Immutable evidence copies, SHA-256 provenance, hash-chained custody, deterministic evidence citations and verified case export patterns",
+      "status": "QUALIFY"
+    },
+    {
+      "id": "winsw",
+      "repository": "winsw/winsw",
+      "sha": "1d0ee4a91bad596d5e7e9c360f2b39ef54674674",
+      "expected_license": "MIT",
+      "target_project": "Rig Worker / KOMB",
+      "purpose": "Mature Windows service wrapper and process-supervision patterns",
+      "status": "QUALIFY"
     }
   ]
 }
