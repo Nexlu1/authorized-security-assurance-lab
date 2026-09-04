@@ -124,19 +124,45 @@ jobs:
           import subprocess
 
           root = pathlib.Path('donor')
-          raw = subprocess.check_output(['git', '-C', 'donor', 'ls-files', '-z'])
-          names = [x.decode('utf-8', 'surrogateescape') for x in raw.split(b'\0') if x]
+          raw = subprocess.check_output(['git', '-C', 'donor', 'ls-files', '-s', '-z'])
           hashes = []
           extensions = collections.Counter()
           total = 0
-          for name in sorted(names):
-              path = root / name
-              data = path.read_bytes()
-              total += len(data)
+          submodules = 0
+
+          for record in raw.split(b'\0'):
+              if not record:
+                  continue
+              metadata, path_bytes = record.split(b'\t', 1)
+              mode, object_sha, stage = metadata.decode('ascii').split()
+              name = path_bytes.decode('utf-8', 'surrogateescape')
+              path = pathlib.PurePosixPath(name)
               suffix = path.suffix.lower() or '<none>'
               extensions[suffix] += 1
-              hashes.append({'path': name, 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
 
+              if mode == '160000':
+                  # A gitlink names a submodule commit rather than a source blob.
+                  # Do not initialize or execute it during passive intake.
+                  data = object_sha.encode('ascii')
+                  kind = 'gitlink'
+                  submodules += 1
+              else:
+                  # Read the exact Git blob. This fingerprints symlink payloads
+                  # without following them on the runner filesystem.
+                  data = subprocess.check_output(['git', '-C', 'donor', 'cat-file', '-p', object_sha])
+                  kind = 'symlink' if mode == '120000' else 'blob'
+
+              total += len(data)
+              hashes.append({
+                  'path': name,
+                  'mode': mode,
+                  'kind': kind,
+                  'git_object_sha': object_sha,
+                  'size': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              })
+
+          hashes.sort(key=lambda item: item['path'])
           meta = {
               'schema_version': 1,
               'donor_id': os.environ['DONOR_ID'],
@@ -145,8 +171,9 @@ jobs:
               'expected_license': os.environ['EXPECTED_LICENSE'],
               'target_project': os.environ['TARGET_PROJECT'],
               'purpose': os.environ['PURPOSE'],
-              'file_count': len(hashes),
-              'source_bytes': total,
+              'tracked_entry_count': len(hashes),
+              'tracked_blob_bytes': total,
+              'gitlink_count': submodules,
               'extensions': dict(extensions.most_common()),
               'donor_code_executed': False,
           }
