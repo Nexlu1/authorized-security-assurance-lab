@@ -1,0 +1,32 @@
+name: Rig Worker llama.cpp slice 1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'integration-handoffs/rig-worker/llamacpp-slice1/**'
+      - '.github/workflows/rig-worker-llamacpp-slice1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rig-worker-llamacpp-slice1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: validate-rig-worker-llamacpp-slice1
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Check out integration glue only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run static safety checks
+        shell: pwsh
+        run: .\integration-handoffs\rig-worker\llamacpp-slice1\Test-RigWorkerSlice.ps1
