@@ -103,7 +103,7 @@ function Assert-ExactLoopbackBindings {
         }
         $binding = $bindings[0]
         if ([string]$binding.HostIp -ne $expected.HostIp -or [string]$binding.HostPort -ne $expected.HostPort) {
-            throw "Unsafe or unexpected Docker binding for $containerPort: $($binding.HostIp):$($binding.HostPort)."
+            throw "Unsafe or unexpected Docker binding for ${containerPort}: $($binding.HostIp):$($binding.HostPort)."
         }
     }
 }
