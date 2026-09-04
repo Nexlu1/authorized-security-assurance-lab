@@ -73,7 +73,8 @@ def extract_licenses(component, src_zip):
             parts=pathlib.PurePosixPath(info.filename).parts
             rel=parts[1:] if len(parts)>1 else parts
             if not rel or len(rel)>4: continue
-            if not LICENSE_RE.match(rel[-1]): continue
+            in_licence_dir = any(part.lower() in {'licenses', 'licences', 'build_licenses'} for part in rel[:-1])
+            if not LICENSE_RE.match(rel[-1]) and not in_licence_dir: continue
             data=z.read(info)
             out.mkdir(parents=True,exist_ok=True)
             dest=out/safe_name('__'.join(rel))
