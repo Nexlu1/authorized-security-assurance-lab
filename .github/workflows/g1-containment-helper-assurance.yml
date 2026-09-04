@@ -84,7 +84,8 @@ jobs:
             }
           }
 
-          $pullMatches = [regex]::Matches($content, "Invoke-Docker -Arguments @\('pull', \$Image\)")
+          $literalPull = "Invoke-Docker -Arguments @('pull', `$Image)"
+          $pullMatches = [regex]::Matches($content, [regex]::Escape($literalPull))
           if ($pullMatches.Count -ne 1) {
             throw "Expected exactly one explicit image pull path (Acquire); found $($pullMatches.Count)."
           }
