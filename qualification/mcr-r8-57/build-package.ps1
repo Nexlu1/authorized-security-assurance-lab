@@ -36,7 +36,7 @@ if ($sourceHash -ne 'dc45a336c415dc7908858352e6d5e3d64d043bea1cc725a47fd4ba8ed68
 }
 Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
 
-# Apply two bounded, reviewable source repairs before formatting and compilation.
+# Apply bounded, reviewable source repairs before formatting and compilation.
 # The original immutable source ZIP is retained in the output package.
 $patches = @()
 
@@ -50,13 +50,50 @@ $newLine = if ($pathText.Contains("`r`n")) { "`r`n" } else { "`n" }
 $newBorrow = "    let normalized = normalise_slashes(raw);${newLine}    for seg in normalized.split('/') {"
 $pathText = $pathText.Replace($oldBorrow, $newBorrow)
 [IO.File]::WriteAllText($pathChecks, $pathText, [Text.UTF8Encoding]::new($false))
-$pathChecksAfterTargeted = Get-Sha256Lower -Path $pathChecks
+$pathChecksAfterBorrow = Get-Sha256Lower -Path $pathChecks
 $patches += [pscustomobject]@{
     file = 'src/path_checks.rs'
     purpose = 'Fix Rust E0716 by extending the normalized String lifetime while preserving path semantics.'
     occurrences = $borrowCount
     before_sha256 = $pathChecksBefore
-    after_targeted_patch_sha256 = $pathChecksAfterTargeted
+    after_targeted_patch_sha256 = $pathChecksAfterBorrow
+}
+
+$pathChecksBeforeClippy = Get-Sha256Lower -Path $pathChecks
+$pathText = [IO.File]::ReadAllText($pathChecks)
+$clippyRepairs = @(
+    [pscustomobject]@{
+        old = 'segments.iter().any(|s| *s == "..")'
+        new = 'segments.contains(&"..")'
+        purpose = 'Use slice contains for parent-segment lookup.'
+    },
+    [pscustomobject]@{
+        old = 'segments.iter().any(|s| *s == ".")'
+        new = 'segments.contains(&".")'
+        purpose = 'Use slice contains for current-segment lookup.'
+    },
+    [pscustomobject]@{
+        old = 'seg.as_bytes().len()'
+        new = 'seg.len()'
+        purpose = 'Use direct UTF-8 byte length on str.'
+    }
+)
+$clippyOccurrences = 0
+foreach ($repair in $clippyRepairs) {
+    $found = ([regex]::Matches($pathText, [regex]::Escape($repair.old))).Count
+    if ($found -ne 1) { throw "Expected exactly one Clippy repair target '$($repair.old)'; found $found" }
+    $pathText = $pathText.Replace($repair.old, $repair.new)
+    $clippyOccurrences += $found
+}
+[IO.File]::WriteAllText($pathChecks, $pathText, [Text.UTF8Encoding]::new($false))
+$pathChecksAfterClippy = Get-Sha256Lower -Path $pathChecks
+$patches += [pscustomobject]@{
+    file = 'src/path_checks.rs'
+    purpose = 'Apply three exact semantics-preserving Rust 1.98 Clippy repairs.'
+    details = @($clippyRepairs | ForEach-Object { $_.purpose })
+    occurrences = $clippyOccurrences
+    before_sha256 = $pathChecksBeforeClippy
+    after_targeted_patch_sha256 = $pathChecksAfterClippy
 }
 
 $magic = Join-Path $root 'src\magic.rs'
@@ -146,6 +183,7 @@ $receipt = [ordered]@{
     cargo = (cargo -V | Out-String).Trim()
     source_payload_sha256 = $sourceHash
     bounded_source_repairs = $patches.Count
+    bounded_replacement_occurrences = (($patches | Measure-Object -Property occurrences -Sum).Sum)
     adversarial_tests = 'PASS_57_OF_57'
     cargo_fmt = 'PASS_AFTER_RECORDED_NORMALIZATION'
     cargo_clippy_deny_warnings = 'PASS'
