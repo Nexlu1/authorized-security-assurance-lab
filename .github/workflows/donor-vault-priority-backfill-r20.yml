@@ -91,14 +91,38 @@ jobs:
           git -C work/donor cat-file commit "$PINNED_SHA" > vault/original-commit-object.txt
           git -C work/donor ls-tree -r --full-tree "$PINNED_SHA" > vault/source-tree-git-manifest.txt
           (cd vault && sha256sum source-tree-git-manifest.txt > source-tree-git-manifest.sha256)
+          git -C work/donor ls-files -s | awk '$1==160000 {print}' > vault/gitlinks.txt
+          test ! -s vault/gitlinks.txt
 
-      - name: Create exact source-tree archive
+      - name: Create and verify exact tracked source-tree archive
         shell: bash
         run: |
           set -euo pipefail
           short="${PINNED_SHA:0:12}"
-          git -C work/donor archive --format=tar -o "../../vault/source-tree-${short}.tar" "$PINNED_SHA"
+          stage="$GITHUB_WORKSPACE/work/source-stage"
+          verify="$GITHUB_WORKSPACE/work/source-archive-verify"
+          rm -rf "$stage" "$verify"
+          mkdir -p "$stage" "$verify"
+
+          # checkout-index exports every tracked entry from the index and does not
+          # honour export-ignore rules that can make `git archive` incomplete.
+          git -C work/donor checkout-index -a --prefix="${stage}/"
+          tar -C "$stage" -cf "vault/source-tree-${short}.tar" .
           (cd vault && sha256sum "source-tree-${short}.tar" > source-tree-archive.sha256)
+
+          tar -xf "vault/source-tree-${short}.tar" -C "$verify"
+          git -C "$verify" init -q
+          git -C "$verify" add -A
+          archive_tree="$(git -C "$verify" write-tree)"
+          original_tree="$(cat vault/original-git-tree.txt)"
+          test "$archive_tree" = "$original_tree"
+          cat > vault/SOURCE_ARCHIVE_VERIFY.txt <<EOF
+          result=PASS
+          original_tree=$original_tree
+          archive_rebuilt_tree=$archive_tree
+          export_method=git_checkout_index
+          gitlinks=0
+          EOF
 
       - name: Create reconstructable Git bundle
         shell: bash
@@ -198,8 +222,12 @@ jobs:
           for line in (root/'bundle-mode.txt').read_text().splitlines():
               if '=' in line:
                   k,v=line.split('=',1); bundle_mode[k]=v
+          archive_verify = {}
+          for line in (root/'SOURCE_ARCHIVE_VERIFY.txt').read_text().splitlines():
+              if '=' in line:
+                  k,v=line.split('=',1); archive_verify[k]=v
           manifest = {
-              'schema': 'donor-vault-manifest-r20-v1',
+              'schema': 'donor-vault-manifest-r20-v2',
               'acquired_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
               'repository': os.environ['REPO'],
               'upstream_url': f"https://github.com/{os.environ['REPO']}",
@@ -209,6 +237,10 @@ jobs:
               'source_tree_git_manifest_sha256': sha256(root/'source-tree-git-manifest.txt'),
               'source_tree_archive': source_archive.name,
               'source_tree_archive_sha256': sha256(source_archive),
+              'source_tree_archive_export_method': archive_verify.get('export_method'),
+              'source_tree_archive_rebuilt_git_tree': archive_verify.get('archive_rebuilt_tree'),
+              'source_tree_archive_tree_verified': archive_verify.get('result') == 'PASS',
+              'gitlinks_count': int(archive_verify.get('gitlinks', '0')),
               'git_bundle': 'repo.bundle',
               'git_bundle_sha256': sha256(root/'repo.bundle'),
               'bundle_mode': os.environ['BUNDLE_MODE'],
