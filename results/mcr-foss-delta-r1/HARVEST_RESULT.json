@@ -1,0 +1,2367 @@
+{
+  "all_failures": [
+    {
+      "component": "mediainfo",
+      "error": "HTTPError: HTTP Error 422: Unprocessable Entity",
+      "repository": "MediaArea/MediaInfoLib",
+      "required": true
+    },
+    {
+      "component": "pyhanko",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "repository": "MatthieuDartiailh/pyHanko",
+      "required": true
+    }
+  ],
+  "authority_boundary": "Public FOSS source acquisition only. No MCR evidence, private correspondence, credentials, export bundles or frozen R59 bytes.",
+  "downloaded_sources": 30,
+  "generated_utc": "2026-09-05T11:28:54.120303+00:00",
+  "license_evidence": [
+    {
+      "bytes": 1281,
+      "component": "process-wrap",
+      "evidence_only": true,
+      "file": "licenses/process-wrap/0000__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__COPYRIGHT",
+      "repository": "watchexec/process-wrap",
+      "sha256": "24c5719787d9ceccf41381943e08c6a5e9b9368d543b8c2a9ce9e4d5c53c3c43",
+      "source_member": "process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb/COPYRIGHT"
+    },
+    {
+      "bytes": 9723,
+      "component": "process-wrap",
+      "evidence_only": true,
+      "file": "licenses/process-wrap/0001__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__LICENSE-APACHE",
+      "repository": "watchexec/process-wrap",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "source_member": "process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1023,
+      "component": "process-wrap",
+      "evidence_only": true,
+      "file": "licenses/process-wrap/0002__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__LICENSE-MIT",
+      "repository": "watchexec/process-wrap",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "source_member": "process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb/LICENSE-MIT"
+    },
+    {
+      "bytes": 1082,
+      "component": "calamine",
+      "evidence_only": true,
+      "file": "licenses/calamine/0000__calamine-0a24c2a9f1e38c0932c1299e633270dc730db505__LICENSE-MIT.md",
+      "repository": "tafia/calamine",
+      "sha256": "f0cf9b1c62bbe3bd3a69f5f79c7158f513f612b4940a0a812d1db39d605318bc",
+      "source_member": "calamine-0a24c2a9f1e38c0932c1299e633270dc730db505/LICENSE-MIT.md"
+    },
+    {
+      "bytes": 10850,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0000__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__LICENSE-APACHE",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1058,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0001__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__LICENSE-MIT",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "090a294a492ab2f41388252312a65cf2f0e423330b721a68c6665ac64766753b",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/LICENSE-MIT"
+    },
+    {
+      "bytes": 1350,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0002__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__benches__license_data.rs",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "285dcf342080ce4d766b300a75be013d768469b6bb20466871ec269f3ac8ea68",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/benches/license_data.rs"
+    },
+    {
+      "bytes": 3149,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0003__src__checks__licenses__README.md",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "da50e67a0940c607e1775d209c1d0397a2e88d0638da9f506a65b7517b193d46",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/docs/src/checks/licenses/README.md"
+    },
+    {
+      "bytes": 9112,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0004__src__checks__licenses__cfg.md",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "14b577c07eaf48d26ecc94e7cf6ba60100fdf083380192df207d5e1ec04bafc2",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/docs/src/checks/licenses/cfg.md"
+    },
+    {
+      "bytes": 1841,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0005__src__checks__licenses__diags.md",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "48a9879bef2ac139f7763d7f7e241fc9fa8c0fdedf1419633628c1c031f49831",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/docs/src/checks/licenses/diags.md"
+    },
+    {
+      "bytes": 1079,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0006__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "16443afd473ca107d501be4c9975ab782917d372546a3a7315befd99d496a5c8",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/examples/14_license_detection/LICENSE"
+    },
+    {
+      "bytes": 34020,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0007__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-AGPL-3.0",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/examples/14_license_detection/LICENSE-AGPL-3.0"
+    },
+    {
+      "bytes": 1518,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0008__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-BSD",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "38cc5fec5a80af1b141447d58f686b3a75488db05ddbd0ef439f494ea0458f64",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/examples/14_license_detection/LICENSE-BSD"
+    },
+    {
+      "bytes": 1228,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0009__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-MIT",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "8ae0bc761d5f10ff26a9b13d26e8f81c2eaed5081cf0c62582df3a5aad15fa2f",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/examples/14_license_detection/LICENSE-MIT"
+    },
+    {
+      "bytes": 20544,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0010__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__cfg.rs",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "43b5c690139e9f7a9e0418f4d505c85494bd51b1d7315a15a5f00d8645a8dea5",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/src/licenses/cfg.rs"
+    },
+    {
+      "bytes": 6455,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0011__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__diags.rs",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "f415bf7b544da5062ad14df92c46eef403893f6cdf8eab795039ea8088fdd9da",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/src/licenses/diags.rs"
+    },
+    {
+      "bytes": 39100,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0012__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__gather.rs",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "b69bb8d69826f6e8d52db11eb0bc77c53326dbc1a41dfd6130e2bfa21d6410bf",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/src/licenses/gather.rs"
+    },
+    {
+      "bytes": 892,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0013__src__licenses__snapshots__cargo_deny__licenses__cfg__test__deserializes_licenses_cfg-2.snap",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "73c5e95c41217d0c65870f9cc1fcfd8b3b599da61299de121121df70804b76af",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/src/licenses/snapshots/cargo_deny__licenses__cfg__test__deserializes_licenses_cfg-2.snap"
+    },
+    {
+      "bytes": 55,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0014__src__licenses__snapshots__cargo_deny__licenses__cfg__test__deserializes_licenses_cfg.snap",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "7c4f263f3c4e2cfdd07175be5251d3e36194eed9d41ecb0507640b4b46bed8fb",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/src/licenses/snapshots/cargo_deny__licenses__cfg__test__deserializes_licenses_cfg.snap"
+    },
+    {
+      "bytes": 10124,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0015__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__tests__LICENSE-RING",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "5540bb4b09fdecb93e121bf3d68860b2c306df6dd1badcc82e80b093da34a95c",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/tests/LICENSE-RING"
+    },
+    {
+      "bytes": 297,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0016__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__tests__LICENSE-SUMMARY",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "014f1bb02c48d65c0bedfb30a526ee293d67faeb08a85f6aead694fcb6a2cb5a",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/tests/LICENSE-SUMMARY"
+    },
+    {
+      "bytes": 10174,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0017__tests__test_data__so-annoying__LICENSE-APACHE",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/tests/test_data/so-annoying/LICENSE-APACHE"
+    },
+    {
+      "bytes": 10037,
+      "component": "cargo-deny",
+      "evidence_only": true,
+      "file": "licenses/cargo-deny/0018__tests__test_data__so-annoying__LICENSE-PIXAR",
+      "repository": "EmbarkStudios/cargo-deny",
+      "sha256": "5e53f5395d15c5b0f9950e27dc401326e4f88c603c36b2239b325c1d03776cf9",
+      "source_member": "cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06/tests/test_data/so-annoying/LICENSE-PIXAR"
+    },
+    {
+      "bytes": 10850,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0000__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__LICENSE-APACHE",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1058,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0001__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__LICENSE-MIT",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "090a294a492ab2f41388252312a65cf2f0e423330b721a68c6665ac64766753b",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/LICENSE-MIT"
+    },
+    {
+      "bytes": 17317,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0002__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__config.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "b170a2783dfdd644520cc4ac1b4b7a4a32b88e14e3bf8067b5ca6e7cac36d9b4",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/config.rs"
+    },
+    {
+      "bytes": 12746,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0003__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__fetch.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "c5da6a35d2dc33374d1346c733188948d66077dcf11a9ffcbdb651abd1da1024",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/fetch.rs"
+    },
+    {
+      "bytes": 10898,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0004__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__resolution.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "625ae763596941310953dd77e4d9bbd989bd6598783a26cce7ced04ab64ed36f",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/resolution.rs"
+    },
+    {
+      "bytes": 5082,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0005__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__scan.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "60b35c2df174955bb91ea41fe2805bc62c5383b1ac48ff6add8f1b75f2679524",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/scan.rs"
+    },
+    {
+      "bytes": 3055,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0006__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__workarounds.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "17760c6d8b10f175a181c1bd7326df182afebfdaf8127fdfad8efec02d5bc875",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds.rs"
+    },
+    {
+      "bytes": 804,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0007__src__licenses__workarounds__bitvec.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "e8cd3bfd49f61119f8169152f4746c978f56a0dcbae53cac94f76b465b606438",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/bitvec.rs"
+    },
+    {
+      "bytes": 1523,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0008__src__licenses__workarounds__chrono.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "9bf91a43c928db8660a2dc699d0e22fc7d85b13719ef0a97dc94795864fbe5ec",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/chrono.rs"
+    },
+    {
+      "bytes": 1393,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0009__src__licenses__workarounds__clap.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "19442374e98000894ae69c2cd93f3449e7d6f1b20101da71a22949e7dacef14c",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/clap.rs"
+    },
+    {
+      "bytes": 1952,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0010__src__licenses__workarounds__cocoa.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "22d90b646d8984f7df83d33058f9571e02bbf0936eae7ef51dbffd6e5e7b6e60",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/cocoa.rs"
+    },
+    {
+      "bytes": 864,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0011__src__licenses__workarounds__gtk.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "23f91292d2e87e05f72a674450989bee831628f8e956ecf8eddb106786646aeb",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/gtk.rs"
+    },
+    {
+      "bytes": 1895,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0012__src__licenses__workarounds__linux_raw_sys.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "9765937964098bd83b36b56466d4035786d83b72146829373152c6a334712b8f",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/linux_raw_sys.rs"
+    },
+    {
+      "bytes": 990,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0013__src__licenses__workarounds__prost.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "26c6d91dd4eb2a0a82b0624e666d30210f7d6a4eccf9b869f24a6715a1622425",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/prost.rs"
+    },
+    {
+      "bytes": 3441,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0014__src__licenses__workarounds__ring.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "09d46df2a89dee08b8dd7a905d11755826028f0c715a65ccc2de41a581b31c89",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/ring.rs"
+    },
+    {
+      "bytes": 1888,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0015__src__licenses__workarounds__rustix.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "27a939672dc38e7d012226ba9ef013b9d021364f13324e9cf801089e7c14d91b",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/rustix.rs"
+    },
+    {
+      "bytes": 1772,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0016__src__licenses__workarounds__rustls.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "6bcd76986b69a7dabc5b8da63d8543eb50acad4b97e454c695d71c472a752afb",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/rustls.rs"
+    },
+    {
+      "bytes": 873,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0017__src__licenses__workarounds__sentry.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "e446a340d084f53f7c88dfc5147fdfb989ccf2878dcc8eaae436c80af24fe011",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/sentry.rs"
+    },
+    {
+      "bytes": 705,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0018__src__licenses__workarounds__tonic.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "35bdf579dacf7c72bc74db8e033b4e11405bea5ea7516852d67d4b1d059b4105",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/tonic.rs"
+    },
+    {
+      "bytes": 1354,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0019__src__licenses__workarounds__tract.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "56c264ccbf6aa9f1bbd264f086b2d58a34df2b74da3e0d3f39c13ce5e4671357",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/tract.rs"
+    },
+    {
+      "bytes": 1837,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0020__src__licenses__workarounds__unicode_ident.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "213fb51c9b83adb0354e569ebd5ca57f8ebabde319ee6f129131924c872a360c",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/unicode_ident.rs"
+    },
+    {
+      "bytes": 2934,
+      "component": "cargo-about",
+      "evidence_only": true,
+      "file": "licenses/cargo-about/0021__src__licenses__workarounds__wasmtime.rs",
+      "repository": "EmbarkStudios/cargo-about",
+      "sha256": "07ef865749dbc9649aaa8b57ab71e314b5bedbb9caace932c39d39e2df00f7ea",
+      "source_member": "cargo-about-f7394d5c8f618623573072caadf6594821c789b6/src/licenses/workarounds/wasmtime.rs"
+    },
+    {
+      "bytes": 10847,
+      "component": "cargo-auditable",
+      "evidence_only": true,
+      "file": "licenses/cargo-auditable/0000__cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0__LICENSE-APACHE",
+      "repository": "rust-secure-code/cargo-auditable",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_member": "cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1070,
+      "component": "cargo-auditable",
+      "evidence_only": true,
+      "file": "licenses/cargo-auditable/0001__cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0__LICENSE-MIT",
+      "repository": "rust-secure-code/cargo-auditable",
+      "sha256": "e3a8938c0304a5d418b6f7453c2f60fd6b590d486c798879063373e3acc94bf1",
+      "source_member": "cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0/LICENSE-MIT"
+    },
+    {
+      "bytes": 10847,
+      "component": "cargo-fuzz",
+      "evidence_only": true,
+      "file": "licenses/cargo-fuzz/0000__cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76__LICENSE-APACHE",
+      "repository": "rust-fuzz/cargo-fuzz",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_member": "cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1071,
+      "component": "cargo-fuzz",
+      "evidence_only": true,
+      "file": "licenses/cargo-fuzz/0001__cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76__LICENSE-MIT",
+      "repository": "rust-fuzz/cargo-fuzz",
+      "sha256": "0621878e61f0d0fda054bcbe02df75192c28bde1ecc8289cbd86aeba2dd72720",
+      "source_member": "cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76/LICENSE-MIT"
+    },
+    {
+      "bytes": 34523,
+      "component": "dangerzone",
+      "evidence_only": true,
+      "file": "licenses/dangerzone/0000__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__LICENSE",
+      "repository": "freedomofpress/dangerzone",
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+      "source_member": "dangerzone-6cc19db50166658feff4d72df605f30e97308f16/LICENSE"
+    },
+    {
+      "bytes": 306,
+      "component": "dangerzone",
+      "evidence_only": true,
+      "file": "licenses/dangerzone/0001__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__debian__copyright",
+      "repository": "freedomofpress/dangerzone",
+      "sha256": "427e6e6fbc10d6faa972703f5b7e58363fc2243c5f0bb472415ab657866af91a",
+      "source_member": "dangerzone-6cc19db50166658feff4d72df605f30e97308f16/debian/copyright"
+    },
+    {
+      "bytes": 157955,
+      "component": "dangerzone",
+      "evidence_only": true,
+      "file": "licenses/dangerzone/0002__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__install__windows__license.rtf",
+      "repository": "freedomofpress/dangerzone",
+      "sha256": "ffbd2a0dadd210810bfa8aac6f6696eaf8439f41bf1a28c6b2e0897d3d175a04",
+      "source_member": "dangerzone-6cc19db50166658feff4d72df605f30e97308f16/install/windows/license.rtf"
+    },
+    {
+      "bytes": 10125,
+      "component": "warcio",
+      "evidence_only": true,
+      "file": "licenses/warcio/0000__warcio-05b1a68d3dda125d12098d0995c0cee920318aa0__LICENSE",
+      "repository": "webrecorder/warcio",
+      "sha256": "a428ab27f0cf20f5b887af1385ab2c7a9d6881936fa7bea4015feae5eb8cfd91",
+      "source_member": "warcio-05b1a68d3dda125d12098d0995c0cee920318aa0/LICENSE"
+    },
+    {
+      "bytes": 173,
+      "component": "warcio",
+      "evidence_only": true,
+      "file": "licenses/warcio/0001__warcio-05b1a68d3dda125d12098d0995c0cee920318aa0__NOTICE",
+      "repository": "webrecorder/warcio",
+      "sha256": "91b3105745a3a5b434c8040e9df47219b0710b26228d2550992bd8b090ed56a8",
+      "source_member": "warcio-05b1a68d3dda125d12098d0995c0cee920318aa0/NOTICE"
+    },
+    {
+      "bytes": 1078,
+      "component": "whisper-cpp",
+      "evidence_only": true,
+      "file": "licenses/whisper-cpp/0000__whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916__LICENSE",
+      "repository": "ggml-org/whisper.cpp",
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "source_member": "whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916/LICENSE"
+    },
+    {
+      "bytes": 1069,
+      "component": "whisper-cpp",
+      "evidence_only": true,
+      "file": "licenses/whisper-cpp/0001__whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916__bindings__go__LICENSE",
+      "repository": "ggml-org/whisper.cpp",
+      "sha256": "3fa8d70be1f0deb5fb971a9c36cfbdcdc904fa46646560f9ac859494b40248b6",
+      "source_member": "whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916/bindings/go/LICENSE"
+    },
+    {
+      "bytes": 1052,
+      "component": "whisper-cpp",
+      "evidence_only": true,
+      "file": "licenses/whisper-cpp/0002__chessboardjs-1.0.0__js__chessboard-1.0.0__LICENSE.md",
+      "repository": "ggml-org/whisper.cpp",
+      "sha256": "d33e835c372360941e425214c06c2063f7058d850b9a0153d5a624c1cab9bf31",
+      "source_member": "whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916/examples/wchess/wchess.wasm/chessboardjs-1.0.0/js/chessboard-1.0.0/LICENSE.md"
+    },
+    {
+      "bytes": 1279,
+      "component": "whisper-cpp",
+      "evidence_only": true,
+      "file": "licenses/whisper-cpp/0003__tests__earnings21__normalizers__LICENSE",
+      "repository": "ggml-org/whisper.cpp",
+      "sha256": "fff3c2ad5a861a1dedc227f08afca28a12bd6fd80a11e0095901262c4fe61d16",
+      "source_member": "whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916/tests/earnings21/normalizers/LICENSE"
+    },
+    {
+      "bytes": 11358,
+      "component": "tesseract",
+      "evidence_only": true,
+      "file": "licenses/tesseract/0000__tesseract-db0ec62f81b0737fbbe184d8fea40af5738f8eef__LICENSE",
+      "repository": "tesseract-ocr/tesseract",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source_member": "tesseract-db0ec62f81b0737fbbe184d8fea40af5738f8eef/LICENSE"
+    },
+    {
+      "bytes": 34523,
+      "component": "browsertrix-crawler",
+      "evidence_only": true,
+      "file": "licenses/browsertrix-crawler/0000__browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4__LICENSE",
+      "repository": "webrecorder/browsertrix-crawler",
+      "sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+      "source_member": "browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4/LICENSE"
+    },
+    {
+      "bytes": 693,
+      "component": "browsertrix-crawler",
+      "evidence_only": true,
+      "file": "licenses/browsertrix-crawler/0001__browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4__NOTICE",
+      "repository": "webrecorder/browsertrix-crawler",
+      "sha256": "08eb655b256672a6341dbaf92d28105958bafccabdccda225225555c812a1bf3",
+      "source_member": "browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4/NOTICE"
+    },
+    {
+      "bytes": 11335,
+      "component": "c2pa-rs",
+      "evidence_only": true,
+      "file": "licenses/c2pa-rs/0000__c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19__LICENSE-APACHE",
+      "repository": "contentauth/c2pa-rs",
+      "sha256": "86bdd5dafab77451044b6fd6d2efab23e3410ce658eb097f04c04f4f54aed62f",
+      "source_member": "c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19/LICENSE-APACHE"
+    },
+    {
+      "bytes": 1083,
+      "component": "c2pa-rs",
+      "evidence_only": true,
+      "file": "licenses/c2pa-rs/0001__c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19__LICENSE-MIT",
+      "repository": "contentauth/c2pa-rs",
+      "sha256": "89375a50de90d2dcaa04406086da832ad452ebcaf6ab402ef3d51b8401a67c71",
+      "source_member": "c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19/LICENSE-MIT"
+    },
+    {
+      "bytes": 35149,
+      "component": "exiftool",
+      "evidence_only": true,
+      "file": "licenses/exiftool/0000__exiftool-2200871d9cef988051d2a99d67df3bda6cbb30a8__LICENSE",
+      "repository": "exiftool/exiftool",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_member": "exiftool-2200871d9cef988051d2a99d67df3bda6cbb30a8/LICENSE"
+    },
+    {
+      "bytes": 1062,
+      "component": "msoffcrypto-tool",
+      "evidence_only": true,
+      "file": "licenses/msoffcrypto-tool/0000__msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3__LICENSE.txt",
+      "repository": "nolze/msoffcrypto-tool",
+      "sha256": "b221010ab98a91225fe06a99b9f0528050b89dad97e7855fe771079a59714b25",
+      "source_member": "msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3/LICENSE.txt"
+    },
+    {
+      "bytes": 1705,
+      "component": "msoffcrypto-tool",
+      "evidence_only": true,
+      "file": "licenses/msoffcrypto-tool/0001__msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3__NOTICE.txt",
+      "repository": "nolze/msoffcrypto-tool",
+      "sha256": "207597a6d7826df5a2fb6e53e147f7f5d0a264f2b3f23ea88daefe72aafae086",
+      "source_member": "msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3/NOTICE.txt"
+    },
+    {
+      "bytes": 35149,
+      "component": "libpff",
+      "evidence_only": true,
+      "file": "licenses/libpff/0000__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__COPYING",
+      "repository": "libyal/libpff",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_member": "libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846/COPYING"
+    },
+    {
+      "bytes": 7652,
+      "component": "libpff",
+      "evidence_only": true,
+      "file": "licenses/libpff/0001__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__COPYING.LESSER",
+      "repository": "libyal/libpff",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "source_member": "libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846/COPYING.LESSER"
+    },
+    {
+      "bytes": 1022,
+      "component": "libpff",
+      "evidence_only": true,
+      "file": "licenses/libpff/0002__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__dpkg__copyright",
+      "repository": "libyal/libpff",
+      "sha256": "9c37fee8873fac219d4791fad220a8594ab0b9107fefe036cb72e4755629490a",
+      "source_member": "libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846/dpkg/copyright"
+    },
+    {
+      "bytes": 35147,
+      "component": "msg-extractor",
+      "evidence_only": true,
+      "file": "licenses/msg-extractor/0000__msg-extractor-f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5__LICENSE.txt",
+      "repository": "TeamMsgExtractor/msg-extractor",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "source_member": "msg-extractor-f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5/LICENSE.txt"
+    },
+    {
+      "bytes": 2733,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0000__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__LICENSE.md",
+      "repository": "decalage2/oletools",
+      "sha256": "558732356f0c4fce779f9805dc946e9329b3e1753da13dc9f8c652f7ccebeb11",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/LICENSE.md"
+    },
+    {
+      "bytes": 2774,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0001__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__LICENSE.txt",
+      "repository": "decalage2/oletools",
+      "sha256": "c66e503e1dee453afe1c07b23d64a43c16f54497f1d7b55b9ec3e2d332ab7243",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/LICENSE.txt"
+    },
+    {
+      "bytes": 4675,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0002__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__doc__License.html",
+      "repository": "decalage2/oletools",
+      "sha256": "92316048e5ee12afaed369e9eadc4a41528add68076a5761e2418734f9856dea",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/doc/License.html"
+    },
+    {
+      "bytes": 3377,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0003__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__doc__License.md",
+      "repository": "decalage2/oletools",
+      "sha256": "2db3cc414d355fc8dfcc1ed31ea98fe56afa8b4f426d866a9ef8e6d04a7b1478",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/doc/License.md"
+    },
+    {
+      "bytes": 1613,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0004__oletools__thirdparty__prettytable__COPYING",
+      "repository": "decalage2/oletools",
+      "sha256": "57a33810a67fb178d3d291818b083d06d87cd5cebeeffda0ec1af9a4bfb4976e",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/thirdparty/prettytable/COPYING"
+    },
+    {
+      "bytes": 1376,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0005__oletools__thirdparty__xglob__LICENSE.txt",
+      "repository": "decalage2/oletools",
+      "sha256": "e49b9488a651edd1bd00d5e3bec0ba279bd095fd04f84171b529f3da2eeefab7",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/thirdparty/xglob/LICENSE.txt"
+    },
+    {
+      "bytes": 35146,
+      "component": "oletools",
+      "evidence_only": true,
+      "file": "licenses/oletools/0006__oletools__thirdparty__xxxswf__LICENSE.txt",
+      "repository": "decalage2/oletools",
+      "sha256": "c53a65c2fd561c87eaabf1072ef5dcab8653042bc15308465f52413585eb6271",
+      "source_member": "oletools-ec10260989dbc48b9109e3d05d22beee19cf2333/oletools/thirdparty/xxxswf/LICENSE.txt"
+    },
+    {
+      "bytes": 32149,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0000__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__LICENSE.txt",
+      "repository": "apache/tika",
+      "sha256": "ad5f4c4d0d4a04ac264ee55539191e1d36eb5d43ff63bbfc2cf97d541dc7ce8c",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/LICENSE.txt"
+    },
+    {
+      "bytes": 80600,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0001__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__NOTICE.txt",
+      "repository": "apache/tika",
+      "sha256": "4cd09bac8d81bd34decf6b95fb23d42fc9b3d6b653ec4be8ef44674b692c97cd",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/NOTICE.txt"
+    },
+    {
+      "bytes": 49296,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0002__main__appended-resources__META-INF__LICENSE",
+      "repository": "apache/tika",
+      "sha256": "503623174c379e1dd4495b478e3fe93f9edecc0675e5ec1c00149e70d8afbdcb",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/tika-app/src/main/appended-resources/META-INF/LICENSE"
+    },
+    {
+      "bytes": 47488,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0003__main__appended-resources__META-INF__LICENSE",
+      "repository": "apache/tika",
+      "sha256": "6b0cc29e0ccb3dfffae244a12cf7ea84a7c5822d9d9587a9a81eb38c503f7244",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/tika-bundles/tika-bundle-standard/src/main/appended-resources/META-INF/LICENSE"
+    },
+    {
+      "bytes": 10173,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0004__main__appended-resources__META-INF__LICENSE",
+      "repository": "apache/tika",
+      "sha256": "ee2d54b2e7c0141b109690cfd95e4157b52c87db7a5576bd464b5c3a2cb931a4",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/tika-core/src/main/appended-resources/META-INF/LICENSE"
+    },
+    {
+      "bytes": 801,
+      "component": "apache-tika",
+      "evidence_only": true,
+      "file": "licenses/apache-tika/0005__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__tika-parent__license-header.txt",
+      "repository": "apache/tika",
+      "sha256": "32235a65b50f13cb98f1f60098ffa1141e8b61987165952f97300476b44d2b2e",
+      "source_member": "tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600/tika-parent/license-header.txt"
+    },
+    {
+      "bytes": 1545,
+      "component": "droid",
+      "evidence_only": true,
+      "file": "licenses/droid/0000__droid-deb91d041ba834077284156774e7352c3df1f87a__LICENSE",
+      "repository": "digital-preservation/droid",
+      "sha256": "091ac45bd1fe9e8eb301320ddd8a7696374d5a441c1b5736b1ac3d248770ffd1",
+      "source_member": "droid-deb91d041ba834077284156774e7352c3df1f87a/LICENSE"
+    },
+    {
+      "bytes": 1569,
+      "component": "droid",
+      "evidence_only": true,
+      "file": "licenses/droid/0002__droid-deb91d041ba834077284156774e7352c3df1f87a__license.md",
+      "repository": "digital-preservation/droid",
+      "sha256": "dd5985f2560bc53df786f614da839169209a378624a2b0fc32d4c9688fea0fe7",
+      "source_member": "droid-deb91d041ba834077284156774e7352c3df1f87a/license.md"
+    },
+    {
+      "bytes": 26419,
+      "component": "jhove",
+      "evidence_only": true,
+      "file": "licenses/jhove/0000__jhove-38115c6071a158b750c6bf2ce552240455e68fcc__COPYING",
+      "repository": "openpreserve/jhove",
+      "sha256": "8392361080d809219b5b769894719352893d797994b0f826fa3a1abea89c6889",
+      "source_member": "jhove-38115c6071a158b750c6bf2ce552240455e68fcc/COPYING"
+    },
+    {
+      "bytes": 880,
+      "component": "jhove",
+      "evidence_only": true,
+      "file": "licenses/jhove/0001__jhove-38115c6071a158b750c6bf2ce552240455e68fcc__LICENSE",
+      "repository": "openpreserve/jhove",
+      "sha256": "089e03a38164df44b636d6bcdcbd3497087a3d4d949b5516d757836c5edc5323",
+      "source_member": "jhove-38115c6071a158b750c6bf2ce552240455e68fcc/LICENSE"
+    },
+    {
+      "bytes": 11357,
+      "component": "magika",
+      "evidence_only": true,
+      "file": "licenses/magika/0000__magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4__LICENSE",
+      "repository": "google/magika",
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+      "source_member": "magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4/LICENSE"
+    },
+    {
+      "bytes": 13,
+      "component": "magika",
+      "evidence_only": true,
+      "file": "licenses/magika/0001__magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4__rust__cli__LICENSE",
+      "repository": "google/magika",
+      "sha256": "a2553752ed447e1147617c1b0bc46775232bbc2c9bf4654516721f9d488191d2",
+      "source_member": "magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4/rust/cli/LICENSE"
+    },
+    {
+      "bytes": 160,
+      "component": "magika",
+      "evidence_only": true,
+      "file": "licenses/magika/0003__content__docs__additional-resources__license.md",
+      "repository": "google/magika",
+      "sha256": "405e40c530c456b505606a06f3922d9444d352ae4d8edb14829a2f44db2af13e",
+      "source_member": "magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4/website-ng/src/content/docs/additional-resources/license.md"
+    },
+    {
+      "bytes": 18738,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0000__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING.txt",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "0c4fd2fa9733fc9122503797648710851e4ee6d9e4969dd33fcbd8c63cd2f584",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING.txt"
+    },
+    {
+      "bytes": 26527,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0001__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.LGPL",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.LGPL"
+    },
+    {
+      "bytes": 11532,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0002__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.YARA",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "a20d6317c5384e8d4c05f9c31097878675d9429ec46090656166039cc10bc957",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.YARA"
+    },
+    {
+      "bytes": 2049,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0003__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.bzip2",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "d72a145c90918184a05ef65a04c9e6f7466faa59bc1b82c8f6a8ddc7ddcb9bed",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.bzip2"
+    },
+    {
+      "bytes": 1088,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0004__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.curl",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "8c8824f50e73a021f5dde1fccbf69685939247399a33a32abab1fa448c9ddabb",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.curl"
+    },
+    {
+      "bytes": 1872,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0005__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.file",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "dfb818a0d41411c6fb1c193c68b73018ceadd1994bda41ad541cbff292894bc6",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.file"
+    },
+    {
+      "bytes": 1125,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0006__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.getopt",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "6dce638b76399e7521ad8e182d3e33e4496c85b3b69b6ff434b53017101e82ad",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.getopt"
+    },
+    {
+      "bytes": 3249,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0007__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.llvm",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "e3a9b913515a42f8ff3ef1551c3a2cdba383c39ed959729e0e2911219496ad74",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.llvm"
+    },
+    {
+      "bytes": 210,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0008__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.lzma",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "c7cbcf00b59dc61165b655b45bf6c21bb685d593861e7abbc78460c499167b42",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.lzma"
+    },
+    {
+      "bytes": 2515,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0009__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.pcre",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "accdcf2455c07b99abea59016b3663eaef926a92092d103bfaa25fed27cf6b24",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.pcre"
+    },
+    {
+      "bytes": 1762,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0010__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.regex",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "e2c1395a3d9fea6d5d25847c9d783db6e2cc8b085b4025861f459139c5dfd90b",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.regex"
+    },
+    {
+      "bytes": 2403,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0011__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.unrar",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "1faccc6b5c7b958fb807a3f573d5be9bf7889fe898f7e0617c544b05a81bfd00",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.unrar"
+    },
+    {
+      "bytes": 885,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0012__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.zlib",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "c2f77553f8d870c5635b0dace0519253233f172b33ce1fdf6578610706294eee",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/COPYING/COPYING.zlib"
+    },
+    {
+      "bytes": 1090,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0013__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__clamonacc__c-thread-pool__LICENSE",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "d337bd233b4c785953abf6090165bc56e366cb58c386f7a68323459dd9c4fe8d",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/clamonacc/c-thread-pool/LICENSE"
+    },
+    {
+      "bytes": 26430,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0014__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__libclammspack__COPYING.LIB",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "a190dc9c8043755d90f8b0a75fa66b9e42d4af4c980bf5ddc633f0124db3cee7",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/libclammspack/COPYING.LIB"
+    },
+    {
+      "bytes": 1976,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0015__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__libclamunrar__license.txt",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "6ecc1687808b7d66b24f874755abfed7464d9751ed0001cd4e8e5d9bf397ff8a",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/libclamunrar/license.txt"
+    },
+    {
+      "bytes": 17992,
+      "component": "clamav",
+      "evidence_only": true,
+      "file": "licenses/clamav/0016__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__unit_tests__input__COPYING",
+      "repository": "Cisco-Talos/clamav",
+      "sha256": "32b1062f7da84967e7019d01ab805935caa7ab7321a7ced0e30ebe75e5df1670",
+      "source_member": "clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf/unit_tests/input/COPYING"
+    },
+    {
+      "bytes": 3089,
+      "component": "libarchive",
+      "evidence_only": true,
+      "file": "licenses/libarchive/0000__libarchive-27cbc7827172698143e440801fc0ba39ccb4f1f5__COPYING",
+      "repository": "libarchive/libarchive",
+      "sha256": "30e556b3959e3985d66efefec5eaac51d4995053caa1d3cffe6eb916f146f229",
+      "source_member": "libarchive-27cbc7827172698143e440801fc0ba39ccb4f1f5/COPYING"
+    },
+    {
+      "bytes": 221,
+      "component": "bagit-python",
+      "evidence_only": true,
+      "file": "licenses/bagit-python/0000__bagit-python-4bd2713cedbe1f8e634567c20ef0dded9622011d__test-data__README",
+      "repository": "LibraryOfCongress/bagit-python",
+      "sha256": "9006a02daf291a3ce8eebbb094ed3d17fcb0177b8e8d3421fbb8a080a2be48bf",
+      "source_member": "bagit-python-4bd2713cedbe1f8e634567c20ef0dded9622011d/test-data/README"
+    },
+    {
+      "bytes": 4863,
+      "component": "legislation-mcp-ts",
+      "evidence_only": true,
+      "file": "licenses/legislation-mcp-ts/0000__legislation-mcp-ts-8261b2aada185aa846d34288790d1321ac79c8dc__LICENSE",
+      "repository": "legislation/legislation-mcp-ts",
+      "sha256": "f06241298c9c8b5f855222b762807137e9cc9f9498655da840a91c1101e02c8a",
+      "source_member": "legislation-mcp-ts-8261b2aada185aa846d34288790d1321ac79c8dc/LICENSE"
+    },
+    {
+      "bytes": 653,
+      "component": "legalize-uk",
+      "evidence_only": true,
+      "file": "licenses/legalize-uk/0000__legalize-uk-8c5b105fa8089d311e285e90d5663343313bca7a__LICENSE",
+      "repository": "legalize-dev/legalize-uk",
+      "sha256": "6b7a54f360ab33e716cfd7966cae6af838059762a2a499876bb22f961ecd6ce7",
+      "source_member": "legalize-uk-8c5b105fa8089d311e285e90d5663343313bca7a/LICENSE"
+    },
+    {
+      "bytes": 1065,
+      "component": "legalize-pipeline",
+      "evidence_only": true,
+      "file": "licenses/legalize-pipeline/0000__legalize-pipeline-5596f1d4f6c84df246dd1e267a981d6ef6a618bc__LICENSE",
+      "repository": "legalize-dev/legalize-pipeline",
+      "sha256": "f8a290cf7fca8ff960bf034ee37632305021751a92c1cb94a447f95a39c73cad",
+      "source_member": "legalize-pipeline-5596f1d4f6c84df246dd1e267a981d6ef6a618bc/LICENSE"
+    },
+    {
+      "bytes": 1589,
+      "component": "legalize-pipeline",
+      "evidence_only": true,
+      "file": "licenses/legalize-pipeline/0001__src__legalize__committer__license.py",
+      "repository": "legalize-dev/legalize-pipeline",
+      "sha256": "9199e2c79c3624669bbc66298ec3aebecae85fac6f5c62a438e6456cacce883a",
+      "source_member": "legalize-pipeline-5596f1d4f6c84df246dd1e267a981d6ef6a618bc/src/legalize/committer/license.py"
+    },
+    {
+      "bytes": 1108,
+      "component": "tna-caselaw-client",
+      "evidence_only": true,
+      "file": "licenses/tna-caselaw-client/0000__ds-caselaw-custom-api-client-d8a55379ed76e23c989c704b197c1f0db7ee6159__LICENSE.md",
+      "repository": "nationalarchives/ds-caselaw-custom-api-client",
+      "sha256": "7c6333cb22ee416f8801751e0d20ab45db185b9dfa68459385d6e90a3a3a64a8",
+      "source_member": "ds-caselaw-custom-api-client-d8a55379ed76e23c989c704b197c1f0db7ee6159/LICENSE.md"
+    },
+    {
+      "bytes": 1101,
+      "component": "tna-judgments-parser",
+      "evidence_only": true,
+      "file": "licenses/tna-judgments-parser/0000__tna-judgments-parser-194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4__LICENSE",
+      "repository": "nationalarchives/tna-judgments-parser",
+      "sha256": "3a1203066faf566439c2f9ede455f2eb16681d89a373788a95b191acc0d867db",
+      "source_member": "tna-judgments-parser-194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4/LICENSE"
+    }
+  ],
+  "license_evidence_open_components": [
+    "pdfid"
+  ],
+  "license_evidence_open_count": 1,
+  "requested_sources": 32,
+  "required_failures": [
+    {
+      "component": "mediainfo",
+      "error": "HTTPError: HTTP Error 422: Unprocessable Entity",
+      "repository": "MediaArea/MediaInfoLib",
+      "required": true
+    },
+    {
+      "component": "pyhanko",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "repository": "MatthieuDartiailh/pyHanko",
+      "required": true
+    }
+  ],
+  "schema": "mcr-github-foss-delta-harvest-result-v1",
+  "sources": [
+    {
+      "archive_bytes": 254795,
+      "archive_name": "process-wrap__watchexec_process-wrap__d02486b8d1e393a4ac27023d591b6f35c6417ffb.zip",
+      "archive_sha256": "6321e260803118beb817d22a5cb3655d3435115692988539df2fb04345f2add0",
+      "category": "core-delta",
+      "commit": "d02486b8d1e393a4ac27023d591b6f35c6417ffb",
+      "commit_date": "2026-08-24T14:52:08Z",
+      "commit_html_url": "https://github.com/watchexec/process-wrap/commit/d02486b8d1e393a4ac27023d591b6f35c6417ffb",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:20.913306+00:00",
+      "id": "process-wrap",
+      "license": "Apache-2.0 OR MIT",
+      "license_evidence": [
+        "licenses/process-wrap/0000__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__COPYRIGHT",
+        "licenses/process-wrap/0001__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__LICENSE-APACHE",
+        "licenses/process-wrap/0002__process-wrap-d02486b8d1e393a4ac27023d591b6f35c6417ffb__LICENSE-MIT"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "watchexec/process-wrap",
+      "required": true,
+      "resolved_commit": "d02486b8d1e393a4ac27023d591b6f35c6417ffb",
+      "source_stats": {
+        "license_evidence_count": 3,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 468895,
+        "zip_member_count": 106
+      },
+      "started_utc": "2026-09-05T11:22:20.245529+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 254795,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/process-wrap__watchexec_process-wrap__d02486b8d1e393a4ac27023d591b6f35c6417ffb.zip",
+          "sha256": "6321e260803118beb817d22a5cb3655d3435115692988539df2fb04345f2add0"
+        }
+      ],
+      "use": "Windows Job Object process-supervisor donor"
+    },
+    {
+      "archive_bytes": 6219549,
+      "archive_name": "calamine__tafia_calamine__0a24c2a9f1e38c0932c1299e633270dc730db505.zip",
+      "archive_sha256": "4a39ae6a2aae34bb71b8f8f20856689d086fb13b15f549823fbde278cbf3216f",
+      "category": "core-delta",
+      "commit": "0a24c2a9f1e38c0932c1299e633270dc730db505",
+      "commit_date": "2026-07-27T10:06:04Z",
+      "commit_html_url": "https://github.com/tafia/calamine/commit/0a24c2a9f1e38c0932c1299e633270dc730db505",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:22.446525+00:00",
+      "id": "calamine",
+      "license": "MIT",
+      "license_evidence": [
+        "licenses/calamine/0000__calamine-0a24c2a9f1e38c0932c1299e633270dc730db505__LICENSE-MIT.md"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "tafia/calamine",
+      "required": true,
+      "resolved_commit": "0a24c2a9f1e38c0932c1299e633270dc730db505",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 22832338,
+        "zip_member_count": 190
+      },
+      "started_utc": "2026-09-05T11:22:20.913329+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 6219549,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/calamine__tafia_calamine__0a24c2a9f1e38c0932c1299e633270dc730db505.zip",
+          "sha256": "4a39ae6a2aae34bb71b8f8f20856689d086fb13b15f549823fbde278cbf3216f"
+        }
+      ],
+      "use": "read-only spreadsheet parser"
+    },
+    {
+      "archive_bytes": 784019,
+      "archive_name": "cargo-deny__EmbarkStudios_cargo-deny__bca0dde53651ee946720e4540b5ce2610bec8f06.zip",
+      "archive_sha256": "82b79a2157ec0e1255f0154077dcba4035bb77e05f7a8c000025394e9378768b",
+      "category": "core-delta",
+      "commit": "bca0dde53651ee946720e4540b5ce2610bec8f06",
+      "commit_date": "2026-07-09T17:58:04Z",
+      "commit_html_url": "https://github.com/EmbarkStudios/cargo-deny/commit/bca0dde53651ee946720e4540b5ce2610bec8f06",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:23.212958+00:00",
+      "id": "cargo-deny",
+      "license": "MIT OR Apache-2.0",
+      "license_evidence": [
+        "licenses/cargo-deny/0000__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__LICENSE-APACHE",
+        "licenses/cargo-deny/0001__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__LICENSE-MIT",
+        "licenses/cargo-deny/0002__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__benches__license_data.rs",
+        "licenses/cargo-deny/0003__src__checks__licenses__README.md",
+        "licenses/cargo-deny/0004__src__checks__licenses__cfg.md",
+        "licenses/cargo-deny/0005__src__checks__licenses__diags.md",
+        "licenses/cargo-deny/0006__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE",
+        "licenses/cargo-deny/0007__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-AGPL-3.0",
+        "licenses/cargo-deny/0008__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-BSD",
+        "licenses/cargo-deny/0009__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__examples__14_license_detection__LICENSE-MIT",
+        "licenses/cargo-deny/0010__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__cfg.rs",
+        "licenses/cargo-deny/0011__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__diags.rs",
+        "licenses/cargo-deny/0012__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__src__licenses__gather.rs",
+        "licenses/cargo-deny/0013__src__licenses__snapshots__cargo_deny__licenses__cfg__test__deserializes_licenses_cfg-2.snap",
+        "licenses/cargo-deny/0014__src__licenses__snapshots__cargo_deny__licenses__cfg__test__deserializes_licenses_cfg.snap",
+        "licenses/cargo-deny/0015__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__tests__LICENSE-RING",
+        "licenses/cargo-deny/0016__cargo-deny-bca0dde53651ee946720e4540b5ce2610bec8f06__tests__LICENSE-SUMMARY",
+        "licenses/cargo-deny/0017__tests__test_data__so-annoying__LICENSE-APACHE",
+        "licenses/cargo-deny/0018__tests__test_data__so-annoying__LICENSE-PIXAR"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "EmbarkStudios/cargo-deny",
+      "required": true,
+      "resolved_commit": "bca0dde53651ee946720e4540b5ce2610bec8f06",
+      "source_stats": {
+        "license_evidence_count": 19,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 3528873,
+        "zip_member_count": 551
+      },
+      "started_utc": "2026-09-05T11:22:22.446554+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 784019,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/cargo-deny__EmbarkStudios_cargo-deny__bca0dde53651ee946720e4540b5ce2610bec8f06.zip",
+          "sha256": "82b79a2157ec0e1255f0154077dcba4035bb77e05f7a8c000025394e9378768b"
+        }
+      ],
+      "use": "Rust licence/advisory/source policy checks"
+    },
+    {
+      "archive_bytes": 131153,
+      "archive_name": "cargo-about__EmbarkStudios_cargo-about__f7394d5c8f618623573072caadf6594821c789b6.zip",
+      "archive_sha256": "ae4aea4f587124a1f1065146e568a724111aba7491eb286b956f52c66476f3d0",
+      "category": "core-delta",
+      "commit": "f7394d5c8f618623573072caadf6594821c789b6",
+      "commit_date": "2026-08-18T14:51:07Z",
+      "commit_html_url": "https://github.com/EmbarkStudios/cargo-about/commit/f7394d5c8f618623573072caadf6594821c789b6",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:23.760739+00:00",
+      "id": "cargo-about",
+      "license": "MIT OR Apache-2.0",
+      "license_evidence": [
+        "licenses/cargo-about/0000__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__LICENSE-APACHE",
+        "licenses/cargo-about/0001__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__LICENSE-MIT",
+        "licenses/cargo-about/0002__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__config.rs",
+        "licenses/cargo-about/0003__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__fetch.rs",
+        "licenses/cargo-about/0004__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__resolution.rs",
+        "licenses/cargo-about/0005__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__scan.rs",
+        "licenses/cargo-about/0006__cargo-about-f7394d5c8f618623573072caadf6594821c789b6__src__licenses__workarounds.rs",
+        "licenses/cargo-about/0007__src__licenses__workarounds__bitvec.rs",
+        "licenses/cargo-about/0008__src__licenses__workarounds__chrono.rs",
+        "licenses/cargo-about/0009__src__licenses__workarounds__clap.rs",
+        "licenses/cargo-about/0010__src__licenses__workarounds__cocoa.rs",
+        "licenses/cargo-about/0011__src__licenses__workarounds__gtk.rs",
+        "licenses/cargo-about/0012__src__licenses__workarounds__linux_raw_sys.rs",
+        "licenses/cargo-about/0013__src__licenses__workarounds__prost.rs",
+        "licenses/cargo-about/0014__src__licenses__workarounds__ring.rs",
+        "licenses/cargo-about/0015__src__licenses__workarounds__rustix.rs",
+        "licenses/cargo-about/0016__src__licenses__workarounds__rustls.rs",
+        "licenses/cargo-about/0017__src__licenses__workarounds__sentry.rs",
+        "licenses/cargo-about/0018__src__licenses__workarounds__tonic.rs",
+        "licenses/cargo-about/0019__src__licenses__workarounds__tract.rs",
+        "licenses/cargo-about/0020__src__licenses__workarounds__unicode_ident.rs",
+        "licenses/cargo-about/0021__src__licenses__workarounds__wasmtime.rs"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "EmbarkStudios/cargo-about",
+      "required": true,
+      "resolved_commit": "f7394d5c8f618623573072caadf6594821c789b6",
+      "source_stats": {
+        "license_evidence_count": 22,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 423666,
+        "zip_member_count": 93
+      },
+      "started_utc": "2026-09-05T11:22:23.212980+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 131153,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/cargo-about__EmbarkStudios_cargo-about__f7394d5c8f618623573072caadf6594821c789b6.zip",
+          "sha256": "ae4aea4f587124a1f1065146e568a724111aba7491eb286b956f52c66476f3d0"
+        }
+      ],
+      "use": "third-party licence inventory"
+    },
+    {
+      "archive_bytes": 172094,
+      "archive_name": "cargo-auditable__rust-secure-code_cargo-auditable__9dc5ff28ff204b73eae91bd96cde4413fdcb70e0.zip",
+      "archive_sha256": "cfea81df83d191f961fec15d5ec51e005c78ea921162fc01baf8385d302bd4ab",
+      "category": "core-delta",
+      "commit": "9dc5ff28ff204b73eae91bd96cde4413fdcb70e0",
+      "commit_date": "2026-05-21T23:24:53Z",
+      "commit_html_url": "https://github.com/rust-secure-code/cargo-auditable/commit/9dc5ff28ff204b73eae91bd96cde4413fdcb70e0",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:24.345848+00:00",
+      "id": "cargo-auditable",
+      "license": "MIT OR Apache-2.0",
+      "license_evidence": [
+        "licenses/cargo-auditable/0000__cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0__LICENSE-APACHE",
+        "licenses/cargo-auditable/0001__cargo-auditable-9dc5ff28ff204b73eae91bd96cde4413fdcb70e0__LICENSE-MIT"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "rust-secure-code/cargo-auditable",
+      "required": true,
+      "resolved_commit": "9dc5ff28ff204b73eae91bd96cde4413fdcb70e0",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 287286,
+        "zip_member_count": 231
+      },
+      "started_utc": "2026-09-05T11:22:23.760760+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 172094,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/cargo-auditable__rust-secure-code_cargo-auditable__9dc5ff28ff204b73eae91bd96cde4413fdcb70e0.zip",
+          "sha256": "cfea81df83d191f961fec15d5ec51e005c78ea921162fc01baf8385d302bd4ab"
+        }
+      ],
+      "use": "embed dependency metadata into release binary"
+    },
+    {
+      "archive_bytes": 54935,
+      "archive_name": "cargo-fuzz__rust-fuzz_cargo-fuzz__984c861c8dfea28055254c5f1d2659ab2cd63f76.zip",
+      "archive_sha256": "7543a7936f4140e21f0814fd911d2beb48ea27b6306928a778eeca3a9031f8f8",
+      "category": "core-delta",
+      "commit": "984c861c8dfea28055254c5f1d2659ab2cd63f76",
+      "commit_date": "2026-06-09T18:36:54Z",
+      "commit_html_url": "https://github.com/rust-fuzz/cargo-fuzz/commit/984c861c8dfea28055254c5f1d2659ab2cd63f76",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:24.881107+00:00",
+      "id": "cargo-fuzz",
+      "license": "Apache-2.0",
+      "license_evidence": [
+        "licenses/cargo-fuzz/0000__cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76__LICENSE-APACHE",
+        "licenses/cargo-fuzz/0001__cargo-fuzz-984c861c8dfea28055254c5f1d2659ab2cd63f76__LICENSE-MIT"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "rust-fuzz/cargo-fuzz",
+      "required": true,
+      "resolved_commit": "984c861c8dfea28055254c5f1d2659ab2cd63f76",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 169255,
+        "zip_member_count": 35
+      },
+      "started_utc": "2026-09-05T11:22:24.345868+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 54935,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/cargo-fuzz__rust-fuzz_cargo-fuzz__984c861c8dfea28055254c5f1d2659ab2cd63f76.zip",
+          "sha256": "7543a7936f4140e21f0814fd911d2beb48ea27b6306928a778eeca3a9031f8f8"
+        }
+      ],
+      "use": "parser fuzzing"
+    },
+    {
+      "category": "secondary-a",
+      "commit": "4728f24b666117a19d36515d95b9367fbb37aaf6",
+      "completed_utc": "2026-09-05T11:22:25.155569+00:00",
+      "error": "HTTPError: HTTP Error 422: Unprocessable Entity",
+      "id": "mediainfo",
+      "license": "BSD-2-Clause",
+      "repo": "MediaArea/MediaInfoLib",
+      "required": true,
+      "started_utc": "2026-09-05T11:22:24.881128+00:00",
+      "status": "FAILED",
+      "use": "optional media metadata comparator"
+    },
+    {
+      "archive_bytes": 1014503,
+      "archive_name": "dangerzone__freedomofpress_dangerzone__6cc19db50166658feff4d72df605f30e97308f16.zip",
+      "archive_sha256": "ca28678d4446a6e7f5523f2ca445d771eae05d1818d0c57cb4d2ccd68fd7d79e",
+      "category": "secondary-a",
+      "commit": "6cc19db50166658feff4d72df605f30e97308f16",
+      "commit_date": "2026-07-01T13:38:06Z",
+      "commit_html_url": "https://github.com/freedomofpress/dangerzone/commit/6cc19db50166658feff4d72df605f30e97308f16",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:25.814045+00:00",
+      "id": "dangerzone",
+      "license": "AGPL-3.0",
+      "license_evidence": [
+        "licenses/dangerzone/0000__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__LICENSE",
+        "licenses/dangerzone/0001__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__debian__copyright",
+        "licenses/dangerzone/0002__dangerzone-6cc19db50166658feff4d72df605f30e97308f16__install__windows__license.rtf"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "freedomofpress/dangerzone",
+      "required": true,
+      "resolved_commit": "6cc19db50166658feff4d72df605f30e97308f16",
+      "source_stats": {
+        "license_evidence_count": 3,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 2662231,
+        "zip_member_count": 258
+      },
+      "started_utc": "2026-09-05T11:22:25.155728+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 1014503,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/dangerzone__freedomofpress_dangerzone__6cc19db50166658feff4d72df605f30e97308f16.zip",
+          "sha256": "ca28678d4446a6e7f5523f2ca445d771eae05d1818d0c57cb4d2ccd68fd7d79e"
+        }
+      ],
+      "use": "separate optional hostile-document preview tool only"
+    },
+    {
+      "archive_bytes": 114538,
+      "archive_name": "warcio__webrecorder_warcio__05b1a68d3dda125d12098d0995c0cee920318aa0.zip",
+      "archive_sha256": "9715169a4032f868f5cc87d58882cd104794cae03d6a05a5f7ed0b6a22356dc8",
+      "category": "secondary-a",
+      "commit": "05b1a68d3dda125d12098d0995c0cee920318aa0",
+      "commit_date": "2026-03-31T16:09:16Z",
+      "commit_html_url": "https://github.com/webrecorder/warcio/commit/05b1a68d3dda125d12098d0995c0cee920318aa0",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:26.374236+00:00",
+      "id": "warcio",
+      "license": "Apache-2.0",
+      "license_evidence": [
+        "licenses/warcio/0000__warcio-05b1a68d3dda125d12098d0995c0cee920318aa0__LICENSE",
+        "licenses/warcio/0001__warcio-05b1a68d3dda125d12098d0995c0cee920318aa0__NOTICE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "webrecorder/warcio",
+      "required": true,
+      "resolved_commit": "05b1a68d3dda125d12098d0995c0cee920318aa0",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 311695,
+        "zip_member_count": 70
+      },
+      "started_utc": "2026-09-05T11:22:25.814068+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 114538,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/warcio__webrecorder_warcio__05b1a68d3dda125d12098d0995c0cee920318aa0.zip",
+          "sha256": "9715169a4032f868f5cc87d58882cd104794cae03d6a05a5f7ed0b6a22356dc8"
+        }
+      ],
+      "use": "WARC read/write/verification module"
+    },
+    {
+      "archive_bytes": 10162197,
+      "archive_name": "whisper-cpp__ggml-org_whisper.cpp__f049fff95a089aa9969deb009cdd4892b3e74916.zip",
+      "archive_sha256": "58347c4dc92142c47b6d6e5a2a7e1b00b501c9bf8cdaff7f089e49ae59eb3a44",
+      "category": "secondary-a",
+      "commit": "f049fff95a089aa9969deb009cdd4892b3e74916",
+      "commit_date": "2026-06-19T04:12:37Z",
+      "commit_html_url": "https://github.com/ggml-org/whisper.cpp/commit/f049fff95a089aa9969deb009cdd4892b3e74916",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:28.154541+00:00",
+      "id": "whisper-cpp",
+      "license": "MIT",
+      "license_evidence": [
+        "licenses/whisper-cpp/0000__whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916__LICENSE",
+        "licenses/whisper-cpp/0001__whisper.cpp-f049fff95a089aa9969deb009cdd4892b3e74916__bindings__go__LICENSE",
+        "licenses/whisper-cpp/0002__chessboardjs-1.0.0__js__chessboard-1.0.0__LICENSE.md",
+        "licenses/whisper-cpp/0003__tests__earnings21__normalizers__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "ggml-org/whisper.cpp",
+      "required": true,
+      "resolved_commit": "f049fff95a089aa9969deb009cdd4892b3e74916",
+      "source_stats": {
+        "license_evidence_count": 4,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 36382209,
+        "zip_member_count": 2152
+      },
+      "started_utc": "2026-09-05T11:22:26.374257+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 10162197,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/whisper-cpp__ggml-org_whisper.cpp__f049fff95a089aa9969deb009cdd4892b3e74916.zip",
+          "sha256": "58347c4dc92142c47b6d6e5a2a7e1b00b501c9bf8cdaff7f089e49ae59eb3a44"
+        }
+      ],
+      "use": "optional offline transcription derivative"
+    },
+    {
+      "archive_bytes": 2533335,
+      "archive_name": "tesseract__tesseract-ocr_tesseract__db0ec62f81b0737fbbe184d8fea40af5738f8eef.zip",
+      "archive_sha256": "d2470cc33ee34deeae6fc47809d0b33a3623a4343d92ff317ac3b9903c507bad",
+      "category": "secondary-b",
+      "commit": "db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+      "commit_date": "2026-07-24T18:27:02Z",
+      "commit_html_url": "https://github.com/tesseract-ocr/tesseract/commit/db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:29.359359+00:00",
+      "id": "tesseract",
+      "license": "Apache-2.0",
+      "license_evidence": [
+        "licenses/tesseract/0000__tesseract-db0ec62f81b0737fbbe184d8fea40af5738f8eef__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "tesseract-ocr/tesseract",
+      "required": true,
+      "resolved_commit": "db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 8185994,
+        "zip_member_count": 772
+      },
+      "started_utc": "2026-09-05T11:22:28.154571+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 2533335,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/tesseract__tesseract-ocr_tesseract__db0ec62f81b0737fbbe184d8fea40af5738f8eef.zip",
+          "sha256": "d2470cc33ee34deeae6fc47809d0b33a3623a4343d92ff317ac3b9903c507bad"
+        }
+      ],
+      "use": "optional OCR derivative"
+    },
+    {
+      "archive_bytes": 2463951,
+      "archive_name": "browsertrix-crawler__webrecorder_browsertrix-crawler__8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4.zip",
+      "archive_sha256": "5e9bd3146fd3109ea69d74d8009b897b0782ad1d81c07cb310c522436bfee06d",
+      "category": "secondary-b",
+      "commit": "8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4",
+      "commit_date": "2026-07-30T02:16:49Z",
+      "commit_html_url": "https://github.com/webrecorder/browsertrix-crawler/commit/8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:30.205621+00:00",
+      "id": "browsertrix-crawler",
+      "license": "AGPL-3.0-or-later",
+      "license_evidence": [
+        "licenses/browsertrix-crawler/0000__browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4__LICENSE",
+        "licenses/browsertrix-crawler/0001__browsertrix-crawler-8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4__NOTICE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "webrecorder/browsertrix-crawler",
+      "required": true,
+      "resolved_commit": "8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 3212467,
+        "zip_member_count": 210
+      },
+      "started_utc": "2026-09-05T11:22:29.359381+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 2463951,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/browsertrix-crawler__webrecorder_browsertrix-crawler__8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4.zip",
+          "sha256": "5e9bd3146fd3109ea69d74d8009b897b0782ad1d81c07cb310c522436bfee06d"
+        }
+      ],
+      "use": "separate optional browser-capture appliance"
+    },
+    {
+      "archive_bytes": 164806158,
+      "archive_name": "c2pa-rs__contentauth_c2pa-rs__3f40cdd22b60bf955d531b0301604e3f257e0a19.zip",
+      "archive_sha256": "1e89d85edf34a0ecf49987ec9098d65f803758f8d772040058dfcb72be32539b",
+      "category": "secondary-b",
+      "commit": "3f40cdd22b60bf955d531b0301604e3f257e0a19",
+      "commit_date": "2026-05-27T17:42:24Z",
+      "commit_html_url": "https://github.com/contentauth/c2pa-rs/commit/3f40cdd22b60bf955d531b0301604e3f257e0a19",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:38.735544+00:00",
+      "id": "c2pa-rs",
+      "license": "Apache-2.0 OR MIT",
+      "license_evidence": [
+        "licenses/c2pa-rs/0000__c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19__LICENSE-APACHE",
+        "licenses/c2pa-rs/0001__c2pa-rs-3f40cdd22b60bf955d531b0301604e3f257e0a19__LICENSE-MIT"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "contentauth/c2pa-rs",
+      "required": true,
+      "resolved_commit": "3f40cdd22b60bf955d531b0301604e3f257e0a19",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 177108093,
+        "zip_member_count": 764
+      },
+      "started_utc": "2026-09-05T11:22:30.205643+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 164806158,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/c2pa-rs__contentauth_c2pa-rs__3f40cdd22b60bf955d531b0301604e3f257e0a19.zip",
+          "sha256": "1e89d85edf34a0ecf49987ec9098d65f803758f8d772040058dfcb72be32539b"
+        }
+      ],
+      "use": "corroborating C2PA authenticity signal only"
+    },
+    {
+      "archive_bytes": 9385877,
+      "archive_name": "exiftool__exiftool_exiftool__2200871d9cef988051d2a99d67df3bda6cbb30a8.zip",
+      "archive_sha256": "564e90d3c74cd9062b38e0be0475ed6d4a10553128a648027edb70723bfc3f1c",
+      "category": "secondary-b",
+      "commit": "2200871d9cef988051d2a99d67df3bda6cbb30a8",
+      "commit_date": "2026-05-27T16:44:48Z",
+      "commit_html_url": "https://github.com/exiftool/exiftool/commit/2200871d9cef988051d2a99d67df3bda6cbb30a8",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:40.530621+00:00",
+      "id": "exiftool",
+      "license": "Artistic OR GPL",
+      "license_evidence": [
+        "licenses/exiftool/0000__exiftool-2200871d9cef988051d2a99d67df3bda6cbb30a8__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "exiftool/exiftool",
+      "required": true,
+      "resolved_commit": "2200871d9cef988051d2a99d67df3bda6cbb30a8",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 34985188,
+        "zip_member_count": 1273
+      },
+      "started_utc": "2026-09-05T11:22:38.735577+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 9385877,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/exiftool__exiftool_exiftool__2200871d9cef988051d2a99d67df3bda6cbb30a8.zip",
+          "sha256": "564e90d3c74cd9062b38e0be0475ed6d4a10553128a648027edb70723bfc3f1c"
+        }
+      ],
+      "use": "read-only metadata comparator"
+    },
+    {
+      "category": "secondary-b",
+      "commit": "0945f9bc64ef6ef386500943ee2b5941b5f142cd",
+      "completed_utc": "2026-09-05T11:22:40.733424+00:00",
+      "error": "HTTPError: HTTP Error 404: Not Found",
+      "id": "pyhanko",
+      "license": "MIT",
+      "repo": "MatthieuDartiailh/pyHanko",
+      "required": true,
+      "started_utc": "2026-09-05T11:22:40.530647+00:00",
+      "status": "FAILED",
+      "use": "optional PDF-signature comparator only"
+    },
+    {
+      "archive_bytes": 339974,
+      "archive_name": "msoffcrypto-tool__nolze_msoffcrypto-tool__6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3.zip",
+      "archive_sha256": "9c8691994925c04f0a0608644aff8f72d70160430f930c0d3fbb1db26ea70a93",
+      "category": "secondary-c",
+      "commit": "6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3",
+      "commit_date": "2026-01-12T08:55:15Z",
+      "commit_html_url": "https://github.com/nolze/msoffcrypto-tool/commit/6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:41.408761+00:00",
+      "id": "msoffcrypto-tool",
+      "license": "MIT",
+      "license_evidence": [
+        "licenses/msoffcrypto-tool/0000__msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3__LICENSE.txt",
+        "licenses/msoffcrypto-tool/0001__msoffcrypto-tool-6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3__NOTICE.txt"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "nolze/msoffcrypto-tool",
+      "required": true,
+      "resolved_commit": "6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 978065,
+        "zip_member_count": 75
+      },
+      "started_utc": "2026-09-05T11:22:40.733610+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 339974,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/msoffcrypto-tool__nolze_msoffcrypto-tool__6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3.zip",
+          "sha256": "9c8691994925c04f0a0608644aff8f72d70160430f930c0d3fbb1db26ea70a93"
+        }
+      ],
+      "use": "known-key Office decryption derivative only"
+    },
+    {
+      "archive_bytes": 1085857,
+      "archive_name": "libpff__libyal_libpff__d8ab3594683ee9f3ec63ab0e2efd79d545854846.zip",
+      "archive_sha256": "9cdff8d8bacbfecec695da6341e8464a7acf4f7f887add2d23a194a4d4bd0c22",
+      "category": "secondary-c",
+      "commit": "d8ab3594683ee9f3ec63ab0e2efd79d545854846",
+      "commit_date": "2023-12-05T06:34:03Z",
+      "commit_html_url": "https://github.com/libyal/libpff/commit/d8ab3594683ee9f3ec63ab0e2efd79d545854846",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:42.205510+00:00",
+      "id": "libpff",
+      "license": "LGPL-3.0-or-later",
+      "license_evidence": [
+        "licenses/libpff/0000__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__COPYING",
+        "licenses/libpff/0001__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__COPYING.LESSER",
+        "licenses/libpff/0002__libpff-d8ab3594683ee9f3ec63ab0e2efd79d545854846__dpkg__copyright"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "libyal/libpff",
+      "required": true,
+      "resolved_commit": "d8ab3594683ee9f3ec63ab0e2efd79d545854846",
+      "source_stats": {
+        "license_evidence_count": 3,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 5482941,
+        "zip_member_count": 613
+      },
+      "started_utc": "2026-09-05T11:22:41.408782+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 1085857,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/libpff__libyal_libpff__d8ab3594683ee9f3ec63ab0e2efd79d545854846.zip",
+          "sha256": "9cdff8d8bacbfecec695da6341e8464a7acf4f7f887add2d23a194a4d4bd0c22"
+        }
+      ],
+      "use": "optional PST/OST comparator; alpha status explicit"
+    },
+    {
+      "archive_bytes": 7084356,
+      "archive_name": "msg-extractor__TeamMsgExtractor_msg-extractor__f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5.zip",
+      "archive_sha256": "fc2db860ee539b6f565901db8ad2d1d3f181c4680829e53154b0f2380c55a48e",
+      "category": "secondary-c",
+      "commit": "f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5",
+      "commit_date": "2026-07-18T21:11:41Z",
+      "commit_html_url": "https://github.com/TeamMsgExtractor/msg-extractor/commit/f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:43.211818+00:00",
+      "id": "msg-extractor",
+      "license": "GPL-3.0",
+      "license_evidence": [
+        "licenses/msg-extractor/0000__msg-extractor-f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5__LICENSE.txt"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "TeamMsgExtractor/msg-extractor",
+      "required": true,
+      "resolved_commit": "f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 8962332,
+        "zip_member_count": 184
+      },
+      "started_utc": "2026-09-05T11:22:42.205533+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 7084356,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/msg-extractor__TeamMsgExtractor_msg-extractor__f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5.zip",
+          "sha256": "fc2db860ee539b6f565901db8ad2d1d3f181c4680829e53154b0f2380c55a48e"
+        }
+      ],
+      "use": "separate Outlook MSG comparator"
+    },
+    {
+      "archive_bytes": 3376555,
+      "archive_name": "oletools__decalage2_oletools__ec10260989dbc48b9109e3d05d22beee19cf2333.zip",
+      "archive_sha256": "3d1060fd7c52cd76753f962231f081fafcc3fac3831733ccb20844b1da4946e7",
+      "category": "secondary-c",
+      "commit": "ec10260989dbc48b9109e3d05d22beee19cf2333",
+      "commit_date": "2026-01-26T22:51:36Z",
+      "commit_html_url": "https://github.com/decalage2/oletools/commit/ec10260989dbc48b9109e3d05d22beee19cf2333",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:22:44.074082+00:00",
+      "id": "oletools",
+      "license": "BSD-style",
+      "license_evidence": [
+        "licenses/oletools/0000__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__LICENSE.md",
+        "licenses/oletools/0001__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__LICENSE.txt",
+        "licenses/oletools/0002__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__doc__License.html",
+        "licenses/oletools/0003__oletools-ec10260989dbc48b9109e3d05d22beee19cf2333__oletools__doc__License.md",
+        "licenses/oletools/0004__oletools__thirdparty__prettytable__COPYING",
+        "licenses/oletools/0005__oletools__thirdparty__xglob__LICENSE.txt",
+        "licenses/oletools/0006__oletools__thirdparty__xxxswf__LICENSE.txt"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "decalage2/oletools",
+      "required": true,
+      "resolved_commit": "ec10260989dbc48b9109e3d05d22beee19cf2333",
+      "source_stats": {
+        "license_evidence_count": 7,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 7395327,
+        "zip_member_count": 296
+      },
+      "started_utc": "2026-09-05T11:22:43.211841+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 3376555,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/oletools__decalage2_oletools__ec10260989dbc48b9109e3d05d22beee19cf2333.zip",
+          "sha256": "3d1060fd7c52cd76753f962231f081fafcc3fac3831733ccb20844b1da4946e7"
+        }
+      ],
+      "use": "legacy Office macro/OLE forensics"
+    },
+    {
+      "archive_bytes": 156230167,
+      "archive_name": "apache-tika__apache_tika__cd800dd8d37a85ec7e258c7ca4cc61752b3ca600.zip",
+      "archive_sha256": "7827734b49068ea5c4124c31c4d16733124a59e562a5ff90a32e59a66d81ea4f",
+      "category": "secondary-c",
+      "commit": "cd800dd8d37a85ec7e258c7ca4cc61752b3ca600",
+      "commit_date": "2026-03-18T18:24:10Z",
+      "commit_html_url": "https://github.com/apache/tika/commit/cd800dd8d37a85ec7e258c7ca4cc61752b3ca600",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:55.809097+00:00",
+      "id": "apache-tika",
+      "license": "Apache-2.0",
+      "license_evidence": [
+        "licenses/apache-tika/0000__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__LICENSE.txt",
+        "licenses/apache-tika/0001__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__NOTICE.txt",
+        "licenses/apache-tika/0002__main__appended-resources__META-INF__LICENSE",
+        "licenses/apache-tika/0003__main__appended-resources__META-INF__LICENSE",
+        "licenses/apache-tika/0004__main__appended-resources__META-INF__LICENSE",
+        "licenses/apache-tika/0005__tika-cd800dd8d37a85ec7e258c7ca4cc61752b3ca600__tika-parent__license-header.txt"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "apache/tika",
+      "required": true,
+      "resolved_commit": "cd800dd8d37a85ec7e258c7ca4cc61752b3ca600",
+      "source_stats": {
+        "license_evidence_count": 6,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 245675104,
+        "zip_member_count": 5962
+      },
+      "started_utc": "2026-09-05T11:22:44.074107+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 156230167,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/apache-tika__apache_tika__cd800dd8d37a85ec7e258c7ca4cc61752b3ca600.zip",
+          "sha256": "7827734b49068ea5c4124c31c4d16733124a59e562a5ff90a32e59a66d81ea4f"
+        }
+      ],
+      "use": "independent format/metadata comparator"
+    },
+    {
+      "archive_bytes": 13191636,
+      "archive_name": "droid__digital-preservation_droid__deb91d041ba834077284156774e7352c3df1f87a.zip",
+      "archive_sha256": "486efd22211c416606ea7f689070758c544bb786d5b38f7046b894b3661f99c0",
+      "category": "secondary-d",
+      "commit": "deb91d041ba834077284156774e7352c3df1f87a",
+      "commit_date": "2026-07-02T15:30:52Z",
+      "commit_html_url": "https://github.com/digital-preservation/droid/commit/deb91d041ba834077284156774e7352c3df1f87a",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:22:57.529583+00:00",
+      "id": "droid",
+      "license": "BSD-3-Clause",
+      "license_evidence": [
+        "licenses/droid/0000__droid-deb91d041ba834077284156774e7352c3df1f87a__LICENSE",
+        "licenses/droid/0002__droid-deb91d041ba834077284156774e7352c3df1f87a__license.md"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "digital-preservation/droid",
+      "required": true,
+      "resolved_commit": "deb91d041ba834077284156774e7352c3df1f87a",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 50721279,
+        "zip_member_count": 3879
+      },
+      "started_utc": "2026-09-05T11:22:55.809128+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 13191636,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/droid__digital-preservation_droid__deb91d041ba834077284156774e7352c3df1f87a.zip",
+          "sha256": "486efd22211c416606ea7f689070758c544bb786d5b38f7046b894b3661f99c0"
+        }
+      ],
+      "use": "PRONOM/DROID comparator only"
+    },
+    {
+      "archive_bytes": 248170945,
+      "archive_name": "jhove__openpreserve_jhove__38115c6071a158b750c6bf2ce552240455e68fcc.zip",
+      "archive_sha256": "bc141864d2e957e9b17610ccf97e60c443a304f033b520cf08edd3155b469a33",
+      "category": "secondary-d",
+      "commit": "38115c6071a158b750c6bf2ce552240455e68fcc",
+      "commit_date": "2025-07-01T14:06:18Z",
+      "commit_html_url": "https://github.com/openpreserve/jhove/commit/38115c6071a158b750c6bf2ce552240455e68fcc",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:23:12.408232+00:00",
+      "id": "jhove",
+      "license": "LGPL-2.1-or-later",
+      "license_evidence": [
+        "licenses/jhove/0000__jhove-38115c6071a158b750c6bf2ce552240455e68fcc__COPYING",
+        "licenses/jhove/0001__jhove-38115c6071a158b750c6bf2ce552240455e68fcc__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "openpreserve/jhove",
+      "required": true,
+      "resolved_commit": "38115c6071a158b750c6bf2ce552240455e68fcc",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 404578395,
+        "zip_member_count": 3372
+      },
+      "started_utc": "2026-09-05T11:22:57.529613+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 248170945,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/jhove__openpreserve_jhove__38115c6071a158b750c6bf2ce552240455e68fcc.zip",
+          "sha256": "bc141864d2e957e9b17610ccf97e60c443a304f033b520cf08edd3155b469a33"
+        }
+      ],
+      "use": "independent archival-format validator"
+    },
+    {
+      "archive_bytes": 84532977,
+      "archive_name": "magika__google_magika__5e2f437fb7b7452368c8c1fa9354858f5487a5c4.zip",
+      "archive_sha256": "54983bcea9c11499aee7162ed11989167918b37b69adce67a4891f2fd3e1d7a0",
+      "category": "secondary-d",
+      "commit": "5e2f437fb7b7452368c8c1fa9354858f5487a5c4",
+      "commit_date": "2026-04-24T10:28:49Z",
+      "commit_html_url": "https://github.com/google/magika/commit/5e2f437fb7b7452368c8c1fa9354858f5487a5c4",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:23:18.040459+00:00",
+      "id": "magika",
+      "license": "Apache-2.0",
+      "license_evidence": [
+        "licenses/magika/0000__magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4__LICENSE",
+        "licenses/magika/0001__magika-5e2f437fb7b7452368c8c1fa9354858f5487a5c4__rust__cli__LICENSE",
+        "licenses/magika/0003__content__docs__additional-resources__license.md"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "google/magika",
+      "required": true,
+      "resolved_commit": "5e2f437fb7b7452368c8c1fa9354858f5487a5c4",
+      "source_stats": {
+        "license_evidence_count": 3,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 94932083,
+        "zip_member_count": 723
+      },
+      "started_utc": "2026-09-05T11:23:12.408264+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 84532977,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/magika__google_magika__5e2f437fb7b7452368c8c1fa9354858f5487a5c4.zip",
+          "sha256": "54983bcea9c11499aee7162ed11989167918b37b69adce67a4891f2fd3e1d7a0"
+        }
+      ],
+      "use": "fuzzy ML secondary file-type signal only"
+    },
+    {
+      "archive_bytes": 14935925,
+      "archive_name": "clamav__Cisco-Talos_clamav__fa59fca15872bb8a914ba4c68188bcc8a502cbdf.zip",
+      "archive_sha256": "31e15ccf9cfd241f446209707b30f0c13d2209efff12541ed937115b4d75e958",
+      "category": "secondary-d",
+      "commit": "fa59fca15872bb8a914ba4c68188bcc8a502cbdf",
+      "commit_date": "2026-08-06T21:06:05Z",
+      "commit_html_url": "https://github.com/Cisco-Talos/clamav/commit/fa59fca15872bb8a914ba4c68188bcc8a502cbdf",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:23:19.702767+00:00",
+      "id": "clamav",
+      "license": "GPL-2.0-family",
+      "license_evidence": [
+        "licenses/clamav/0000__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING.txt",
+        "licenses/clamav/0001__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.LGPL",
+        "licenses/clamav/0002__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.YARA",
+        "licenses/clamav/0003__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.bzip2",
+        "licenses/clamav/0004__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.curl",
+        "licenses/clamav/0005__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.file",
+        "licenses/clamav/0006__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.getopt",
+        "licenses/clamav/0007__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.llvm",
+        "licenses/clamav/0008__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.lzma",
+        "licenses/clamav/0009__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.pcre",
+        "licenses/clamav/0010__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.regex",
+        "licenses/clamav/0011__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.unrar",
+        "licenses/clamav/0012__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__COPYING__COPYING.zlib",
+        "licenses/clamav/0013__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__clamonacc__c-thread-pool__LICENSE",
+        "licenses/clamav/0014__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__libclammspack__COPYING.LIB",
+        "licenses/clamav/0015__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__libclamunrar__license.txt",
+        "licenses/clamav/0016__clamav-fa59fca15872bb8a914ba4c68188bcc8a502cbdf__unit_tests__input__COPYING"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "Cisco-Talos/clamav",
+      "required": true,
+      "resolved_commit": "fa59fca15872bb8a914ba4c68188bcc8a502cbdf",
+      "source_stats": {
+        "license_evidence_count": 17,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 27151536,
+        "zip_member_count": 1533
+      },
+      "started_utc": "2026-09-05T11:23:18.040490+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 14935925,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/clamav__Cisco-Talos_clamav__fa59fca15872bb8a914ba4c68188bcc8a502cbdf.zip",
+          "sha256": "31e15ccf9cfd241f446209707b30f0c13d2209efff12541ed937115b4d75e958"
+        }
+      ],
+      "use": "separate optional malware scanner; clean never means safe"
+    },
+    {
+      "archive_bytes": 7853394,
+      "archive_name": "libarchive__libarchive_libarchive__27cbc7827172698143e440801fc0ba39ccb4f1f5.zip",
+      "archive_sha256": "37ff6caddbeca67bb551fd5e3edf80b8d69fa0f644d92bdd0052534bf055d6a0",
+      "category": "secondary-d",
+      "commit": "27cbc7827172698143e440801fc0ba39ccb4f1f5",
+      "commit_date": "2026-07-28T09:14:47Z",
+      "commit_html_url": "https://github.com/libarchive/libarchive/commit/27cbc7827172698143e440801fc0ba39ccb4f1f5",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:23:20.933848+00:00",
+      "id": "libarchive",
+      "license": "BSD-style with per-file exceptions",
+      "license_evidence": [
+        "licenses/libarchive/0000__libarchive-27cbc7827172698143e440801fc0ba39ccb4f1f5__COPYING"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "libarchive/libarchive",
+      "required": true,
+      "resolved_commit": "27cbc7827172698143e440801fc0ba39ccb4f1f5",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 20417383,
+        "zip_member_count": 1505
+      },
+      "started_utc": "2026-09-05T11:23:19.702796+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 7853394,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/libarchive__libarchive_libarchive__27cbc7827172698143e440801fc0ba39ccb4f1f5.zip",
+          "sha256": "37ff6caddbeca67bb551fd5e3edf80b8d69fa0f644d92bdd0052534bf055d6a0"
+        }
+      ],
+      "use": "non-ZIP archive comparator under MCR limits"
+    },
+    {
+      "archive_bytes": 14069935,
+      "archive_name": "pdfid__DidierStevens_DidierStevensSuite__dea6816048fb2fd3a3597f2e131449fc87f60138.zip",
+      "archive_sha256": "cc03ce03f75e31b7c9a03f5c85d07a3465af4121691399166b43513ffacba516",
+      "category": "legal-reference",
+      "commit": "dea6816048fb2fd3a3597f2e131449fc87f60138",
+      "commit_date": "2026-07-30T13:37:07Z",
+      "commit_html_url": "https://github.com/DidierStevens/DidierStevensSuite/commit/dea6816048fb2fd3a3597f2e131449fc87f60138",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:23:23.244855+00:00",
+      "id": "pdfid",
+      "license": "Public Domain",
+      "license_evidence": [],
+      "license_evidence_status": "EVIDENCE_OPEN_REVIEW_REQUIRED",
+      "repo": "DidierStevens/DidierStevensSuite",
+      "required": true,
+      "resolved_commit": "dea6816048fb2fd3a3597f2e131449fc87f60138",
+      "source_stats": {
+        "license_evidence_count": 0,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 36073176,
+        "zip_member_count": 275
+      },
+      "started_utc": "2026-09-05T11:23:20.933875+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 14069935,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/pdfid__DidierStevens_DidierStevensSuite__dea6816048fb2fd3a3597f2e131449fc87f60138.zip",
+          "sha256": "cc03ce03f75e31b7c9a03f5c85d07a3465af4121691399166b43513ffacba516"
+        }
+      ],
+      "use": "PDFiD lexical risk-indicator donor only"
+    },
+    {
+      "archive_bytes": 1031542,
+      "archive_name": "bagit-python__LibraryOfCongress_bagit-python__4bd2713cedbe1f8e634567c20ef0dded9622011d.zip",
+      "archive_sha256": "130e7351cbc91bd76232eab86782f0b98fc4ff6fba51e2740f09e04c50645bbb",
+      "category": "legal-reference",
+      "commit": "4bd2713cedbe1f8e634567c20ef0dded9622011d",
+      "commit_date": "2026-06-18T18:49:55Z",
+      "commit_html_url": "https://github.com/LibraryOfCongress/bagit-python/commit/4bd2713cedbe1f8e634567c20ef0dded9622011d",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:23:23.860803+00:00",
+      "id": "bagit-python",
+      "license": "Public Domain",
+      "license_evidence": [
+        "licenses/bagit-python/0000__bagit-python-4bd2713cedbe1f8e634567c20ef0dded9622011d__test-data__README"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "LibraryOfCongress/bagit-python",
+      "required": true,
+      "resolved_commit": "4bd2713cedbe1f8e634567c20ef0dded9622011d",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 1136493,
+        "zip_member_count": 36
+      },
+      "started_utc": "2026-09-05T11:23:23.244885+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 1031542,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/bagit-python__LibraryOfCongress_bagit-python__4bd2713cedbe1f8e634567c20ef0dded9622011d.zip",
+          "sha256": "130e7351cbc91bd76232eab86782f0b98fc4ff6fba51e2740f09e04c50645bbb"
+        }
+      ],
+      "use": "BagIt-style fixity/package reference"
+    },
+    {
+      "archive_bytes": 331638,
+      "archive_name": "legislation-mcp-ts__legislation_legislation-mcp-ts__8261b2aada185aa846d34288790d1321ac79c8dc.zip",
+      "archive_sha256": "380d457d7fe78f52f41565a283326165ddc864892c9d89bb32a915e95d342e4d",
+      "category": "legal-reference",
+      "commit": "8261b2aada185aa846d34288790d1321ac79c8dc",
+      "commit_date": "2026-08-28T19:43:04Z",
+      "commit_html_url": "https://github.com/legislation/legislation-mcp-ts/commit/8261b2aada185aa846d34288790d1321ac79c8dc",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:23:24.464493+00:00",
+      "id": "legislation-mcp-ts",
+      "license": "OGL v3 / repository notices",
+      "license_evidence": [
+        "licenses/legislation-mcp-ts/0000__legislation-mcp-ts-8261b2aada185aa846d34288790d1321ac79c8dc__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "legislation/legislation-mcp-ts",
+      "required": true,
+      "resolved_commit": "8261b2aada185aa846d34288790d1321ac79c8dc",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 998259,
+        "zip_member_count": 138
+      },
+      "started_utc": "2026-09-05T11:23:23.860824+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 331638,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/legislation-mcp-ts__legislation_legislation-mcp-ts__8261b2aada185aa846d34288790d1321ac79c8dc.zip",
+          "sha256": "380d457d7fe78f52f41565a283326165ddc864892c9d89bb32a915e95d342e4d"
+        }
+      ],
+      "use": "technical route to legislation.gov.uk; official source remains authority"
+    },
+    {
+      "archive_bytes": 480922442,
+      "archive_name": "legalize-uk__legalize-dev_legalize-uk__8c5b105fa8089d311e285e90d5663343313bca7a.zip",
+      "archive_sha256": "39a089e0a3e62f2a57f4dc35bcf5cfcabba6a37805cd2473361b6c44373b0040",
+      "category": "legal-reference",
+      "commit": "8c5b105fa8089d311e285e90d5663343313bca7a",
+      "commit_date": "2026-09-03T00:00:00Z",
+      "commit_html_url": "https://github.com/legalize-dev/legalize-uk/commit/8c5b105fa8089d311e285e90d5663343313bca7a",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:28:45.521747+00:00",
+      "id": "legalize-uk",
+      "license": "OGL/data terms",
+      "license_evidence": [
+        "licenses/legalize-uk/0000__legalize-uk-8c5b105fa8089d311e285e90d5663343313bca7a__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "legalize-dev/legalize-uk",
+      "required": true,
+      "resolved_commit": "8c5b105fa8089d311e285e90d5663343313bca7a",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 2135151687,
+        "zip_member_count": 86657
+      },
+      "started_utc": "2026-09-05T11:23:24.464514+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 262144000,
+          "chunk_count": 2,
+          "chunk_index": 0,
+          "path": "source-chunks/legalize-uk/legalize-uk__legalize-dev_legalize-uk__8c5b105fa8089d311e285e90d5663343313bca7a.zip.part000",
+          "reconstruct_as": "sources/legalize-uk__legalize-dev_legalize-uk__8c5b105fa8089d311e285e90d5663343313bca7a.zip",
+          "sha256": "82efd1415cb5860d6a1cc8dd9cbbf86bf6c8dc218147055e646007f8041f9ed0"
+        },
+        {
+          "bytes": 218778442,
+          "chunk_count": 2,
+          "chunk_index": 1,
+          "path": "source-chunks/legalize-uk/legalize-uk__legalize-dev_legalize-uk__8c5b105fa8089d311e285e90d5663343313bca7a.zip.part001",
+          "reconstruct_as": "sources/legalize-uk__legalize-dev_legalize-uk__8c5b105fa8089d311e285e90d5663343313bca7a.zip",
+          "sha256": "71689119516b6afc801808227dcffc15843ed412707c342d7f310621ae1556d0"
+        }
+      ],
+      "use": "UK legislation change-history cross-check"
+    },
+    {
+      "archive_bytes": 18843296,
+      "archive_name": "legalize-pipeline__legalize-dev_legalize-pipeline__5596f1d4f6c84df246dd1e267a981d6ef6a618bc.zip",
+      "archive_sha256": "2f54da416cb79c7353bc6017e95d639c95b131439b9ad81c8692a2a6f94c444a",
+      "category": "legal-reference",
+      "commit": "5596f1d4f6c84df246dd1e267a981d6ef6a618bc",
+      "commit_date": "2026-09-03T21:36:03Z",
+      "commit_html_url": "https://github.com/legalize-dev/legalize-pipeline/commit/5596f1d4f6c84df246dd1e267a981d6ef6a618bc",
+      "commit_verification_reason": "unsigned",
+      "commit_verification_verified": false,
+      "completed_utc": "2026-09-05T11:28:48.460516+00:00",
+      "id": "legalize-pipeline",
+      "license": "MIT / data subtrees separate",
+      "license_evidence": [
+        "licenses/legalize-pipeline/0000__legalize-pipeline-5596f1d4f6c84df246dd1e267a981d6ef6a618bc__LICENSE",
+        "licenses/legalize-pipeline/0001__src__legalize__committer__license.py"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "legalize-dev/legalize-pipeline",
+      "required": true,
+      "resolved_commit": "5596f1d4f6c84df246dd1e267a981d6ef6a618bc",
+      "source_stats": {
+        "license_evidence_count": 2,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 84862376,
+        "zip_member_count": 737
+      },
+      "started_utc": "2026-09-05T11:28:45.521781+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 18843296,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/legalize-pipeline__legalize-dev_legalize-pipeline__5596f1d4f6c84df246dd1e267a981d6ef6a618bc.zip",
+          "sha256": "2f54da416cb79c7353bc6017e95d639c95b131439b9ad81c8692a2a6f94c444a"
+        }
+      ],
+      "use": "caching/rate-limit/history/run-state donor"
+    },
+    {
+      "archive_bytes": 361034,
+      "archive_name": "tna-caselaw-client__nationalarchives_ds-caselaw-custom-api-client__d8a55379ed76e23c989c704b197c1f0db7ee6159.zip",
+      "archive_sha256": "4231fcf06e06d852e97da419218e99c1e55fbb09954729365a5d2973a4b297b3",
+      "category": "legal-reference",
+      "commit": "d8a55379ed76e23c989c704b197c1f0db7ee6159",
+      "commit_date": "2026-09-04T13:04:37Z",
+      "commit_html_url": "https://github.com/nationalarchives/ds-caselaw-custom-api-client/commit/d8a55379ed76e23c989c704b197c1f0db7ee6159",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:28:49.086047+00:00",
+      "id": "tna-caselaw-client",
+      "license": "MIT",
+      "license_evidence": [
+        "licenses/tna-caselaw-client/0000__ds-caselaw-custom-api-client-d8a55379ed76e23c989c704b197c1f0db7ee6159__LICENSE.md"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "nationalarchives/ds-caselaw-custom-api-client",
+      "required": true,
+      "resolved_commit": "d8a55379ed76e23c989c704b197c1f0db7ee6159",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 1101308,
+        "zip_member_count": 255
+      },
+      "started_utc": "2026-09-05T11:28:48.460543+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 361034,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/tna-caselaw-client__nationalarchives_ds-caselaw-custom-api-client__d8a55379ed76e23c989c704b197c1f0db7ee6159.zip",
+          "sha256": "4231fcf06e06d852e97da419218e99c1e55fbb09954729365a5d2973a4b297b3"
+        }
+      ],
+      "use": "Find Case Law technical retrieval route"
+    },
+    {
+      "archive_bytes": 75227755,
+      "archive_name": "tna-judgments-parser__nationalarchives_tna-judgments-parser__194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4.zip",
+      "archive_sha256": "985a00ec2adc3b3130ff16fb51e9a225552d45d69e252fd27eb2ea35e9d0f4b6",
+      "category": "legal-reference",
+      "commit": "194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4",
+      "commit_date": "2026-09-04T08:29:08Z",
+      "commit_html_url": "https://github.com/nationalarchives/tna-judgments-parser/commit/194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4",
+      "commit_verification_reason": "valid",
+      "commit_verification_verified": true,
+      "completed_utc": "2026-09-05T11:28:54.120135+00:00",
+      "id": "tna-judgments-parser",
+      "license": "repository licence to verify",
+      "license_evidence": [
+        "licenses/tna-judgments-parser/0000__tna-judgments-parser-194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4__LICENSE"
+      ],
+      "license_evidence_status": "EVIDENCE_FOUND",
+      "repo": "nationalarchives/tna-judgments-parser",
+      "required": true,
+      "resolved_commit": "194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4",
+      "source_stats": {
+        "license_evidence_count": 1,
+        "zip_crc_and_read": "PASS",
+        "zip_declared_uncompressed_bytes": 137817419,
+        "zip_member_count": 1638
+      },
+      "started_utc": "2026-09-05T11:28:49.086069+00:00",
+      "status": "DOWNLOADED_HASHED_AND_ZIP_VERIFIED",
+      "storage_items": [
+        {
+          "bytes": 75227755,
+          "chunk_count": 1,
+          "chunk_index": 0,
+          "path": "sources/tna-judgments-parser__nationalarchives_tna-judgments-parser__194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4.zip",
+          "sha256": "985a00ec2adc3b3130ff16fb51e9a225552d45d69e252fd27eb2ea35e9d0f4b6"
+        }
+      ],
+      "use": "DOCX-to-LegalDocML parser/test donor"
+    }
+  ]
+}

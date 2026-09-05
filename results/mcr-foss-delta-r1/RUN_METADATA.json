@@ -1,0 +1,7 @@
+{
+  "schema": "mcr-foss-delta-run-metadata-v1",
+  "run_id": 33963148516,
+  "run_attempt": 1,
+  "head_sha": "ac9929fd54ce0e0ed535552ac5e8db016180f3a1",
+  "workflow": "temporary-mcr-foss-delta-publish.yml"
+}

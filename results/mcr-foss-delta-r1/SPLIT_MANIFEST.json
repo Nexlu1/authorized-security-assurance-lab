@@ -1,0 +1,39 @@
+{
+  "generated_utc": "2026-09-05T11:28:57.340770+00:00",
+  "parts": [
+    {
+      "bytes": 367004276,
+      "file": "MCR_FOSS_DELTA_R1_PART_00.zip",
+      "part": 0,
+      "payload_bytes": 367001558,
+      "payload_items": 9,
+      "sha256": "58f90cc70794b9c81daf5f36db59b235b5b8e28fb26ff31be29a88fca038c251"
+    },
+    {
+      "bytes": 367004112,
+      "file": "MCR_FOSS_DELTA_R1_PART_01.zip",
+      "part": 1,
+      "payload_bytes": 367001566,
+      "payload_items": 9,
+      "sha256": "b7f54ef28e0a32481d35222ba3152052eb617836a476ca9eb97329b372954e78"
+    },
+    {
+      "bytes": 271799051,
+      "file": "MCR_FOSS_DELTA_R1_PART_02.zip",
+      "part": 2,
+      "payload_bytes": 271764855,
+      "payload_items": 126,
+      "sha256": "a7056996da49193450eabf2040fac120dc7f0d751825b7c848f4fbaa1287ad4d"
+    },
+    {
+      "bytes": 321036859,
+      "file": "MCR_FOSS_DELTA_R1_PART_03.zip",
+      "part": 3,
+      "payload_bytes": 321036325,
+      "payload_items": 2,
+      "sha256": "b3a815a36d4b8f8693962aa632f0e0d6d27af179bfef15950f252453b0838574"
+    }
+  ],
+  "schema": "mcr-foss-delta-split-manifest-v1",
+  "source_archive_count": 30
+}
