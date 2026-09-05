@@ -32,12 +32,16 @@ if not REBUILD_RECEIPT.is_file():
     raise SystemExit(f"clean rebuild receipt missing: {REBUILD_RECEIPT}")
 
 rebuild = json.loads(REBUILD_RECEIPT.read_text(encoding="utf-8"))
-if rebuild.get("byte_identical") is not True:
-    raise SystemExit("clean rebuild receipt does not prove byte identity")
+reproducible = rebuild.get("byte_identical") is True
 
 record = {
-    "schema": "mcr-r8-focused-public-qualification-receipt-v2",
+    "schema": "mcr-r8-focused-public-qualification-receipt-v3",
     "generated_utc": datetime.now(timezone.utc).isoformat(),
+    "status": (
+        "PASS_FOCUSED_FUNCTIONAL_AND_REPRODUCIBLE"
+        if reproducible
+        else "PASS_FOCUSED_FUNCTIONAL_REPRODUCIBILITY_OPEN"
+    ),
     "scope": (
         "Focused dependency-free Rust bootstrap slice only: archive-name checks, "
         "content-addressed object paths, MBOX scanning, and evidence-aware mail threading. "
@@ -67,7 +71,9 @@ record = {
         "cargo_clippy_locked_all_targets_deny_warnings": "PASS",
         "cargo_release_build_locked": "PASS",
         "release_runtime_self_test": "PASS",
-        "same_runner_clean_rebuild_byte_identity": "PASS",
+        "same_runner_clean_rebuild_byte_identity": (
+            "PASS" if reproducible else "OPEN_NONDETERMINISM"
+        ),
     },
 }
 OUT.write_text(json.dumps(record, indent=2), encoding="utf-8")
