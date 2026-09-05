@@ -56,3 +56,55 @@ jobs:
 
       - name: Bootstrap runtime self-test
         run: cargo run --locked --release -- self-test
+
+      - name: Emit machine-readable qualification receipt
+        run: python tools/write_qualification_receipt.py
+
+      - name: Upload Windows executable and receipt
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r8-focused-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            qualification/mcr-r8/target/release/mcr-ingest.exe
+            qualification/mcr-r8/qualification-receipt.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload Linux executable and receipt
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r8-focused-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            qualification/mcr-r8/target/release/mcr-ingest
+            qualification/mcr-r8/qualification-receipt.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  authority-schema:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: qualification/mcr-r8
+    steps:
+      - name: Check out synthetic-only public qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Record Python and SQLite versions
+        run: |
+          python --version
+          python -c "import sqlite3; print(sqlite3.sqlite_version)"
+
+      - name: Execute append-only authority-schema qualification
+        run: python tests/test_authority_schema.py
