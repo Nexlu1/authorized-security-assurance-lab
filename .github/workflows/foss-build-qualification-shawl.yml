@@ -1,0 +1,138 @@
+name: FOSS Build Qualification - Shawl
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/foss-build-qualification-shawl.yml'
+      - 'receipts/donor-builds/shawl/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/foss-build-qualification-shawl.yml'
+      - 'receipts/donor-builds/shawl/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-shawl:
+    name: Exact Windows build, test, smoke and RustSec audit
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      SHAWL_REPO: https://github.com/mtkennerly/shawl.git
+      SHAWL_SHA: 51e7ac0910621a4827cfd92cb2a0d5ec5b468af0
+      RUST_TOOLCHAIN: 1.85.0-x86_64-pc-windows-msvc
+      CARGO_AUDIT_VERSION: 0.22.2
+      CARGO_AUDIT_SHA256: 0a7316540862c13d954f648917ceacca593747baed6eec180fafa590be2710ab
+      CARGO_AUDIT_URL: https://github.com/rustsec/rustsec/releases/download/cargo-audit/v0.22.2/cargo-audit-x86_64-pc-windows-msvc-v0.22.2.zip
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Fetch and verify exact Shawl source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path donor, receipts/donor-builds/shawl | Out-Null
+          git clone --quiet --no-checkout $env:SHAWL_REPO donor/shawl
+          git -C donor/shawl checkout --quiet $env:SHAWL_SHA
+          $actual = (git -C donor/shawl rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($actual -ne $env:SHAWL_SHA) {
+            throw "Shawl revision mismatch: expected $env:SHAWL_SHA, got $actual"
+          }
+          "source_repo=$env:SHAWL_REPO" | Set-Content -Encoding utf8 receipts/donor-builds/shawl/source.txt
+          "source_sha=$actual" | Add-Content -Encoding utf8 receipts/donor-builds/shawl/source.txt
+
+      - name: Install exact Rust toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install $env:RUST_TOOLCHAIN --profile minimal --no-self-update
+          Push-Location donor/shawl
+          rustup override set $env:RUST_TOOLCHAIN
+          rustc -Vv | Tee-Object -FilePath ../../receipts/donor-builds/shawl/rustc-version.txt
+          cargo -V | Tee-Object -FilePath ../../receipts/donor-builds/shawl/cargo-version.txt
+          Pop-Location
+
+      - name: Run locked Shawl tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Push-Location donor/shawl
+          cargo test --locked -- --test-threads 1 2>&1 | Tee-Object -FilePath ../../receipts/donor-builds/shawl/cargo-test.txt
+          if ($LASTEXITCODE -ne 0) { throw "cargo test failed with exit code $LASTEXITCODE" }
+          Pop-Location
+
+      - name: Build locked release and smoke-test CLI
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Push-Location donor/shawl
+          cargo build --release --locked 2>&1 | Tee-Object -FilePath ../../receipts/donor-builds/shawl/cargo-build.txt
+          if ($LASTEXITCODE -ne 0) { throw "cargo build failed with exit code $LASTEXITCODE" }
+          & ./target/release/shawl.exe --help | Tee-Object -FilePath ../../receipts/donor-builds/shawl/shawl-help.txt
+          if ($LASTEXITCODE -ne 0) { throw "shawl --help failed with exit code $LASTEXITCODE" }
+          $binaryHash = (Get-FileHash ./target/release/shawl.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "shawl_exe_sha256=$binaryHash" | Set-Content -Encoding utf8 ../../receipts/donor-builds/shawl/binary-sha256.txt
+          Pop-Location
+
+      - name: Download and verify RustSec cargo-audit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'cargo-audit.zip'
+          $extract = Join-Path $env:RUNNER_TEMP 'cargo-audit'
+          Invoke-WebRequest -Uri $env:CARGO_AUDIT_URL -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $env:CARGO_AUDIT_SHA256) {
+            throw "cargo-audit archive hash mismatch: expected $env:CARGO_AUDIT_SHA256, got $actual"
+          }
+          Expand-Archive -Path $archive -DestinationPath $extract -Force
+          $exe = Get-ChildItem -Path $extract -Filter cargo-audit.exe -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'cargo-audit.exe not found in verified archive' }
+          $env:PATH = "$(Split-Path $exe.FullName);$env:PATH"
+          "cargo_audit_version=$env:CARGO_AUDIT_VERSION" | Set-Content -Encoding utf8 receipts/donor-builds/shawl/cargo-audit-tool.txt
+          "cargo_audit_archive_sha256=$actual" | Add-Content -Encoding utf8 receipts/donor-builds/shawl/cargo-audit-tool.txt
+          cargo audit --version | Add-Content -Encoding utf8 receipts/donor-builds/shawl/cargo-audit-tool.txt
+          "CARGO_AUDIT_DIR=$(Split-Path $exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Audit exact locked dependency graph against RustSec
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:PATH = "$env:CARGO_AUDIT_DIR;$env:PATH"
+          Push-Location donor/shawl
+          cargo audit --json 1> ../../receipts/donor-builds/shawl/cargo-audit.json 2> ../../receipts/donor-builds/shawl/cargo-audit-stderr.txt
+          $auditExit = $LASTEXITCODE
+          Pop-Location
+          if ($auditExit -ne 0) {
+            Get-Content receipts/donor-builds/shawl/cargo-audit-stderr.txt -ErrorAction SilentlyContinue
+            throw "RustSec cargo audit failed or found a blocking advisory (exit $auditExit)"
+          }
+
+      - name: Write qualification manifest
+        if: always()
+        shell: pwsh
+        run: |
+          @(
+            'donor=mtkennerly/shawl'
+            "source_sha=$env:SHAWL_SHA"
+            "rust_toolchain=$env:RUST_TOOLCHAIN"
+            "cargo_audit_version=$env:CARGO_AUDIT_VERSION"
+            "cargo_audit_archive_sha256=$env:CARGO_AUDIT_SHA256"
+            "runner=$env:RUNNER_OS/$env:RUNNER_ARCH"
+            "run_id=$env:GITHUB_RUN_ID"
+            "run_attempt=$env:GITHUB_RUN_ATTEMPT"
+          ) | Set-Content -Encoding utf8 receipts/donor-builds/shawl/manifest.txt
+
+      - name: Upload Shawl qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: shawl-qualification-r17d
+          path: receipts/donor-builds/shawl/
+          if-no-files-found: error
+          retention-days: 30
