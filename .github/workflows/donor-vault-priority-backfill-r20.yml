@@ -1,0 +1,234 @@
+name: Donor Vault - Priority Backfill R20
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/donor-vault-priority-backfill-r20.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preserve:
+    name: Preserve ${{ matrix.slug }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slug: llama-cpp
+            repo: ggml-org/llama.cpp
+            sha: 0ef4d560e12c1a46470265c1abd31dd47c777d23
+            default_branch: master
+            licence: MIT
+            state: USE_INTEGRATED
+            target: Rig Worker
+            bundle_mode: source_snapshot
+          - slug: netforensicai
+            repo: Sh3n0bi/NetForensicAI
+            sha: 70cd1b98a4433ab6fe2db6280799d33673acea9e
+            default_branch: NetForensicAI
+            licence: MIT
+            state: ADAPT_HOLD
+            target: ECO / Dossier / MCR
+            bundle_mode: exact_history_to_commit
+          - slug: winsw
+            repo: winsw/winsw
+            sha: 1d0ee4a91bad596d5e7e9c360f2b39ef54674674
+            default_branch: v3
+            licence: MIT
+            state: TEST_PASS_SECURITY_HOLD
+            target: Remote Rig Access / Windows supervision
+            bundle_mode: exact_history_to_commit
+          - slug: llama-cpp-windows-manager
+            repo: alekk89/llama-cpp-windows-manager
+            sha: a48a8b9dca99736792096de66446fdf7d28bf585
+            default_branch: main
+            licence: MIT
+            state: HOLD_SECURITY
+            target: Rig Worker
+            bundle_mode: exact_history_to_commit
+    env:
+      REPO: ${{ matrix.repo }}
+      PINNED_SHA: ${{ matrix.sha }}
+      DEFAULT_BRANCH: ${{ matrix.default_branch }}
+      LICENCE_ID: ${{ matrix.licence }}
+      QUAL_STATE: ${{ matrix.state }}
+      TARGET_LANES: ${{ matrix.target }}
+      BUNDLE_MODE: ${{ matrix.bundle_mode }}
+      SLUG: ${{ matrix.slug }}
+
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Acquire exact pinned donor source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work vault
+          url="https://github.com/${REPO}.git"
+
+          if [[ "$BUNDLE_MODE" == "exact_history_to_commit" ]]; then
+            git clone --quiet --no-checkout "$url" work/donor
+            if ! git -C work/donor cat-file -e "${PINNED_SHA}^{commit}" 2>/dev/null; then
+              git -C work/donor fetch --quiet origin "$PINNED_SHA"
+            fi
+            git -C work/donor checkout --quiet --detach "$PINNED_SHA"
+          else
+            git init -q work/donor
+            git -C work/donor remote add origin "$url"
+            git -C work/donor fetch --quiet --depth=1 origin "$PINNED_SHA"
+            git -C work/donor checkout --quiet --detach FETCH_HEAD
+          fi
+
+          actual="$(git -C work/donor rev-parse HEAD)"
+          test "$actual" = "$PINNED_SHA"
+          tree="$(git -C work/donor rev-parse "${PINNED_SHA}^{tree}")"
+          printf '%s\n' "$tree" > vault/original-git-tree.txt
+          git -C work/donor cat-file commit "$PINNED_SHA" > vault/original-commit-object.txt
+          git -C work/donor ls-tree -r --full-tree "$PINNED_SHA" > vault/source-tree-git-manifest.txt
+          sha256sum vault/source-tree-git-manifest.txt > vault/source-tree-git-manifest.sha256
+
+      - name: Create exact source-tree archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          short="${PINNED_SHA:0:12}"
+          git -C work/donor archive --format=tar -o "../../vault/source-tree-${short}.tar" "$PINNED_SHA"
+          sha256sum "vault/source-tree-${short}.tar" > vault/source-tree-archive.sha256
+
+      - name: Create reconstructable Git bundle
+        shell: bash
+        env:
+          GIT_AUTHOR_NAME: Donor Vault Snapshot
+          GIT_AUTHOR_EMAIL: donor-vault@example.invalid
+          GIT_COMMITTER_NAME: Donor Vault Snapshot
+          GIT_COMMITTER_EMAIL: donor-vault@example.invalid
+        run: |
+          set -euo pipefail
+          if [[ "$BUNDLE_MODE" == "exact_history_to_commit" ]]; then
+            git -C work/donor branch -f vault-target "$PINNED_SHA"
+            git -C work/donor bundle create ../../vault/repo.bundle refs/heads/vault-target
+            printf 'bundle_ref=refs/heads/vault-target\nrestores_original_commit=true\n' > vault/bundle-mode.txt
+          else
+            tree="$(cat vault/original-git-tree.txt)"
+            snapshot_commit="$(printf 'Source snapshot for %s@%s\n' "$REPO" "$PINNED_SHA" | git -C work/donor commit-tree "$tree")"
+            git -C work/donor update-ref refs/heads/vault-snapshot "$snapshot_commit"
+            git -C work/donor bundle create ../../vault/repo.bundle refs/heads/vault-snapshot
+            printf 'bundle_ref=refs/heads/vault-snapshot\nrestores_original_commit=false\nsnapshot_commit=%s\n' "$snapshot_commit" > vault/bundle-mode.txt
+          fi
+          sha256sum vault/repo.bundle > vault/repo-bundle.sha256
+          git -C work/donor bundle verify ../../vault/repo.bundle > vault/bundle-verify.txt 2>&1
+
+      - name: Snapshot root licence and notice files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vault/licence
+          found=0
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            case "$path" in
+              */*) continue ;;
+            esac
+            if [[ "$path" =~ ^(LICENSE|LICENCE|COPYING|NOTICE)(\..*)?$ ]]; then
+              git -C work/donor show "${PINNED_SHA}:${path}" > "vault/licence/${path}"
+              found=1
+            fi
+          done < <(git -C work/donor ls-tree -r --name-only "$PINNED_SHA")
+          if [[ "$found" -eq 0 ]]; then
+            echo 'No root licence/notice filename matched the controlled pattern.' > vault/licence/NO_ROOT_LICENCE_MATCH.txt
+          fi
+          find vault/licence -type f -print0 | sort -z | xargs -0 sha256sum > vault/licence/SHA256SUMS.txt
+
+      - name: Restore-test bundle and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet vault/repo.bundle work/restored
+          restored_tree="$(git -C work/restored rev-parse 'HEAD^{tree}')"
+          original_tree="$(cat vault/original-git-tree.txt)"
+          test "$restored_tree" = "$original_tree"
+
+          git -C work/restored ls-tree -r --full-tree HEAD > vault/restored-source-tree-git-manifest.txt
+          sha256sum vault/restored-source-tree-git-manifest.txt > vault/restored-source-tree-git-manifest.sha256
+          cmp vault/source-tree-git-manifest.txt vault/restored-source-tree-git-manifest.txt
+          git -C work/restored fsck --full > vault/restored-git-fsck.txt 2>&1
+
+          if [[ "$BUNDLE_MODE" == "exact_history_to_commit" ]]; then
+            restored_sha="$(git -C work/restored rev-parse HEAD)"
+            test "$restored_sha" = "$PINNED_SHA"
+          fi
+
+          cat > vault/RESTORE_TEST.txt <<EOF
+          result=PASS
+          original_commit=$PINNED_SHA
+          original_tree=$original_tree
+          restored_tree=$restored_tree
+          bundle_mode=$BUNDLE_MODE
+          EOF
+
+      - name: Write donor manifest and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess, datetime
+          root = pathlib.Path('vault')
+          def sha256(path):
+              h = hashlib.sha256()
+              with open(path, 'rb') as f:
+                  for chunk in iter(lambda: f.read(1024*1024), b''):
+                      h.update(chunk)
+              return h.hexdigest()
+          source_archive = next(root.glob('source-tree-*.tar'))
+          licence_files = []
+          for p in sorted((root/'licence').glob('*')):
+              if p.is_file() and p.name != 'SHA256SUMS.txt':
+                  licence_files.append({'path': str(p.relative_to(root)), 'sha256': sha256(p)})
+          bundle_mode = {}
+          for line in (root/'bundle-mode.txt').read_text().splitlines():
+              if '=' in line:
+                  k,v=line.split('=',1); bundle_mode[k]=v
+          manifest = {
+              'schema': 'donor-vault-manifest-r20-v1',
+              'acquired_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'repository': os.environ['REPO'],
+              'upstream_url': f"https://github.com/{os.environ['REPO']}",
+              'default_branch_at_control_record': os.environ['DEFAULT_BRANCH'],
+              'pinned_commit': os.environ['PINNED_SHA'],
+              'git_tree': (root/'original-git-tree.txt').read_text().strip(),
+              'source_tree_git_manifest_sha256': sha256(root/'source-tree-git-manifest.txt'),
+              'source_tree_archive': source_archive.name,
+              'source_tree_archive_sha256': sha256(source_archive),
+              'git_bundle': 'repo.bundle',
+              'git_bundle_sha256': sha256(root/'repo.bundle'),
+              'bundle_mode': os.environ['BUNDLE_MODE'],
+              'bundle_restore_ref': bundle_mode.get('bundle_ref'),
+              'bundle_restores_original_commit': bundle_mode.get('restores_original_commit') == 'true',
+              'snapshot_commit': bundle_mode.get('snapshot_commit'),
+              'licence_identifier': os.environ['LICENCE_ID'],
+              'licence_notice_files': licence_files,
+              'qualification_state': os.environ['QUAL_STATE'],
+              'target_lanes': os.environ['TARGET_LANES'],
+              'restore_test': 'PASS',
+              'history_scope_note': (
+                  'Bundle contains the original pinned commit and its reachable ancestry to that commit.'
+                  if os.environ['BUNDLE_MODE'] == 'exact_history_to_commit'
+                  else 'Bundle is a self-contained source snapshot commit with the exact original Git tree; original commit metadata is preserved separately, but original ancestry/history is not included.'
+              ),
+          }
+          (root/'MANIFEST.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
+          PY
+          find vault -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > vault/SHA256SUMS.txt
+
+      - name: Upload permanent-vault candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: donor-vault-r20-${{ matrix.slug }}
+          path: vault/
+          if-no-files-found: error
+          retention-days: 90
