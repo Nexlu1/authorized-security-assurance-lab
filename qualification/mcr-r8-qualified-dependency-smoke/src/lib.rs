@@ -2,7 +2,9 @@ pub use mcr_safety_core as safety_core;
 
 #[cfg(test)]
 mod tests {
-    use super::safety_core::{hash::sha256_bytes, model::ScanPolicy, path_checks::analyse_path_str};
+    use super::safety_core::{
+        hash::sha256_bytes, model::ScanPolicy, path_checks::analyse_path_str,
+    };
 
     #[test]
     fn pinned_dependency_detects_traversal() {
@@ -13,7 +15,9 @@ mod tests {
     #[test]
     fn pinned_dependency_accepts_safe_relative_path() {
         let findings = analyse_path_str("folder/evidence.txt", &ScanPolicy::default());
-        assert!(!findings.iter().any(|f| f.code == "PATH_TRAVERSAL" || f.code == "PATH_ABSOLUTE"));
+        assert!(!findings
+            .iter()
+            .any(|f| f.code == "PATH_TRAVERSAL" || f.code == "PATH_ABSOLUTE"));
     }
 
     #[test]
