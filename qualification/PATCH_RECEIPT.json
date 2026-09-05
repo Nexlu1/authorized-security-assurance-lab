@@ -1,0 +1,45 @@
+{
+  "schema": "mcr-r8-57-source-patch-receipt-v1",
+  "generated_utc": "2026-09-05T19:24:37.5593720Z",
+  "original_source_zip_sha256": "dc45a336c415dc7908858352e6d5e3d64d043bea1cc725a47fd4ba8ed68ef1dc",
+  "policy": "Original source ZIP retained; only the exact recorded bounded repairs and rustfmt normalization were applied before compilation.",
+  "patches": [
+    {
+      "file": "src/path_checks.rs",
+      "purpose": "Fix Rust E0716 by extending the normalized String lifetime while preserving path semantics.",
+      "occurrences": 1,
+      "before_sha256": "c1d4910f484f93535e3543d903610fdbdebc8ed7e94c572fe2dff9f8bad1938b",
+      "after_targeted_patch_sha256": "dcf6e01fdcd19f42633410078216c6bac99760c34ff84bc1a9269d93e86057cf",
+      "after_rustfmt_sha256": "5c2f27b7b85bbf934b68b7059a90412665f70ee47aa085ca14796ca31066e45c"
+    },
+    {
+      "file": "src/path_checks.rs",
+      "purpose": "Apply three exact semantics-preserving Rust 1.98 Clippy repairs.",
+      "details": [
+        "Use slice contains for parent-segment lookup.",
+        "Use slice contains for current-segment lookup.",
+        "Use direct UTF-8 byte length on str."
+      ],
+      "occurrences": 3,
+      "before_sha256": "dcf6e01fdcd19f42633410078216c6bac99760c34ff84bc1a9269d93e86057cf",
+      "after_targeted_patch_sha256": "7ff4e28bae47c4b146c5ce41da02acb8eabceef8068ebcffffa6d345f18f9379",
+      "after_rustfmt_sha256": "5c2f27b7b85bbf934b68b7059a90412665f70ee47aa085ca14796ca31066e45c"
+    },
+    {
+      "file": "src/magic.rs",
+      "purpose": "Collapse identical branches without changing severity or behavior.",
+      "occurrences": 1,
+      "before_sha256": "00cb42aac185e85e0f05960b4715b63ff34cd0df0a28d0af8eb1f9c1508d9fd0",
+      "after_targeted_patch_sha256": "71303d21ccb036cf0866292506ae6626e0aa2535ce5cb947a6104fddfcf0e982",
+      "after_rustfmt_sha256": "1b3d4f6a16c4b0f26e8c5ddd8853b65be244de620197ffec5b6ebff87ae71584"
+    },
+    {
+      "file": "tests/adversarial.rs",
+      "purpose": "Add one test-only Clippy allowance because these five hostile-policy tests intentionally mutate selected fields after ScanPolicy::default(); runtime behavior is unchanged.",
+      "occurrences": 1,
+      "before_sha256": "79c60e8e50525eed5342967199e031f25e4e1013fc3be9cee04a9118cbf9f26f",
+      "after_targeted_patch_sha256": "ada607dd73a826977f59a6a7a59265dff85387c17ad108dc0faefdd69f2cfa85",
+      "after_rustfmt_sha256": "12acfb675ccac8acf1f296e5f05f3223a92fdc9b9e1b1a70f3f952c8819731b5"
+    }
+  ]
+}

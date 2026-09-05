@@ -1,0 +1,19 @@
+{
+  "schema": "mcr-r8-57-windows-build-receipt-v2",
+  "generated_utc": "2026-09-05T19:24:37.5768836Z",
+  "repository": "Nexlu1/authorized-security-assurance-lab",
+  "git_sha": "a912d9d3d60249d79c65d69e74c98096f72208d9",
+  "workflow_run_id": "33986924821",
+  "runner_os": "Windows",
+  "runner_arch": "X64",
+  "runner_image": "win25-vs2026",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\r\nbinary: rustc\r\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\r\ncommit-date: 2026-08-18\r\nhost: x86_64-pc-windows-msvc\r\nrelease: 1.98.0\r\nLLVM version: 22.1.8",
+  "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+  "source_payload_sha256": "dc45a336c415dc7908858352e6d5e3d64d043bea1cc725a47fd4ba8ed68ef1dc",
+  "bounded_source_repairs": 4,
+  "bounded_replacement_occurrences": 6.0,
+  "adversarial_tests": "PASS_57_OF_57",
+  "cargo_fmt": "PASS_AFTER_RECORDED_NORMALIZATION",
+  "cargo_clippy_deny_warnings": "PASS",
+  "cargo_release_build": "PASS"
+}

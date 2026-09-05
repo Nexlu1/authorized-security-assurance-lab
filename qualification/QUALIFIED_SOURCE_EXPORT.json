@@ -1,0 +1,11 @@
+{
+  "schema": "mcr-r8-57-qualified-source-export-v1",
+  "generated_utc": "2026-09-05T19:24:46.5704918Z",
+  "git_sha": "a912d9d3d60249d79c65d69e74c98096f72208d9",
+  "workflow_run_id": "33986924821",
+  "qualified_source_files": 17,
+  "source_root": "source/qualified",
+  "exact_build_receipt": "control/BUILD_RECEIPT.json",
+  "exact_patch_receipt": "control/PATCH_RECEIPT.json",
+  "manifest": "control/QUALIFIED_SOURCE_SHA256.csv"
+}
