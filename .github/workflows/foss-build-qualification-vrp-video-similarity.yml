@@ -1,0 +1,358 @@
+name: FOSS Build Qualification - VRP Video Similarity
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/foss-build-qualification-vrp-video-similarity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  THREATEXCHANGE_REPO: https://github.com/facebook/ThreatExchange.git
+  THREATEXCHANGE_SHA: 73a742c45c35d711e94c8bf92254df1a2d9c9f01
+  VIDEOHASH_REPO: https://github.com/akamhy/videohash.git
+  VIDEOHASH_SHA: e407bb0b26de625a846c2700072efccd9eb44e9a
+
+jobs:
+  qualify-tmk:
+    name: TMK+PDQF exact build, regtest and similarity smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install native prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential ffmpeg
+
+      - name: Fetch and verify exact ThreatExchange revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/vrp/tmk
+          git clone --quiet --no-checkout "$THREATEXCHANGE_REPO" donor/ThreatExchange
+          git -C donor/ThreatExchange checkout --quiet "$THREATEXCHANGE_SHA"
+          actual="$(git -C donor/ThreatExchange rev-parse HEAD)"
+          test "$actual" = "$THREATEXCHANGE_SHA"
+          printf 'repo=%s\nsha=%s\n' "$THREATEXCHANGE_REPO" "$actual" > receipts/vrp/tmk/source.txt
+          sha256sum donor/ThreatExchange/LICENSE > receipts/vrp/tmk/license-sha256.txt
+          ffmpeg -version | head -n 3 > receipts/vrp/tmk/ffmpeg-version.txt
+          g++ --version | head -n 2 > receipts/vrp/tmk/compiler-version.txt
+
+      - name: Build bounded TMK toolset
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/tmk/cpp
+          make -j2 tmk-hash-video tmk-compare-two-tmks tmk-two-level-score tmk-clusterize 2>&1 | tee ../../../../receipts/vrp/tmk/build.txt
+          sha256sum tmk-hash-video tmk-compare-two-tmks tmk-two-level-score tmk-clusterize > ../../../../receipts/vrp/tmk/binary-sha256.txt
+
+      - name: Run upstream TMK regression hashes
+        id: regtest
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/tmk/cpp
+          make regtest 2>&1 | tee ../../../../receipts/vrp/tmk/regtest.txt
+
+      - name: Verify known similar and different TMK pairs
+        id: behavior
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/tmk/cpp
+          python3 - <<'PY' | tee ../../../../receipts/vrp/tmk/behavior-smoke.txt
+          import subprocess
+
+          def score(a, b):
+              out = subprocess.check_output([
+                  './tmk-two-level-score', '--c1', '-1.0', '--c2', '0.0', a, b
+              ], text=True).strip().splitlines()
+              line = [x for x in out if x.strip()][-1]
+              p = line.split()
+              return float(p[0]), float(p[1]), line
+
+          similar = score('../sample-hashes/chair-19-sd-bar.tmk', '../sample-hashes/chair-20-sd-bar.tmk')
+          different = score('../sample-hashes/chair-19-sd-bar.tmk', '../sample-hashes/doorknob-hd-no-bar.tmk')
+          print('similar:', similar[2])
+          print('different:', different[2])
+          assert similar[0] >= 0.90 and similar[1] >= 0.90, similar
+          assert different[0] < 0.70 or different[1] < 0.70, different
+          print('TMK behavior smoke: PASS')
+          PY
+
+      - name: Write TMK outcome manifest
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          REGTEST_OUTCOME: ${{ steps.regtest.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+        run: |
+          printf 'build=%s\nregtest=%s\nbehavior=%s\n' "$BUILD_OUTCOME" "$REGTEST_OUTCOME" "$BEHAVIOR_OUTCOME" > receipts/vrp/tmk/outcomes.txt
+
+      - name: Upload TMK qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrp-tmk-r19
+          path: receipts/vrp/tmk/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce TMK qualification gate
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          REGTEST_OUTCOME: ${{ steps.regtest.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+        run: |
+          test "$BUILD_OUTCOME" = success
+          test "$REGTEST_OUTCOME" = success
+          test "$BEHAVIOR_OUTCOME" = success
+
+  qualify-vpdq:
+    name: vPDQ exact build, regtest and real clip smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install native prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake pkg-config ffmpeg python3 \
+            libavdevice-dev libavfilter-dev libavformat-dev libavcodec-dev libswresample-dev \
+            libswscale-dev libavutil-dev
+
+      - name: Fetch and verify exact ThreatExchange revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/vrp/vpdq
+          git clone --quiet --no-checkout "$THREATEXCHANGE_REPO" donor/ThreatExchange
+          git -C donor/ThreatExchange checkout --quiet "$THREATEXCHANGE_SHA"
+          actual="$(git -C donor/ThreatExchange rev-parse HEAD)"
+          test "$actual" = "$THREATEXCHANGE_SHA"
+          printf 'repo=%s\nsha=%s\n' "$THREATEXCHANGE_REPO" "$actual" > receipts/vrp/vpdq/source.txt
+          sha256sum donor/ThreatExchange/LICENSE > receipts/vrp/vpdq/license-sha256.txt
+          ffmpeg -version | head -n 3 > receipts/vrp/vpdq/ffmpeg-version.txt
+          cmake --version | head -n 1 > receipts/vrp/vpdq/cmake-version.txt
+
+      - name: Build vPDQ release binaries
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/vpdq/cpp
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release 2>&1 | tee ../../../../receipts/vrp/vpdq/cmake-configure.txt
+          cmake --build build -j2 2>&1 | tee ../../../../receipts/vrp/vpdq/build.txt
+          sha256sum build/apps/vpdq-hash-video build/apps/match-hashes-byline build/apps/match-hashes-brute > ../../../../receipts/vrp/vpdq/binary-sha256.txt
+
+      - name: Run upstream vPDQ regression suite
+        id: regtest
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/vpdq/cpp
+          python3 regtest.py 2>&1 | tee ../../../../receipts/vrp/vpdq/regtest.txt
+
+      - name: Prove actual subsequence/clip matching
+        id: clip
+        if: always() && steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/ThreatExchange/vpdq/cpp
+          rm -rf clip-smoke
+          mkdir -p clip-smoke
+          full='../../tmk/sample-videos/chair-orig-22-sd-bar.mp4'
+          duration="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$full")"
+          clip_duration="$(python3 -c "d=float('$duration'); print(max(1.0, min(4.0, d/2.0)))")"
+          ffmpeg -hide_banner -loglevel error -y -i "$full" -t "$clip_duration" -c:v libx264 -an clip-smoke/chair-clip.mp4
+          build/apps/vpdq-hash-video -r 1 -d clip-smoke -i "$full" -t 1
+          build/apps/vpdq-hash-video -r 1 -d clip-smoke -i clip-smoke/chair-clip.mp4 -t 1
+          build/apps/match-hashes-brute clip-smoke/chair-clip.txt clip-smoke/chair-orig-22-sd-bar.txt 31 50 | tee ../../../../receipts/vrp/vpdq/clip-match.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('../../../../receipts/vrp/vpdq/clip-match.txt').read_text()
+          first = float(text.splitlines()[0].split()[0])
+          print('clip query match percent:', first)
+          assert first >= 80.0, text
+          PY
+          printf 'source_duration=%s\nclip_duration=%s\n' "$duration" "$clip_duration" > ../../../../receipts/vrp/vpdq/clip-metadata.txt
+
+      - name: Write vPDQ outcome manifest
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          REGTEST_OUTCOME: ${{ steps.regtest.outcome }}
+          CLIP_OUTCOME: ${{ steps.clip.outcome }}
+        run: |
+          printf 'build=%s\nregtest=%s\nclip=%s\n' "$BUILD_OUTCOME" "$REGTEST_OUTCOME" "$CLIP_OUTCOME" > receipts/vrp/vpdq/outcomes.txt
+
+      - name: Upload vPDQ qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrp-vpdq-r19
+          path: receipts/vrp/vpdq/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce vPDQ qualification gate
+        if: always()
+        shell: bash
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          REGTEST_OUTCOME: ${{ steps.regtest.outcome }}
+          CLIP_OUTCOME: ${{ steps.clip.outcome }}
+        run: |
+          test "$BUILD_OUTCOME" = success
+          test "$REGTEST_OUTCOME" = success
+          test "$CLIP_OUTCOME" = success
+
+  qualify-videohash:
+    name: videohash exact source, current Python, tests and behavior
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Fetch and verify exact videohash revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/vrp/videohash
+          git clone --quiet --no-checkout "$VIDEOHASH_REPO" donor/videohash
+          git -C donor/videohash checkout --quiet "$VIDEOHASH_SHA"
+          actual="$(git -C donor/videohash rev-parse HEAD)"
+          test "$actual" = "$VIDEOHASH_SHA"
+          printf 'repo=%s\nsha=%s\n' "$VIDEOHASH_REPO" "$actual" > receipts/vrp/videohash/source.txt
+          sha256sum donor/videohash/LICENSE > receipts/vrp/videohash/license-sha256.txt
+          python --version > receipts/vrp/videohash/python-version.txt
+          ffmpeg -version | head -n 3 > receipts/vrp/videohash/ffmpeg-version.txt
+
+      - name: Install exact donor and bounded test/audit tools
+        id: install
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install ./donor/videohash pytest pip-audit==2.10.1 2>&1 | tee receipts/vrp/videohash/install.txt
+          python -m pip check 2>&1 | tee receipts/vrp/videohash/pip-check.txt
+          python -m pip freeze | sort > receipts/vrp/videohash/pip-freeze.txt
+          pip-audit --version > receipts/vrp/videohash/pip-audit-version.txt
+
+      - name: Run upstream videohash tests
+        id: tests
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q donor/videohash/tests 2>&1 | tee receipts/vrp/videohash/pytest.txt
+
+      - name: Run generated near-duplicate behavior smoke
+        id: behavior
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p receipts/vrp/videohash/smoke-videos
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'testsrc=size=320x240:rate=15' -t 8 -pix_fmt yuv420p receipts/vrp/videohash/smoke-videos/original.mp4
+          ffmpeg -hide_banner -loglevel error -y -i receipts/vrp/videohash/smoke-videos/original.mp4 -vf 'scale=240:180,fps=12' -c:v libx264 -crf 28 -an receipts/vrp/videohash/smoke-videos/transcoded.mp4
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'smptebars=size=320x240:rate=15' -t 8 -pix_fmt yuv420p receipts/vrp/videohash/smoke-videos/different.mp4
+          python - <<'PY' | tee receipts/vrp/videohash/behavior-smoke.txt
+          from videohash import VideoHash
+          root = 'receipts/vrp/videohash/smoke-videos/'
+          original = VideoHash(path=root + 'original.mp4')
+          transcoded = VideoHash(path=root + 'transcoded.mp4')
+          different = VideoHash(path=root + 'different.mp4')
+          print('original hash:', original.hash_hex)
+          print('transcoded hash:', transcoded.hash_hex)
+          print('different hash:', different.hash_hex)
+          print('transcoded distance:', original - transcoded)
+          print('different distance:', original - different)
+          print('transcoded similar:', original.is_similar(transcoded))
+          print('different similar:', original.is_similar(different))
+          assert original.is_similar(transcoded)
+          assert not original.is_similar(different)
+          print('videohash behavior smoke: PASS')
+          PY
+
+      - name: Audit installed Python environment
+        id: audit
+        if: always() && steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          pip-audit --local --format=json --output=receipts/vrp/videohash/pip-audit.json
+          rc=$?
+          echo "pip_audit_exit=$rc" > receipts/vrp/videohash/pip-audit-exit.txt
+          exit $rc
+
+      - name: Write videohash outcome manifest
+        if: always()
+        shell: bash
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          printf 'install=%s\ntests=%s\nbehavior=%s\naudit=%s\n' "$INSTALL_OUTCOME" "$TESTS_OUTCOME" "$BEHAVIOR_OUTCOME" "$AUDIT_OUTCOME" > receipts/vrp/videohash/outcomes.txt
+
+      - name: Upload videohash qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrp-videohash-r19
+          path: receipts/vrp/videohash/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce videohash qualification gate
+        if: always()
+        shell: bash
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          test "$INSTALL_OUTCOME" = success
+          test "$TESTS_OUTCOME" = success
+          test "$BEHAVIOR_OUTCOME" = success
+          test "$AUDIT_OUTCOME" = success
