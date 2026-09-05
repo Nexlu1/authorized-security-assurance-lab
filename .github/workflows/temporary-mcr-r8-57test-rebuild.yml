@@ -1,0 +1,155 @@
+name: Temporary MCR R8 exact 57-test Windows rebuild
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r8-57test-rebuild-20260905
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-mcr-r8-57test-rebuild-20260905
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out synthetic-only qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Decode exact source payload
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'mcr-r8-57'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $b64 = Get-Content -LiteralPath 'qualification/mcr-r8-57/source-payload.b64' -Raw
+          $zip = Join-Path $env:RUNNER_TEMP 'mcr-r8-57-source.zip'
+          [IO.File]::WriteAllBytes($zip, [Convert]::FromBase64String($b64.Trim()))
+          $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'dc45a336c415dc7908858352e6d5e3d64d043bea1cc725a47fd4ba8ed68ef1dc') {
+            throw "Source payload SHA-256 mismatch: $sha"
+          }
+          Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
+          "MCR_PROJECT_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "MCR_SOURCE_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.98.0
+          components: rustfmt,clippy
+
+      - name: Generate dependency lock and record toolchain
+        shell: pwsh
+        working-directory: ${{ env.MCR_PROJECT_ROOT }}
+        run: |
+          rustc -Vv
+          cargo -V
+          cargo generate-lockfile
+
+      - name: Formatting gate
+        shell: pwsh
+        working-directory: ${{ env.MCR_PROJECT_ROOT }}
+        run: cargo fmt --check
+
+      - name: Compile and execute exact adversarial suite
+        shell: pwsh
+        working-directory: ${{ env.MCR_PROJECT_ROOT }}
+        run: |
+          cargo test --locked --release --test adversarial -- --test-threads=1 --nocapture
+          $listed = @(cargo test --locked --release --test adversarial -- --list)
+          $count = @($listed | Where-Object { $_ -match '^t\d{2}_[^:]+: test$' }).Count
+          if ($count -ne 57) { throw "Expected exactly 57 named adversarial tests; found $count" }
+
+      - name: Strict Clippy gate
+        shell: pwsh
+        working-directory: ${{ env.MCR_PROJECT_ROOT }}
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Release build
+        shell: pwsh
+        working-directory: ${{ env.MCR_PROJECT_ROOT }}
+        run: cargo build --locked --release
+
+      - name: Stage and hash target-Windows package
+        shell: pwsh
+        run: |
+          $project = $env:MCR_PROJECT_ROOT
+          $stage = Join-Path $env:RUNNER_TEMP 'mcr-r8-57-stage'
+          New-Item -ItemType Directory -Path (Join-Path $stage 'bin') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'tests') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'control') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'source') -Force | Out-Null
+
+          Copy-Item -LiteralPath (Join-Path $project 'target/release/mcr-ingest.exe') -Destination (Join-Path $stage 'bin/mcr-ingest.exe')
+          $tests = @(Get-ChildItem -LiteralPath (Join-Path $project 'target/release/deps') -Filter 'adversarial-*.exe' -File)
+          if ($tests.Count -ne 1) { throw "Expected one adversarial test executable; found $($tests.Count)" }
+          Copy-Item -LiteralPath $tests[0].FullName -Destination (Join-Path $stage 'tests')
+          Copy-Item -LiteralPath (Join-Path $project 'packaging/RUN_ME_TARGET_WINDOWS_QUALIFICATION.cmd') -Destination $stage
+          Copy-Item -LiteralPath (Join-Path $project 'packaging/RUN_TARGET_WINDOWS_QUALIFICATION.ps1') -Destination $stage
+          Copy-Item -LiteralPath (Join-Path $project 'README.md') -Destination $stage
+          Copy-Item -LiteralPath (Join-Path $project 'LICENSE-MIT') -Destination $stage
+          Copy-Item -LiteralPath (Join-Path $project 'LICENSE-APACHE') -Destination $stage
+          Copy-Item -LiteralPath (Join-Path $project 'Cargo.lock') -Destination (Join-Path $stage 'source/Cargo.lock')
+          Copy-Item -LiteralPath $env:MCR_SOURCE_ZIP -Destination (Join-Path $stage 'source/mcr-r8-57-source.zip')
+
+          $receipt = [ordered]@{
+            schema = 'mcr-r8-57-windows-build-receipt-v1'
+            generated_utc = (Get-Date).ToUniversalTime().ToString('o')
+            repository = $env:GITHUB_REPOSITORY
+            git_sha = $env:GITHUB_SHA
+            workflow_run_id = $env:GITHUB_RUN_ID
+            runner_os = $env:RUNNER_OS
+            runner_arch = $env:RUNNER_ARCH
+            runner_image = '${{ matrix.os }}'
+            rustc = (rustc -Vv | Out-String).Trim()
+            cargo = (cargo -V | Out-String).Trim()
+            source_payload_sha256 = 'dc45a336c415dc7908858352e6d5e3d64d043bea1cc725a47fd4ba8ed68ef1dc'
+            adversarial_tests = 'PASS_57_OF_57'
+            cargo_fmt = 'PASS'
+            cargo_clippy_deny_warnings = 'PASS'
+            cargo_release_build = 'PASS'
+          }
+          $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage 'control/BUILD_RECEIPT.json') -Encoding utf8
+
+          $rows = foreach ($file in Get-ChildItem -LiteralPath $stage -Recurse -File) {
+            [pscustomobject]@{
+              path = $file.FullName.Substring($stage.Length + 1).Replace('\','/')
+              bytes = [int64]$file.Length
+              sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+          }
+          $rows | Sort-Object path | Export-Csv -LiteralPath (Join-Path $stage 'control/PAYLOAD_SHA256.csv') -NoTypeInformation -Encoding utf8
+          "MCR_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Execute exact runner in Windows PowerShell 5.1
+        shell: pwsh
+        run: |
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:MCR_STAGE/RUN_TARGET_WINDOWS_QUALIFICATION.ps1" -QualificationLabel github_ps51
+          if ($LASTEXITCODE -ne 0) { throw "Windows PowerShell 5.1 qualification failed: $LASTEXITCODE" }
+
+      - name: Execute exact runner in PowerShell 7
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -File "$env:MCR_STAGE/RUN_TARGET_WINDOWS_QUALIFICATION.ps1" -QualificationLabel github_ps7
+          if ($LASTEXITCODE -ne 0) { throw "PowerShell 7 qualification failed: $LASTEXITCODE" }
+
+      - name: Upload complete tested package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r8-full-57-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_STAGE }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
