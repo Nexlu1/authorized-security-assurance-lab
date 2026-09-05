@@ -10,7 +10,7 @@ Only sanitized governance, synthetic/local-lab material, public-source reference
 - personal case/evidence data, medical/financial/benefits records or private correspondence;
 - raw conversation/export archives;
 - real private infrastructure identifiers, internal network details or sensitive system configuration;
-- third-party data obtained outside explicit authorization;
+- any third-party confidential or non-public data unless it is explicitly authorized for public disclosure; access or testing authorization alone is not publication consent;
 - unredacted logs, screenshots or diagnostic bundles containing personal or infrastructure details.
 
 Before committing, ask: would this still be safe if copied outside GitHub today? If not, do not commit it.
