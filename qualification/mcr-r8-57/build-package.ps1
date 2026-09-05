@@ -113,6 +113,55 @@ $patches += [pscustomobject]@{
     after_targeted_patch_sha256 = $magicAfterTargeted
 }
 
+$adversarial = Join-Path $root 'tests\adversarial.rs'
+$adversarialBefore = Get-Sha256Lower -Path $adversarial
+$testText = [IO.File]::ReadAllText($adversarial)
+$testNewLine = if ($testText.Contains("`r`n")) { "`r`n" } else { "`n" }
+$policyRepairs = @(
+    [pscustomobject]@{
+        old = "    let mut p = ScanPolicy::default();${testNewLine}    p.max_segment_bytes = 8;"
+        new = "    let p = ScanPolicy {${testNewLine}        max_segment_bytes: 8,${testNewLine}        ..ScanPolicy::default()${testNewLine}    };"
+        purpose = 'Initialize max_segment_bytes directly.'
+    },
+    [pscustomobject]@{
+        old = "    let mut p = ScanPolicy::default();${testNewLine}    p.max_path_depth = 2;"
+        new = "    let p = ScanPolicy {${testNewLine}        max_path_depth: 2,${testNewLine}        ..ScanPolicy::default()${testNewLine}    };"
+        purpose = 'Initialize max_path_depth directly.'
+    },
+    [pscustomobject]@{
+        old = "    let mut p = ScanPolicy::default();${testNewLine}    p.max_archive_entry_ratio = 10.0;"
+        new = "    let p = ScanPolicy {${testNewLine}        max_archive_entry_ratio: 10.0,${testNewLine}        ..ScanPolicy::default()${testNewLine}    };"
+        purpose = 'Initialize max_archive_entry_ratio directly.'
+    },
+    [pscustomobject]@{
+        old = "    let mut p = ScanPolicy::default();${testNewLine}    p.max_archive_entries = 2;"
+        new = "    let p = ScanPolicy {${testNewLine}        max_archive_entries: 2,${testNewLine}        ..ScanPolicy::default()${testNewLine}    };"
+        purpose = 'Initialize max_archive_entries directly.'
+    },
+    [pscustomobject]@{
+        old = "    let mut p = ScanPolicy::default();${testNewLine}    p.max_archive_total_uncompressed_bytes = 2;"
+        new = "    let p = ScanPolicy {${testNewLine}        max_archive_total_uncompressed_bytes: 2,${testNewLine}        ..ScanPolicy::default()${testNewLine}    };"
+        purpose = 'Initialize max_archive_total_uncompressed_bytes directly.'
+    }
+)
+$policyOccurrences = 0
+foreach ($repair in $policyRepairs) {
+    $found = ([regex]::Matches($testText, [regex]::Escape($repair.old))).Count
+    if ($found -ne 1) { throw "Expected exactly one ScanPolicy repair target '$($repair.purpose)'; found $found" }
+    $testText = $testText.Replace($repair.old, $repair.new)
+    $policyOccurrences += $found
+}
+[IO.File]::WriteAllText($adversarial, $testText, [Text.UTF8Encoding]::new($false))
+$adversarialAfter = Get-Sha256Lower -Path $adversarial
+$patches += [pscustomobject]@{
+    file = 'tests/adversarial.rs'
+    purpose = 'Replace five post-Default field assignments with direct ScanPolicy struct initialization.'
+    details = @($policyRepairs | ForEach-Object { $_.purpose })
+    occurrences = $policyOccurrences
+    before_sha256 = $adversarialBefore
+    after_targeted_patch_sha256 = $adversarialAfter
+}
+
 Push-Location $root
 try {
     Invoke-NativeChecked -FilePath 'rustc' -ArgumentList @('-Vv')
