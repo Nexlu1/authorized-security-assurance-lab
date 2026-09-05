@@ -163,8 +163,21 @@ fn is_day_of_week(s: &str) -> bool {
 }
 
 fn is_month(s: &str) -> bool {
-    matches!(s, "Jan" | "Feb" | "Mar" | "Apr" | "May" | "Jun"
-        | "Jul" | "Aug" | "Sep" | "Oct" | "Nov" | "Dec")
+    matches!(
+        s,
+        "Jan"
+            | "Feb"
+            | "Mar"
+            | "Apr"
+            | "May"
+            | "Jun"
+            | "Jul"
+            | "Aug"
+            | "Sep"
+            | "Oct"
+            | "Nov"
+            | "Dec"
+    )
 }
 
 fn is_day(s: &str) -> bool {
@@ -178,9 +191,8 @@ fn is_time(s: &str) -> bool {
     else {
         return false;
     };
-    let ok = |t: &str, max: u8| {
-        (1..=2).contains(&t.len()) && t.parse::<u8>().is_ok_and(|v| v <= max)
-    };
+    let ok =
+        |t: &str, max: u8| (1..=2).contains(&t.len()) && t.parse::<u8>().is_ok_and(|v| v <= max);
     ok(h, 23) && ok(m, 59) && ok(sec, 61)
 }
 
@@ -197,7 +209,8 @@ fn is_timezone(s: &str) -> bool {
 }
 
 fn is_blank_line(line: &[u8]) -> bool {
-    line.iter().all(|&b| matches!(b, b'\n' | b'\r' | b' ' | b'\t'))
+    line.iter()
+        .all(|&b| matches!(b, b'\n' | b'\r' | b' ' | b'\t'))
 }
 
 #[cfg(test)]
