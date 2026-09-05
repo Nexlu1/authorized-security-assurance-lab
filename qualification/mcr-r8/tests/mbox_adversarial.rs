@@ -38,7 +38,9 @@ fn oversized_physical_line_keeps_later_offset_exact() {
     data.extend(std::iter::repeat_n(b'x', RETAIN_LIMIT + 1024));
     data.push(b'\n');
     let second_start = data.len() as u64;
-    data.extend_from_slice(b"From b@example.com Fri Jan 02 00:00:00 2024\nSubject: Second\n\nBody\n");
+    data.extend_from_slice(
+        b"From b@example.com Fri Jan 02 00:00:00 2024\nSubject: Second\n\nBody\n",
+    );
 
     let spans = scan_headers(Cursor::new(&data)).unwrap();
     assert_eq!(spans.len(), 2);
