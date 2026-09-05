@@ -1,0 +1,156 @@
+name: FOSS Qualification - videohash compatibility remediation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/foss-build-qualification-videohash-remediation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-remediation:
+    name: Exact videohash plus one-line Pillow compatibility patch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VIDEOHASH_REPO: https://github.com/akamhy/videohash.git
+      VIDEOHASH_SHA: e407bb0b26de625a846c2700072efccd9eb44e9a
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Fetch and verify exact donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/vrp/videohash-remediation
+          git clone --quiet --no-checkout "$VIDEOHASH_REPO" donor/videohash
+          git -C donor/videohash checkout --quiet "$VIDEOHASH_SHA"
+          actual="$(git -C donor/videohash rev-parse HEAD)"
+          test "$actual" = "$VIDEOHASH_SHA"
+          printf 'repo=%s\nsha=%s\n' "$VIDEOHASH_REPO" "$actual" > receipts/vrp/videohash-remediation/source.txt
+          sha256sum donor/videohash/LICENSE > receipts/vrp/videohash-remediation/license-sha256.txt
+
+      - name: Apply bounded one-line Pillow compatibility patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('donor/videohash/videohash/collagemaker.py')
+          text = p.read_text()
+          old = 'Image.ANTIALIAS'
+          new = 'Image.Resampling.LANCZOS'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one {old} occurrence, found {count}')
+          p.write_text(text.replace(old, new))
+          PY
+          changed="$(git -C donor/videohash diff --name-only)"
+          test "$changed" = 'videohash/collagemaker.py'
+          git -C donor/videohash diff -- videohash/collagemaker.py > receipts/vrp/videohash-remediation/pillow-compat.patch
+          sha256sum receipts/vrp/videohash-remediation/pillow-compat.patch > receipts/vrp/videohash-remediation/patch-sha256.txt
+
+      - name: Install patched donor, correct upstream test plugin and audit tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install ./donor/videohash pytest pytest-cov pip-audit==2.10.1 2>&1 | tee receipts/vrp/videohash-remediation/install.txt
+          python -m pip check 2>&1 | tee receipts/vrp/videohash-remediation/pip-check.txt
+          python -m pip freeze | sort > receipts/vrp/videohash-remediation/pip-freeze.txt
+
+      - name: Run complete upstream test suite
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q donor/videohash/tests 2>&1 | tee receipts/vrp/videohash-remediation/pytest.txt
+
+      - name: Run generated local near-duplicate behavior smoke
+        id: behavior
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p receipts/vrp/videohash-remediation/smoke-videos
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'testsrc=size=320x240:rate=15' -t 8 -pix_fmt yuv420p receipts/vrp/videohash-remediation/smoke-videos/original.mp4
+          ffmpeg -hide_banner -loglevel error -y -i receipts/vrp/videohash-remediation/smoke-videos/original.mp4 -vf 'scale=240:180,fps=12' -c:v libx264 -crf 28 -an receipts/vrp/videohash-remediation/smoke-videos/transcoded.mp4
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'smptebars=size=320x240:rate=15' -t 8 -pix_fmt yuv420p receipts/vrp/videohash-remediation/smoke-videos/different.mp4
+          python - <<'PY' | tee receipts/vrp/videohash-remediation/behavior-smoke.txt
+          from videohash import VideoHash
+          root = 'receipts/vrp/videohash-remediation/smoke-videos/'
+          original = VideoHash(path=root + 'original.mp4')
+          transcoded = VideoHash(path=root + 'transcoded.mp4')
+          different = VideoHash(path=root + 'different.mp4')
+          td = original - transcoded
+          dd = original - different
+          print('original hash:', original.hash_hex)
+          print('transcoded hash:', transcoded.hash_hex)
+          print('different hash:', different.hash_hex)
+          print('transcoded distance:', td)
+          print('different distance:', dd)
+          print('transcoded similar:', original.is_similar(transcoded))
+          print('different similar:', original.is_similar(different))
+          assert original.is_similar(transcoded)
+          assert not original.is_similar(different)
+          assert td < dd
+          print('videohash patched behavior smoke: PASS')
+          PY
+
+      - name: Audit installed environment
+        id: audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          pip-audit --local --format=json --output=receipts/vrp/videohash-remediation/pip-audit.json
+          rc=$?
+          echo "pip_audit_exit=$rc" > receipts/vrp/videohash-remediation/pip-audit-exit.txt
+          exit $rc
+
+      - name: Assert patch scope and write outcomes
+        if: always()
+        shell: bash
+        env:
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          set -euo pipefail
+          changed="$(git -C donor/videohash diff --name-only)"
+          test "$changed" = 'videohash/collagemaker.py'
+          printf 'tests=%s\nbehavior=%s\naudit=%s\n' "$TESTS_OUTCOME" "$BEHAVIOR_OUTCOME" "$AUDIT_OUTCOME" > receipts/vrp/videohash-remediation/outcomes.txt
+
+      - name: Upload remediation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vrp-videohash-remediation-r19
+          path: receipts/vrp/videohash-remediation/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce remediation gate
+        if: always()
+        shell: bash
+        env:
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BEHAVIOR_OUTCOME: ${{ steps.behavior.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          test "$TESTS_OUTCOME" = success
+          test "$BEHAVIOR_OUTCOME" = success
+          test "$AUDIT_OUTCOME" = success
