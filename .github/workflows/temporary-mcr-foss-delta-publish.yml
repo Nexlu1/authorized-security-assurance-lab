@@ -1,0 +1,259 @@
+name: Temporary MCR FOSS delta harvest with published receipts
+
+on:
+  push:
+    branches:
+      - temporary/mcr-foss-delta-r1-20260905
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-mcr-foss-delta-publish-r1-20260905
+  cancel-in-progress: true
+
+jobs:
+  harvest-and-publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - name: Check out public synthetic-only harvest controls
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+
+      - name: Download and verify exact public source delta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/temporary_mcr_foss_delta_harvest.py
+
+      - name: Publish small machine-readable receipts to temporary branch
+        if: always()
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p results/mcr-foss-delta-r1
+          result='harvest-work/MCR_GITHUB_FOSS_DELTA_R1_2026-09-05/CONTROL/HARVEST_RESULT.json'
+          register='harvest-work/MCR_GITHUB_FOSS_DELTA_R1_2026-09-05/CONTROL/SOURCE_REGISTER.csv'
+          split='harvest-work/MCR_GITHUB_FOSS_DELTA_R1_2026-09-05/CONTROL/SPLIT_MANIFEST.json'
+          if [ -f "$result" ]; then cp "$result" results/mcr-foss-delta-r1/HARVEST_RESULT.json; fi
+          if [ -f "$register" ]; then cp "$register" results/mcr-foss-delta-r1/SOURCE_REGISTER.csv; fi
+          if [ -f "$split" ]; then cp "$split" results/mcr-foss-delta-r1/SPLIT_MANIFEST.json; fi
+          if [ -f harvest-output/OUTPUT_SHA256.json ]; then cp harvest-output/OUTPUT_SHA256.json results/mcr-foss-delta-r1/OUTPUT_SHA256.json; fi
+          if [ -f harvest-output/OUTPUT_SHA256.txt ]; then cp harvest-output/OUTPUT_SHA256.txt results/mcr-foss-delta-r1/OUTPUT_SHA256.txt; fi
+          python3 - <<'PY'
+          import json, os, pathlib
+          pathlib.Path('results/mcr-foss-delta-r1/RUN_METADATA.json').write_text(json.dumps({
+              'schema':'mcr-foss-delta-run-metadata-v1',
+              'run_id':int(os.environ['RUN_ID']),
+              'run_attempt':int(os.environ['RUN_ATTEMPT']),
+              'head_sha':os.environ['HEAD_SHA'],
+              'workflow':'temporary-mcr-foss-delta-publish.yml'
+          }, indent=2), encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add results/mcr-foss-delta-r1
+          if ! git diff --cached --quiet; then
+            git commit -m 'temp: publish MCR FOSS delta receipts [skip ci]'
+            git push origin HEAD:temporary/mcr-foss-delta-r1-20260905
+          fi
+
+      - name: Upload controls and output hashes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-controls
+          path: |
+            harvest-output/MCR_FOSS_DELTA_R1_CONTROLS.zip
+            harvest-output/OUTPUT_SHA256.json
+            harvest-output/OUTPUT_SHA256.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 00
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part00
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_00.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 01
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part01
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_01.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 02
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part02
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_02.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 03
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part03
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_03.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 04
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part04
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_04.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 05
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part05
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_05.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 06
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part06
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_06.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 07
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part07
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_07.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 08
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part08
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_08.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 09
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part09
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_09.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 10
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part10
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_10.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 11
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part11
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_11.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 12
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part12
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_12.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 13
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part13
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_13.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 14
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part14
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_14.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload delta part 15
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-foss-delta-r1-published-part15
+          path: harvest-output/MCR_FOSS_DELTA_R1_PART_15.zip
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7
+
+      - name: Fail closed on required source acquisition gaps
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          path = pathlib.Path('harvest-work/MCR_GITHUB_FOSS_DELTA_R1_2026-09-05/CONTROL/HARVEST_RESULT.json')
+          if not path.exists():
+              raise SystemExit('Harvest result missing')
+          result = json.loads(path.read_text(encoding='utf-8'))
+          print(json.dumps({
+              'requested_sources': result['requested_sources'],
+              'downloaded_sources': result['downloaded_sources'],
+              'required_failure_count': len(result['required_failures']),
+              'license_evidence_open_count': result['license_evidence_open_count'],
+          }, indent=2))
+          for failure in result['required_failures']:
+              print(json.dumps(failure, sort_keys=True))
+          if result['required_failures']:
+              sys.exit(2)
+          PY
