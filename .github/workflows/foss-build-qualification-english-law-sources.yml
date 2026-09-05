@@ -1,0 +1,162 @@
+name: FOSS Build Qualification - English Law Sources
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/foss-build-qualification-english-law-sources.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-caselaw-utils:
+    name: TNA case-law utilities - exact tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DONOR_REPO: https://github.com/nationalarchives/ds-caselaw-utils.git
+      DONOR_SHA: b37f1bb1bba3e1cfbb0f4d9bd588b7a828d8b850
+      PYTHON_VERSION: '3.12'
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Fetch and verify exact donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/english-law/caselaw-utils
+          git clone --quiet --no-checkout "$DONOR_REPO" donor/caselaw-utils
+          git -C donor/caselaw-utils checkout --quiet "$DONOR_SHA"
+          actual="$(git -C donor/caselaw-utils rev-parse HEAD)"
+          test "$actual" = "$DONOR_SHA"
+          printf 'source_repo=%s\nsource_sha=%s\n' "$DONOR_REPO" "$actual" > receipts/english-law/caselaw-utils/source.txt
+          python --version 2>&1 | tee receipts/english-law/caselaw-utils/python-version.txt
+
+      - name: Install exact package and test dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install ./donor/caselaw-utils 'pytest==9.0.3' 2>&1 | tee receipts/english-law/caselaw-utils/install.txt
+          python -m pip check 2>&1 | tee receipts/english-law/caselaw-utils/pip-check.txt
+
+      - name: Run upstream tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/caselaw-utils
+          python -m pytest -q 2>&1 | tee ../../receipts/english-law/caselaw-utils/pytest.txt
+
+      - name: Smoke neutral-citation validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' | tee receipts/english-law/caselaw-utils/smoke.txt
+          from ds_caselaw_utils import neutral_url
+          assert neutral_url('[2020] EWCA Civ 1') == 'ewca/civ/2020/1'
+          assert neutral_url('[2022] NOTACOURT 1 TC') is None
+          print('neutral citation smoke: PASS')
+          PY
+
+      - name: Record package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > receipts/english-law/caselaw-utils/package-metadata.txt
+          from importlib.metadata import metadata, version
+          m = metadata('ds_caselaw_utils')
+          print('version=' + version('ds_caselaw_utils'))
+          print('license=' + str(m.get('License')))
+          PY
+
+      - name: Upload case-law evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: english-law-caselaw-utils-r18
+          path: receipts/english-law/caselaw-utils/
+          if-no-files-found: error
+          retention-days: 30
+
+  qualify-legislation-mcp:
+    name: legislation.gov.uk MCP - build, tests, audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DONOR_REPO: https://github.com/legislation/legislation-mcp-ts.git
+      DONOR_SHA: 8261b2aada185aa846d34288790d1321ac79c8dc
+      NODE_VERSION: '22.16.0'
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Fetch and verify exact donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/english-law/legislation-mcp
+          git clone --quiet --no-checkout "$DONOR_REPO" donor/legislation-mcp
+          git -C donor/legislation-mcp checkout --quiet "$DONOR_SHA"
+          actual="$(git -C donor/legislation-mcp rev-parse HEAD)"
+          test "$actual" = "$DONOR_SHA"
+          printf 'source_repo=%s\nsource_sha=%s\n' "$DONOR_REPO" "$actual" > receipts/english-law/legislation-mcp/source.txt
+          node --version | tee receipts/english-law/legislation-mcp/node-version.txt
+          npm --version | tee receipts/english-law/legislation-mcp/npm-version.txt
+
+      - name: Install locked dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm ci 2>&1 | tee ../../receipts/english-law/legislation-mcp/npm-ci.txt
+
+      - name: Type-check and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm run check 2>&1 | tee ../../receipts/english-law/legislation-mcp/typecheck.txt
+          npm run build 2>&1 | tee ../../receipts/english-law/legislation-mcp/build.txt
+
+      - name: Run upstream tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm test 2>&1 | tee ../../receipts/english-law/legislation-mcp/tests.txt
+
+      - name: Audit production dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm audit --omit=dev --audit-level=high --json > ../../receipts/english-law/legislation-mcp/npm-audit-production.json
+
+      - name: Record package and licence metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          node -e "const p=require('./package.json'); console.log('name='+p.name); console.log('version='+p.version); console.log('license='+p.license); console.log('node='+p.engines.node)" > ../../receipts/english-law/legislation-mcp/package-metadata.txt
+          sha256sum LICENSE > ../../receipts/english-law/legislation-mcp/license-sha256.txt
+          sha256sum package-lock.json > ../../receipts/english-law/legislation-mcp/package-lock-sha256.txt
+
+      - name: Upload legislation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: english-law-legislation-mcp-r18
+          path: receipts/english-law/legislation-mcp/
+          if-no-files-found: error
+          retention-days: 30
