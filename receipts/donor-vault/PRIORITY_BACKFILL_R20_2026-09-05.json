@@ -1,0 +1,98 @@
+{
+  "schema": "priority-donor-vault-backfill-r20-v1",
+  "date": "2026-09-05",
+  "status": "PASS",
+  "temporary_qualification_pr": 41,
+  "temporary_workflow_head": "53aa79493cd8349c1cfadb18deeee98d3dab0352",
+  "workflow_run_id": 33977293449,
+  "workflow_result": "4_of_4_pass",
+  "repository_controls": {
+    "governance_integrity": "PASS",
+    "workflow_assurance": "PASS",
+    "python_sast": "PASS",
+    "repository_assurance": "PASS"
+  },
+  "independent_local_verification": {
+    "result": "PASS",
+    "results_manifest_sha256": "024664a8b8a0cafc6d9c4fb4e3e824e03583f3a2d47095a4d5dcf93df69b6ee8",
+    "checks": [
+      "downloaded artifact ZIP SHA-256 matches GitHub artifact digest",
+      "all portable internal SHA-256 manifests verify",
+      "original commit object hashes to pinned commit",
+      "git bundle verify passes",
+      "bundle restores expected branch and exact Git tree",
+      "git fsck --full passes",
+      "restored ls-tree manifest equals original manifest",
+      "exact-history bundles restore the original pinned commit",
+      "tracked source tar rebuilds the exact original Git tree"
+    ]
+  },
+  "entries": [
+    {
+      "repository": "ggml-org/llama.cpp",
+      "pinned_commit": "0ef4d560e12c1a46470265c1abd31dd47c777d23",
+      "git_tree": "abeb6d5e222529f849ce13a3e8e33345ff5c3a55",
+      "licence": "MIT",
+      "qualification_state": "USE_INTEGRATED",
+      "target_lanes": "Rig Worker",
+      "bundle_mode": "source_snapshot",
+      "bundle_restores_original_commit": false,
+      "snapshot_commit": "facc4f563a1ec99266ee1758cab88145d619131f",
+      "source_tree_archive_sha256": "79ada0ebb29b9194bc6fc8a50bba39dd5cb8f8e98d78724ed7823a0a5aa854f8",
+      "git_bundle_sha256": "b39d3db00b1037d558d13fd6e1c5e08b63d1930f1b740bbde48b730f970ec2af",
+      "artifact_id": 9972690049,
+      "artifact_zip_sha256": "1cfdbe042acedc32b49e84ee3eb4a1d3ac861612e11c76ffecf6a6b6f2689582",
+      "history_scope": "self-contained snapshot commit with exact pinned Git tree; original commit object preserved separately; original ancestry not included"
+    },
+    {
+      "repository": "alekk89/llama-cpp-windows-manager",
+      "pinned_commit": "a48a8b9dca99736792096de66446fdf7d28bf585",
+      "git_tree": "1af146aaad927ff10e39ac3219fe7454fee87711",
+      "licence": "MIT",
+      "qualification_state": "HOLD_SECURITY",
+      "target_lanes": "Rig Worker",
+      "bundle_mode": "exact_history_to_commit",
+      "bundle_restores_original_commit": true,
+      "source_tree_archive_sha256": "f09466c5b5f2e5edafbc95722c4bd9ecfcac2ae9ed018ecba4c34ffce58183f6",
+      "git_bundle_sha256": "61f0eadabed7ba2a3d433ad3c39be62d9ddb04fa7883ab6ff1c018f039790a88",
+      "artifact_id": 9972686418,
+      "artifact_zip_sha256": "ee8fe00ea6e465fd68d6125c957e9b5558a7c935a593d04508ed7e2c4ed41f9f",
+      "history_scope": "original pinned commit plus reachable ancestry to that commit"
+    },
+    {
+      "repository": "winsw/winsw",
+      "pinned_commit": "1d0ee4a91bad596d5e7e9c360f2b39ef54674674",
+      "git_tree": "66bdc63b630f98eb4bbf81e11bb29391bc42bec5",
+      "licence": "MIT",
+      "qualification_state": "TEST_PASS_SECURITY_HOLD",
+      "target_lanes": "Remote Rig Access / Windows supervision",
+      "bundle_mode": "exact_history_to_commit",
+      "bundle_restores_original_commit": true,
+      "source_tree_archive_sha256": "c3db838bf19138527ef965be9bea48c2e372d5753d21baffebd6d6afb4c51192",
+      "git_bundle_sha256": "c3ed55676df8d9ca9f4aa18ab57954b3a4047a40468830203d5d7525508c9938",
+      "artifact_id": 9972686398,
+      "artifact_zip_sha256": "f9b8a2a93f4b27dab7234bfbf9d792482c8d18f85e7b8547e532ded4153463d5",
+      "history_scope": "original pinned commit plus reachable ancestry to that commit"
+    },
+    {
+      "repository": "Sh3n0bi/NetForensicAI",
+      "pinned_commit": "70cd1b98a4433ab6fe2db6280799d33673acea9e",
+      "git_tree": "6a72dd0c0798836647f77c828321425dc9921d26",
+      "licence": "MIT",
+      "qualification_state": "ADAPT_HOLD",
+      "target_lanes": "ECO / Dossier / MCR",
+      "bundle_mode": "exact_history_to_commit",
+      "bundle_restores_original_commit": true,
+      "source_tree_archive_sha256": "cc55f946d0a3da231bc404c421e33fabd6ca6f24bd549f78a34e7d351da66af1",
+      "git_bundle_sha256": "37ba1396a55c8f7d12a0736c4638d1c222bce27b0698653063f6749c57a485aa",
+      "artifact_id": 9972685664,
+      "artifact_zip_sha256": "a8e185d5e024205c77b59cdb672777ca9ed3bbd9659121b9244811f4b8026f70",
+      "history_scope": "original pinned commit plus reachable ancestry to that commit"
+    }
+  ],
+  "scope_boundary": {
+    "closed": "priority source-byte acquisition and verified restorable packaging for the four historical priority donors",
+    "not_claimed": "physical duplication to the user's local E: working vault and separate restic/cold-storage restore copy; that remains an operator/storage redundancy task outside this chat's current machine access",
+    "mission_after_r20": "continuous GitHub-first radar and affected-capability handoff only; do not restart the already-frozen initial comprehensive reconnaissance"
+  }
+}
