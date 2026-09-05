@@ -1,0 +1,10 @@
+[package]
+name = "mcr-ingest"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+
+[dependencies]
+mcr-safety-core = { package = "mcr-ingest", git = "https://github.com/Nexlu1/authorized-security-assurance-lab", rev = "5572c1f6bdec9e7ae41d42116540bc24fc8db9f1" }
