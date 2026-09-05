@@ -114,7 +114,9 @@ jobs:
 
           tar -xf "vault/source-tree-${short}.tar" -C "$verify"
           git -C "$verify" init -q
-          git -C "$verify" add -A
+          # Force-add because some repositories intentionally track files that
+          # their own .gitignore rules would hide in a newly initialized repo.
+          git -C "$verify" add -A -f
           archive_tree="$(git -C "$verify" write-tree)"
           original_tree="$(cat vault/original-git-tree.txt)"
           test "$archive_tree" = "$original_tree"
@@ -123,6 +125,7 @@ jobs:
           original_tree=$original_tree
           archive_rebuilt_tree=$archive_tree
           export_method=git_checkout_index
+          verifier_add_mode=force_tracked_reconstruction
           gitlinks=0
           EOF
 
