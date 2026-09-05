@@ -1,0 +1,164 @@
+name: FOSS build qualification batch 3 model runtime
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'qualification/batch3-model-runtime/**'
+      - '.github/workflows/foss-build-qualification-batch3-model-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foss-build-qualification-batch3-model-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ''
+  GITHUB_TOKEN: ''
+  GIT_TERMINAL_PROMPT: '0'
+
+jobs:
+  validate:
+    name: validate-batch3-model-runtime-manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out qualification controls only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Require manifest to match executable qualification job
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          doc = json.loads(Path('qualification/batch3-model-runtime/BUILD_QUALIFICATION.json').read_text(encoding='utf-8'))
+          if doc.get('schema_version') != 1:
+              raise SystemExit('unsupported schema_version')
+          policy = doc.get('policy', {})
+          expected_policy = {
+              'third_party_write': False,
+              'secrets_available_to_donor': False,
+              'execute_donor_code': True,
+              'publish_compiled_donor_artifacts': False,
+              'qualification_is_not_target_project_integration': True,
+          }
+          if policy != expected_policy:
+              raise SystemExit(f'policy mismatch: {policy!r}')
+          candidate = doc.get('candidate', {})
+          expected = {
+              'id': 'llamacpp-windows-manager-model-runtime-safety',
+              'repository': 'alekk89/llama-cpp-windows-manager',
+              'sha': 'a48a8b9dca99736792096de66446fdf7d28bf585',
+              'platform': 'windows-2025',
+              'scope': [
+                  'LocalLlmConsole.Tests.DownloadSafetyTests',
+                  'LocalLlmConsole.Tests.RuntimePackageInstallationTests',
+              ],
+          }
+          for key, value in expected.items():
+              if candidate.get(key) != value:
+                  raise SystemExit(f'candidate {key} mismatch: {candidate.get(key)!r}')
+          print('Batch 3 manifest matches executable qualification job')
+          PY
+
+  focused-model-runtime:
+    name: qualify-manager-model-runtime-safety
+    needs: validate
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - name: Acquire exact public donor source
+        id: acquire
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init donor
+          git -C donor remote add origin https://github.com/alekk89/llama-cpp-windows-manager.git
+          git -C donor -c protocol.version=2 fetch --no-tags --depth=1 origin a48a8b9dca99736792096de66446fdf7d28bf585
+          git -C donor checkout --detach FETCH_HEAD
+          if ((git -C donor rev-parse HEAD).Trim() -ne 'a48a8b9dca99736792096de66446fdf7d28bf585') { throw 'donor SHA mismatch' }
+          git -C donor remote remove origin
+          if (git -C donor remote) { throw 'donor repository still has a Git remote' }
+
+      - name: Set up exact .NET SDK from upstream global.json
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: donor/global.json
+
+      - name: Locked restore and build
+        id: build
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\build-app.ps1 -Restore -LockedRestore
+
+      - name: Run focused model and runtime safety tests
+        id: tests
+        working-directory: donor
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet test --project tests\LocalLlmConsole.Tests\LocalLlmConsole.Tests.csproj -c Debug `
+            --minimum-expected-tests 2 `
+            --fail-skips on `
+            --report-xunit-trx `
+            --report-xunit-trx-filename focused-model-runtime.trx `
+            -- `
+            --filter-class LocalLlmConsole.Tests.DownloadSafetyTests LocalLlmConsole.Tests.RuntimePackageInstallationTests
+          if ($LASTEXITCODE -ne 0) { throw 'Focused model/runtime safety tests failed.' }
+
+      - name: Run upstream package vulnerability audit
+        id: vuln
+        working-directory: donor
+        shell: pwsh
+        run: .\scripts\test-vulnerabilities.ps1
+
+      - name: Record qualification receipt
+        if: always()
+        shell: pwsh
+        env:
+          ACQUIRE: ${{ steps.acquire.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          VULN: ${{ steps.vuln.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force evidence | Out-Null
+          $receipt = [ordered]@{
+            schema_version = 1
+            donor = 'alekk89/llama-cpp-windows-manager'
+            sha = 'a48a8b9dca99736792096de66446fdf7d28bf585'
+            runner = 'windows-2025'
+            scope = @(
+              'LocalLlmConsole.Tests.DownloadSafetyTests',
+              'LocalLlmConsole.Tests.RuntimePackageInstallationTests'
+            )
+            unrelated_benchmark_tests_executed = $false
+            ui_tests_executed = $false
+            binaries_uploaded = $false
+            upstream_write_credentials = $false
+            steps = [ordered]@{
+              acquire = $env:ACQUIRE
+              locked_build = $env:BUILD
+              focused_tests = $env:TESTS
+              package_vulnerability_audit = $env:VULN
+            }
+          }
+          $receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath evidence/qualification.json -Encoding utf8
+
+      - name: Preserve allowlisted text qualification evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: batch3-manager-model-runtime-receipt
+          path: evidence/qualification.json
+          if-no-files-found: error
+          retention-days: 30

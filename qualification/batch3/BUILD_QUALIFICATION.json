@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "id": "llama-cpp-windows-manager-model-runtime-safety",
+    "repository": "alekk89/llama-cpp-windows-manager",
+    "sha": "a48a8b9dca99736792096de66446fdf7d28bf585",
+    "license": "MIT",
+    "platform": "windows-2025 / .NET SDK 10.0.400",
+    "target_project": "Rig Worker",
+    "scope": [
+      "LocalLlmConsole.Tests.DownloadSafetyTests",
+      "LocalLlmConsole.Tests.RuntimePackageInstallationTests"
+    ]
+  },
+  "policy": {
+    "third_party_write": false,
+    "secrets_available_to_donor": false,
+    "publish_compiled_donor_artifacts": false,
+    "run_unrelated_benchmark_tests": false,
+    "qualification_is_not_full_application_approval": true,
+    "qualification_is_not_target_project_integration": true
+  }
+}
