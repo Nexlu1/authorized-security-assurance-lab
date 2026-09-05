@@ -1,0 +1,16 @@
+[package]
+name = "mcr-ingest"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Synthetic-only MCR evidence tooling bootstrap shell"
+publish = false
+
+[dependencies]
+
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+panic = "abort"
