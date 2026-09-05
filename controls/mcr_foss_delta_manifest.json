@@ -1,0 +1,45 @@
+{
+  "schema": "mcr-github-foss-delta-plan-v1",
+  "date": "2026-09-05",
+  "authority_boundary": "Public FOSS source acquisition only. No MCR evidence, private correspondence, credentials, export bundles or frozen R59 bytes.",
+  "purpose": "Acquire only the exact public source repositories absent from the already verified 41-source local harvest; do not redownload the intact base package.",
+  "sources": [
+    {"category":"core-delta","id":"process-wrap","repo":"watchexec/process-wrap","commit":"d02486b8d1e393a4ac27023d591b6f35c6417ffb","license":"Apache-2.0 OR MIT","use":"Windows Job Object process-supervisor donor","required":true},
+    {"category":"core-delta","id":"calamine","repo":"tafia/calamine","commit":"0a24c2a9f1e38c0932c1299e633270dc730db505","license":"MIT","use":"read-only spreadsheet parser","required":true},
+    {"category":"core-delta","id":"cargo-deny","repo":"EmbarkStudios/cargo-deny","commit":"bca0dde53651ee946720e4540b5ce2610bec8f06","license":"MIT OR Apache-2.0","use":"Rust licence/advisory/source policy checks","required":true},
+    {"category":"core-delta","id":"cargo-about","repo":"EmbarkStudios/cargo-about","commit":"f7394d5c8f618623573072caadf6594821c789b6","license":"MIT OR Apache-2.0","use":"third-party licence inventory","required":true},
+    {"category":"core-delta","id":"cargo-auditable","repo":"rust-secure-code/cargo-auditable","commit":"9dc5ff28ff204b73eae91bd96cde4413fdcb70e0","license":"MIT OR Apache-2.0","use":"embed dependency metadata into release binary","required":true},
+    {"category":"core-delta","id":"cargo-fuzz","repo":"rust-fuzz/cargo-fuzz","commit":"984c861c8dfea28055254c5f1d2659ab2cd63f76","license":"Apache-2.0","use":"parser fuzzing","required":true},
+
+    {"category":"secondary-a","id":"mediainfo","repo":"MediaArea/MediaInfoLib","commit":"4728f24b666117a19d36515d95b9367fbb37aaf6","license":"BSD-2-Clause","use":"optional media metadata comparator","required":true},
+    {"category":"secondary-a","id":"dangerzone","repo":"freedomofpress/dangerzone","commit":"6cc19db50166658feff4d72df605f30e97308f16","license":"AGPL-3.0","use":"separate optional hostile-document preview tool only","required":true},
+    {"category":"secondary-a","id":"warcio","repo":"webrecorder/warcio","commit":"05b1a68d3dda125d12098d0995c0cee920318aa0","license":"Apache-2.0","use":"WARC read/write/verification module","required":true},
+    {"category":"secondary-a","id":"whisper-cpp","repo":"ggml-org/whisper.cpp","commit":"f049fff95a089aa9969deb009cdd4892b3e74916","license":"MIT","use":"optional offline transcription derivative","required":true},
+
+    {"category":"secondary-b","id":"tesseract","repo":"tesseract-ocr/tesseract","commit":"db0ec62f81b0737fbbe184d8fea40af5738f8eef","license":"Apache-2.0","use":"optional OCR derivative","required":true},
+    {"category":"secondary-b","id":"browsertrix-crawler","repo":"webrecorder/browsertrix-crawler","commit":"8908ccc4aa0e17fe2c3266bed0a8b8e017a0fed4","license":"AGPL-3.0-or-later","use":"separate optional browser-capture appliance","required":true},
+    {"category":"secondary-b","id":"c2pa-rs","repo":"contentauth/c2pa-rs","commit":"3f40cdd22b60bf955d531b0301604e3f257e0a19","license":"Apache-2.0 OR MIT","use":"corroborating C2PA authenticity signal only","required":true},
+    {"category":"secondary-b","id":"exiftool","repo":"exiftool/exiftool","commit":"2200871d9cef988051d2a99d67df3bda6cbb30a8","license":"Artistic OR GPL","use":"read-only metadata comparator","required":true},
+    {"category":"secondary-b","id":"pyhanko","repo":"MatthieuDartiailh/pyHanko","commit":"0945f9bc64ef6ef386500943ee2b5941b5f142cd","license":"MIT","use":"optional PDF-signature comparator only","required":true},
+
+    {"category":"secondary-c","id":"msoffcrypto-tool","repo":"nolze/msoffcrypto-tool","commit":"6d9e72c58de2cf7df1ab45ac0d74ebedac8c58e3","license":"MIT","use":"known-key Office decryption derivative only","required":true},
+    {"category":"secondary-c","id":"libpff","repo":"libyal/libpff","commit":"d8ab3594683ee9f3ec63ab0e2efd79d545854846","license":"LGPL-3.0-or-later","use":"optional PST/OST comparator; alpha status explicit","required":true},
+    {"category":"secondary-c","id":"msg-extractor","repo":"TeamMsgExtractor/msg-extractor","commit":"f9a078fd3237ab7d3dbf922ab2fb6e12daf8bbd5","license":"GPL-3.0","use":"separate Outlook MSG comparator","required":true},
+    {"category":"secondary-c","id":"oletools","repo":"decalage2/oletools","commit":"ec10260989dbc48b9109e3d05d22beee19cf2333","license":"BSD-style","use":"legacy Office macro/OLE forensics","required":true},
+    {"category":"secondary-c","id":"apache-tika","repo":"apache/tika","commit":"cd800dd8d37a85ec7e258c7ca4cc61752b3ca600","license":"Apache-2.0","use":"independent format/metadata comparator","required":true},
+
+    {"category":"secondary-d","id":"droid","repo":"digital-preservation/droid","commit":"deb91d041ba834077284156774e7352c3df1f87a","license":"BSD-3-Clause","use":"PRONOM/DROID comparator only","required":true},
+    {"category":"secondary-d","id":"jhove","repo":"openpreserve/jhove","commit":"38115c6071a158b750c6bf2ce552240455e68fcc","license":"LGPL-2.1-or-later","use":"independent archival-format validator","required":true},
+    {"category":"secondary-d","id":"magika","repo":"google/magika","commit":"5e2f437fb7b7452368c8c1fa9354858f5487a5c4","license":"Apache-2.0","use":"fuzzy ML secondary file-type signal only","required":true},
+    {"category":"secondary-d","id":"clamav","repo":"Cisco-Talos/clamav","commit":"fa59fca15872bb8a914ba4c68188bcc8a502cbdf","license":"GPL-2.0-family","use":"separate optional malware scanner; clean never means safe","required":true},
+    {"category":"secondary-d","id":"libarchive","repo":"libarchive/libarchive","commit":"27cbc7827172698143e440801fc0ba39ccb4f1f5","license":"BSD-style with per-file exceptions","use":"non-ZIP archive comparator under MCR limits","required":true},
+
+    {"category":"legal-reference","id":"pdfid","repo":"DidierStevens/DidierStevensSuite","commit":"dea6816048fb2fd3a3597f2e131449fc87f60138","license":"Public Domain","use":"PDFiD lexical risk-indicator donor only","required":true},
+    {"category":"legal-reference","id":"bagit-python","repo":"LibraryOfCongress/bagit-python","commit":"4bd2713cedbe1f8e634567c20ef0dded9622011d","license":"Public Domain","use":"BagIt-style fixity/package reference","required":true},
+    {"category":"legal-reference","id":"legislation-mcp-ts","repo":"legislation/legislation-mcp-ts","commit":"8261b2aada185aa846d34288790d1321ac79c8dc","license":"OGL v3 / repository notices","use":"technical route to legislation.gov.uk; official source remains authority","required":true},
+    {"category":"legal-reference","id":"legalize-uk","repo":"legalize-dev/legalize-uk","commit":"8c5b105fa8089d311e285e90d5663343313bca7a","license":"OGL/data terms","use":"UK legislation change-history cross-check","required":true},
+    {"category":"legal-reference","id":"legalize-pipeline","repo":"legalize-dev/legalize-pipeline","commit":"5596f1d4f6c84df246dd1e267a981d6ef6a618bc","license":"MIT / data subtrees separate","use":"caching/rate-limit/history/run-state donor","required":true},
+    {"category":"legal-reference","id":"tna-caselaw-client","repo":"nationalarchives/ds-caselaw-custom-api-client","commit":"d8a55379ed76e23c989c704b197c1f0db7ee6159","license":"MIT","use":"Find Case Law technical retrieval route","required":true},
+    {"category":"legal-reference","id":"tna-judgments-parser","repo":"nationalarchives/tna-judgments-parser","commit":"194e98b5fa0cb5cd5fe9efbab7d0b8814436a3a4","license":"repository licence to verify","use":"DOCX-to-LegalDocML parser/test donor","required":true}
+  ]
+}
