@@ -52,7 +52,7 @@ jobs:
           $linker = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
           if (-not $linker) { throw "Rust-supplied rust-lld.exe not found under $sysroot" }
           "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "RUSTFLAGS=-C link-arg=/Brepro" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUSTFLAGS=-C debuginfo=0 -C link-arg=/DEBUG:NONE -C link-arg=/Brepro" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Pinned linker: $linker"
 
       - name: Record toolchain
