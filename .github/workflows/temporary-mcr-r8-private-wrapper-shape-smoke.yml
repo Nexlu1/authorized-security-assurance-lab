@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   wrapper-shape:
@@ -58,3 +58,24 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+      - name: Publish exact qualified lock branch
+        if: matrix.os == 'ubuntu-24.04'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          lock="$PWD/Cargo.lock"
+          tmp="$RUNNER_TEMP/mcr-r8-wrapper-lock-publish"
+          rm -rf "$tmp"
+          mkdir -p "$tmp"
+          cd "$tmp"
+          git init
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          cp "$lock" Cargo.lock
+          printf '%s\n' '# Qualified lockfile for private MCR wrapper shape' '' 'Generated after Ubuntu/Windows dependency-shape qualification. The locked safety-core revision is 5572c1f6bdec9e7ae41d42116540bc24fc8db9f1.' > README.md
+          git add Cargo.lock README.md
+          git commit -m "qualified: private wrapper Cargo.lock from run $GITHUB_RUN_ID"
+          auth=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push --force "https://github.com/$GITHUB_REPOSITORY.git" HEAD:refs/heads/qualified/mcr-r8-private-wrapper-lock-v1
