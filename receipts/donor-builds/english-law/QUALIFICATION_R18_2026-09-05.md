@@ -11,7 +11,7 @@ The reconnaissance cell is sufficiently resolved for handoff.
 |---|---|---|---|---|
 | UK courts / neutral-citation recognition and canonical Find Case Law routing | `nationalarchives/ds-caselaw-utils` | `b37f1bb1bba3e1cfbb0f4d9bd588b7a828d8b850` | MIT | **PASS** |
 | UK legislation.gov.uk search/retrieval/effects MCP | `legislation/legislation-mcp-ts` | `8261b2aada185aa846d34288790d1321ac79c8dc` | OGL-UK-3.0 | **HOLD as published; PASS with the qualified lock-only remediation below** |
-| Judgment citation/legislation enrichment logic | `nationalarchives/ds-caselaw-data-enrichment-service` | official National Archives repository | MIT | **SELECTIVE DONOR** — reuse/adapt rules and concepts; do not adopt the whole AWS/serverless service by default |
+| Judgment citation/legislation enrichment logic | `nationalarchives/ds-caselaw-data-enrichment-service` | `fe2d1d83572fbe2a21866996f730e40bed139a41` | MIT | **SELECTIVE DONOR** — reuse/adapt rules and concepts; do not adopt the whole AWS/serverless service by default |
 | Find Case Law public API specification | `nationalarchives/ds-find-caselaw-docs` | official National Archives repository | published documentation | **AUTHORITATIVE INTERFACE REFERENCE** |
 | CLML schema repository | `legislation/clml-schema` | official legislation repository | explicit repository licence not established during this pass | **LICENCE HOLD** |
 | Third-party public-API downloader | `pw9876/caselaw-downloader` | repository inspected 2026-09-05 | no software licence established | **REJECT FOR CODE REUSE** |
@@ -100,6 +100,14 @@ Artifact: `english-law-legislation-mcp-remediation-r18`
 Artifact ID: `9971393907`  
 Artifact digest: `sha256:4152462d82eee62183c2edc96e8fb0d4e3c0866ef3c0515be1fb6051529cb21b`
 
+The exact tested remediation is preserved durably in this repository as:
+
+- `receipts/donor-builds/english-law/legislation-mcp/package-lock-remediation-8261b2a.patch`
+- patch SHA-256: `afa2d7122dc296a447c20b8f6ea546ed2a4e5b39e900744845e3f1b486527e29`
+- patch base: exact upstream source SHA `8261b2aada185aa846d34288790d1321ac79c8dc`
+
+This patch contains the complete tested lockfile delta, including resolved package URLs and integrity fields; it is not merely a version summary. If the patch does not apply cleanly to that exact base or its resulting lockfile hash differs from the qualified hash below, the remediation must be requalified rather than reconstructed heuristically.
+
 Lockfile hashes:
 
 - original exact upstream `package-lock.json`: `e5c06d6416c0cda3f4de9a20134581f179941ba2acf075b893df66b6859c57a2`
@@ -131,13 +139,18 @@ Post-remediation results:
 The exact upstream source is acceptable only when paired with either:
 
 1. an upstream revision whose committed dependency lock independently requalifies cleanly; or
-2. the controlled lock-only remediation represented by the qualified remediated lock hash above (or a later independently qualified equivalent).
+2. the exact preserved remediation patch above applied to exact source SHA `8261b2aada185aa846d34288790d1321ac79c8dc`, with the resulting `package-lock.json` verified as SHA-256 `46c8af715985a901855f92a9874eb76982aa4a5cb8d91c4738cb5b8553710931`; or
+3. a later independently qualified equivalent.
 
-Do not silently use the vulnerable published lockfile.
+Do not rerun `npm audit fix` and assume it reproduces the qualified graph. Do not silently use the vulnerable published lockfile.
 
 ## 4. Judgment enrichment donor — selective reuse
 
-`nationalarchives/ds-caselaw-data-enrichment-service` is an official MIT-licensed Judgment Enrichment Pipeline. It already contains logic/concepts for identifying and enriching:
+- Repository: `nationalarchives/ds-caselaw-data-enrichment-service`
+- Inspected/pinned SHA: `fe2d1d83572fbe2a21866996f730e40bed139a41`
+- Licence at that exact SHA: MIT, Crown Copyright (The National Archives)
+
+This official Judgment Enrichment Pipeline already contains logic/concepts for identifying and enriching:
 
 - UK case citations;
 - primary legislation references;
@@ -146,7 +159,7 @@ Do not silently use the vulnerable published lockfile.
 - provision references such as “section 6”;
 - LegalDocML citation metadata.
 
-It is useful evidence that we should not invent the English-law citation/enrichment rules from zero. However, the complete repository is an AWS/serverless service with deployment/environment assumptions, so it is a **selective donor/reference**, not a default whole-service dependency for an offline/local English Law Master.
+It is useful evidence that we should not invent the English-law citation/enrichment rules from zero. However, the complete repository is an AWS/serverless service with deployment/environment assumptions, so it is a **selective donor/reference**, not a default whole-service dependency for an offline/local English Law Master. Any later reuse must remain pinned to an inspected revision and independently requalify any materially different revision.
 
 ## 5. Public Find Case Law API and data-licence boundary
 
@@ -177,8 +190,8 @@ For the specialist English Law lane, the practical architecture is now:
 
 1. **Neutral citations / court identity:** adopt the qualified `nationalarchives/ds-caselaw-utils` donor.
 2. **Judgment source lookup:** use the authoritative Find Case Law public API specification, respecting Open Justice data-use restrictions.
-3. **Citation/enrichment logic:** selectively reuse/adapt MIT-licensed National Archives enrichment patterns rather than writing a fresh recogniser.
-4. **Legislation source/version/effects retrieval:** prefer the official `legislation/legislation-mcp-ts` core public tools, but only with a clean independently qualified dependency lock; the published `8261b2a...` lock is HOLD, while the source-identical remediated lock described above passed all gates.
+3. **Citation/enrichment logic:** selectively reuse/adapt the pinned MIT-licensed National Archives enrichment patterns rather than writing a fresh recogniser.
+4. **Legislation source/version/effects retrieval:** prefer the official `legislation/legislation-mcp-ts` core public tools, but only with a clean independently qualified dependency lock; the published `8261b2a...` lock is HOLD, while the exact source plus the durably preserved qualified remediation patch above passed all gates.
 5. **CLML validation:** remain on licence HOLD until explicit reuse terms are verified.
 6. Preserve exact source SHA, licence, dependency-lock hash and qualification evidence for every adopted donor.
 
