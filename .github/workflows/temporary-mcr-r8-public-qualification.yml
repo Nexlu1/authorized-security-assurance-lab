@@ -13,6 +13,9 @@ concurrency:
   group: temporary-mcr-r8-public-qualification-20260905
   cancel-in-progress: true
 
+env:
+  SOURCE_DATE_EPOCH: "0"
+
 jobs:
   rust:
     strategy:
@@ -37,6 +40,21 @@ jobs:
           toolchain: 1.88.0
           components: rustfmt,clippy
 
+      - name: Pin Rust-supplied LLD and deterministic PE mode
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $sysroot = (rustc --print sysroot).Trim()
+          $candidates = @(
+            (Join-Path $sysroot 'lib\rustlib\x86_64-pc-windows-msvc\bin\rust-lld.exe'),
+            (Join-Path $sysroot 'bin\rust-lld.exe')
+          )
+          $linker = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $linker) { throw "Rust-supplied rust-lld.exe not found under $sysroot" }
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$linker" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RUSTFLAGS=-C link-arg=/Brepro" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Pinned linker: $linker"
+
       - name: Record toolchain
         run: |
           rustc -Vv
@@ -57,10 +75,13 @@ jobs:
       - name: Bootstrap runtime self-test
         run: cargo run --locked --release -- self-test
 
+      - name: Clean rebuild byte-identity gate
+        run: python tools/check_clean_rebuild.py
+
       - name: Emit machine-readable qualification receipt
         run: python tools/write_qualification_receipt.py
 
-      - name: Upload Windows executable and receipt
+      - name: Upload Windows executable and receipts
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -68,11 +89,12 @@ jobs:
           path: |
             qualification/mcr-r8/target/release/mcr-ingest.exe
             qualification/mcr-r8/qualification-receipt.json
+            qualification/mcr-r8/clean-rebuild-receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
 
-      - name: Upload Linux executable and receipt
+      - name: Upload Linux executable and receipts
         if: runner.os != 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -80,6 +102,7 @@ jobs:
           path: |
             qualification/mcr-r8/target/release/mcr-ingest
             qualification/mcr-r8/qualification-receipt.json
+            qualification/mcr-r8/clean-rebuild-receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
