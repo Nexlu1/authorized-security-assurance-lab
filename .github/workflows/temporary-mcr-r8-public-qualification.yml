@@ -75,32 +75,36 @@ jobs:
       - name: Bootstrap runtime self-test
         run: cargo run --locked --release -- self-test
 
-      - name: Clean rebuild byte-identity gate
+      - name: Capture clean rebuild and byte-difference evidence
         run: python tools/check_clean_rebuild.py
 
       - name: Emit machine-readable qualification receipt
         run: python tools/write_qualification_receipt.py
 
-      - name: Upload Windows executable and receipts
+      - name: Upload Windows executable and forensic rebuild receipts
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: mcr-r8-focused-${{ matrix.os }}-${{ github.sha }}
           path: |
             qualification/mcr-r8/target/release/mcr-ingest.exe
+            qualification/mcr-r8/repro-first-mcr-ingest.exe
+            qualification/mcr-r8/repro-second-mcr-ingest.exe
             qualification/mcr-r8/qualification-receipt.json
             qualification/mcr-r8/clean-rebuild-receipt.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
 
-      - name: Upload Linux executable and receipts
+      - name: Upload Linux executable and forensic rebuild receipts
         if: runner.os != 'Windows'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: mcr-r8-focused-${{ matrix.os }}-${{ github.sha }}
           path: |
             qualification/mcr-r8/target/release/mcr-ingest
+            qualification/mcr-r8/repro-first-mcr-ingest
+            qualification/mcr-r8/repro-second-mcr-ingest
             qualification/mcr-r8/qualification-receipt.json
             qualification/mcr-r8/clean-rebuild-receipt.json
           if-no-files-found: error
