@@ -1,0 +1,66 @@
+name: Temporary MCR target-Windows runner R1 regression
+
+on:
+  push:
+    branches:
+      - temporary/mcr-windows-runner-r1-20260905
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-mcr-windows-runner-r1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out synthetic-only test branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Static safety boundary
+        shell: python
+        run: |
+          from pathlib import Path
+          text = Path('tools/RUN_TARGET_WINDOWS_QUALIFICATION_R1.ps1').read_text(encoding='utf-8')
+          forbidden = ['Invoke-WebRequest', 'Start-BitsTransfer', 'Set-ExecutionPolicy', 'runas.exe', 'net user', 'reg add', 'Format-Volume']
+          found = [token for token in forbidden if token.lower() in text.lower()]
+          if found:
+              raise SystemExit(f'Forbidden command(s): {found}')
+          required = ['Get-FileHash', 'PAYLOAD_SHA256.csv', 'Start-Process', 'ConvertTo-Json', 'Compress-Archive', 'PASS_TARGET_WINDOWS_RUNTIME']
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'Missing required control(s): {missing}')
+          print('PASS_STATIC_BOUNDARY')
+
+      - name: Windows PowerShell 5.1 parse and self-test
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          $path = Join-Path $PWD 'tools\RUN_TARGET_WINDOWS_QUALIFICATION_R1.ps1'
+          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { $errors | Format-List *; throw 'Windows PowerShell parser errors' }
+          & $path -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Self-test exit $LASTEXITCODE" }
+
+      - name: PowerShell 7 parse and self-test
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          $path = Join-Path $PWD 'tools\RUN_TARGET_WINDOWS_QUALIFICATION_R1.ps1'
+          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) { $errors | Format-List *; throw 'PowerShell 7 parser errors' }
+          & $path -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "Self-test exit $LASTEXITCODE" }
