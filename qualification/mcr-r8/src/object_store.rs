@@ -7,7 +7,10 @@ pub fn object_relpath(sha256: &str) -> Result<PathBuf, String> {
     if sha256.len() != 64 {
         return Err("SHA-256 must contain exactly 64 lowercase hex characters".to_string());
     }
-    if !sha256.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+    if !sha256
+        .bytes()
+        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
         return Err("SHA-256 must contain lowercase hexadecimal only".to_string());
     }
 
