@@ -90,7 +90,7 @@ jobs:
           printf '%s\n' "$tree" > vault/original-git-tree.txt
           git -C work/donor cat-file commit "$PINNED_SHA" > vault/original-commit-object.txt
           git -C work/donor ls-tree -r --full-tree "$PINNED_SHA" > vault/source-tree-git-manifest.txt
-          sha256sum vault/source-tree-git-manifest.txt > vault/source-tree-git-manifest.sha256
+          (cd vault && sha256sum source-tree-git-manifest.txt > source-tree-git-manifest.sha256)
 
       - name: Create exact source-tree archive
         shell: bash
@@ -98,7 +98,7 @@ jobs:
           set -euo pipefail
           short="${PINNED_SHA:0:12}"
           git -C work/donor archive --format=tar -o "../../vault/source-tree-${short}.tar" "$PINNED_SHA"
-          sha256sum "vault/source-tree-${short}.tar" > vault/source-tree-archive.sha256
+          (cd vault && sha256sum "source-tree-${short}.tar" > source-tree-archive.sha256)
 
       - name: Create reconstructable Git bundle
         shell: bash
@@ -120,7 +120,7 @@ jobs:
             git -C work/donor bundle create ../../vault/repo.bundle refs/heads/vault-snapshot
             printf 'bundle_ref=refs/heads/vault-snapshot\nrestore_branch=vault-snapshot\nrestores_original_commit=false\nsnapshot_commit=%s\n' "$snapshot_commit" > vault/bundle-mode.txt
           fi
-          sha256sum vault/repo.bundle > vault/repo-bundle.sha256
+          (cd vault && sha256sum repo.bundle > repo-bundle.sha256)
           git -C work/donor bundle verify ../../vault/repo.bundle > vault/bundle-verify.txt 2>&1
 
       - name: Snapshot root licence and notice files
@@ -142,7 +142,7 @@ jobs:
           if [[ "$found" -eq 0 ]]; then
             echo 'No root licence/notice filename matched the controlled pattern.' > vault/licence/NO_ROOT_LICENCE_MATCH.txt
           fi
-          find vault/licence -type f -print0 | sort -z | xargs -0 sha256sum > vault/licence/SHA256SUMS.txt
+          (cd vault/licence && find . -type f ! -path './SHA256SUMS.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
 
       - name: Restore-test bundle and source identity
         shell: bash
@@ -157,7 +157,7 @@ jobs:
           test "$restored_tree" = "$original_tree"
 
           git -C work/restored ls-tree -r --full-tree HEAD > vault/restored-source-tree-git-manifest.txt
-          sha256sum vault/restored-source-tree-git-manifest.txt > vault/restored-source-tree-git-manifest.sha256
+          (cd vault && sha256sum restored-source-tree-git-manifest.txt > restored-source-tree-git-manifest.sha256)
           cmp vault/source-tree-git-manifest.txt vault/restored-source-tree-git-manifest.txt
           git -C work/restored fsck --full > vault/restored-git-fsck.txt 2>&1
 
@@ -176,7 +176,7 @@ jobs:
           restore_branch=$restore_branch
           EOF
 
-      - name: Write donor manifest and hashes
+      - name: Write donor manifest and portable hashes
         shell: bash
         run: |
           set -euo pipefail
@@ -229,7 +229,18 @@ jobs:
           }
           (root/'MANIFEST.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
           PY
-          find vault -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > vault/SHA256SUMS.txt
+          (cd vault && find . -type f ! -path './SHA256SUMS.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+
+      - name: Self-verify portable checksum manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd vault && sha256sum -c source-tree-git-manifest.sha256)
+          (cd vault && sha256sum -c source-tree-archive.sha256)
+          (cd vault && sha256sum -c repo-bundle.sha256)
+          (cd vault && sha256sum -c restored-source-tree-git-manifest.sha256)
+          (cd vault/licence && sha256sum -c SHA256SUMS.txt)
+          (cd vault && sha256sum -c SHA256SUMS.txt)
 
       - name: Upload permanent-vault candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
