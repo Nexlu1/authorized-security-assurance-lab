@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: temporary-mcr-r8-57test-rebuild-v2-20260905
@@ -38,10 +38,16 @@ jobs:
       - name: Export exact patched source used by the successful build
         shell: pwsh
         run: ./qualification/mcr-r8-57/export-qualified-source.ps1
+      - name: Publish exact qualified source branch
+        if: matrix.os == 'windows-2025'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./qualification/mcr-r8-57/publish-qualified-source-branch.ps1
       - name: Upload complete tested package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mcr-r8-full-57-v4-${{ matrix.os }}-${{ github.sha }}
+          name: mcr-r8-full-57-v5-${{ matrix.os }}-${{ github.sha }}
           path: ${{ env.MCR_STAGE }}
           if-no-files-found: error
           compression-level: 0
