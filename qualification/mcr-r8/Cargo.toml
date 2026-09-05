@@ -11,6 +11,7 @@ publish = false
 
 [profile.release]
 strip = "symbols"
-lto = true
+lto = false
 codegen-units = 1
 panic = "abort"
+incremental = false
