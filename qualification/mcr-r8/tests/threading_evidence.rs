@@ -1,6 +1,4 @@
-use mcr_ingest::threading::{
-    analyse_threads, DeclaredLinkKind, GroupBasis, ThreadMessage,
-};
+use mcr_ingest::threading::{DeclaredLinkKind, GroupBasis, ThreadMessage, analyse_threads};
 
 fn msg(
     message_id: Option<&str>,
@@ -65,22 +63,31 @@ fn exact_platform_ids_separate_same_subject_conversations() {
     ];
     let result = analyse_threads(&entries);
     assert_eq!(result.groups.len(), 2);
-    assert!(result.groups.iter().all(|g| g.basis == GroupBasis::Singleton));
+    assert!(
+        result
+            .groups
+            .iter()
+            .all(|g| g.basis == GroupBasis::Singleton)
+    );
 }
 
 #[test]
 fn exact_platform_id_can_group_different_subject_roots() {
     let entries = vec![
         msg(Some("<a@example>"), None, &[], "Original", Some("111"), 1),
-        msg(Some("<b@example>"), None, &[], "Edited subject", Some("111"), 2),
+        msg(
+            Some("<b@example>"),
+            None,
+            &[],
+            "Edited subject",
+            Some("111"),
+            2,
+        ),
     ];
     let result = analyse_threads(&entries);
     assert_eq!(result.groups.len(), 1);
     assert_eq!(result.groups[0].members, vec![0, 1]);
-    assert_eq!(
-        result.groups[0].basis,
-        GroupBasis::ExplicitPlatformThreadId
-    );
+    assert_eq!(result.groups[0].basis, GroupBasis::ExplicitPlatformThreadId);
     assert_eq!(result.groups[0].platform_thread_id.as_deref(), Some("111"));
 }
 
@@ -146,8 +153,22 @@ fn conflicting_platform_ids_inside_rfc_chain_are_surfaced() {
 #[test]
 fn cyclic_reference_headers_do_not_create_recursive_loop() {
     let entries = vec![
-        msg(Some("<a@example>"), None, &["<b@example>"], "Cycle", None, 1),
-        msg(Some("<b@example>"), None, &["<a@example>"], "Cycle", None, 2),
+        msg(
+            Some("<a@example>"),
+            None,
+            &["<b@example>"],
+            "Cycle",
+            None,
+            1,
+        ),
+        msg(
+            Some("<b@example>"),
+            None,
+            &["<a@example>"],
+            "Cycle",
+            None,
+            2,
+        ),
     ];
     let result = analyse_threads(&entries);
     let shown: Vec<usize> = result
