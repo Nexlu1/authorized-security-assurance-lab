@@ -35,10 +35,13 @@ jobs:
       - name: Build and execute exact 57-test package
         shell: pwsh
         run: ./qualification/mcr-r8-57/invoke-build-package-v3.ps1
+      - name: Export exact patched source used by the successful build
+        shell: pwsh
+        run: ./qualification/mcr-r8-57/export-qualified-source.ps1
       - name: Upload complete tested package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mcr-r8-full-57-v3-${{ matrix.os }}-${{ github.sha }}
+          name: mcr-r8-full-57-v4-${{ matrix.os }}-${{ github.sha }}
           path: ${{ env.MCR_STAGE }}
           if-no-files-found: error
           compression-level: 0
