@@ -112,13 +112,13 @@ jobs:
           if [[ "$BUNDLE_MODE" == "exact_history_to_commit" ]]; then
             git -C work/donor branch -f vault-target "$PINNED_SHA"
             git -C work/donor bundle create ../../vault/repo.bundle refs/heads/vault-target
-            printf 'bundle_ref=refs/heads/vault-target\nrestores_original_commit=true\n' > vault/bundle-mode.txt
+            printf 'bundle_ref=refs/heads/vault-target\nrestore_branch=vault-target\nrestores_original_commit=true\n' > vault/bundle-mode.txt
           else
             tree="$(cat vault/original-git-tree.txt)"
             snapshot_commit="$(printf 'Source snapshot for %s@%s\n' "$REPO" "$PINNED_SHA" | git -C work/donor commit-tree "$tree")"
             git -C work/donor update-ref refs/heads/vault-snapshot "$snapshot_commit"
             git -C work/donor bundle create ../../vault/repo.bundle refs/heads/vault-snapshot
-            printf 'bundle_ref=refs/heads/vault-snapshot\nrestores_original_commit=false\nsnapshot_commit=%s\n' "$snapshot_commit" > vault/bundle-mode.txt
+            printf 'bundle_ref=refs/heads/vault-snapshot\nrestore_branch=vault-snapshot\nrestores_original_commit=false\nsnapshot_commit=%s\n' "$snapshot_commit" > vault/bundle-mode.txt
           fi
           sha256sum vault/repo.bundle > vault/repo-bundle.sha256
           git -C work/donor bundle verify ../../vault/repo.bundle > vault/bundle-verify.txt 2>&1
@@ -148,7 +148,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git clone --quiet vault/repo.bundle work/restored
+          restore_branch="$(sed -n 's/^restore_branch=//p' vault/bundle-mode.txt)"
+          test -n "$restore_branch"
+          git clone --quiet -b "$restore_branch" vault/repo.bundle work/restored
+
           restored_tree="$(git -C work/restored rev-parse 'HEAD^{tree}')"
           original_tree="$(cat vault/original-git-tree.txt)"
           test "$restored_tree" = "$original_tree"
@@ -158,17 +161,19 @@ jobs:
           cmp vault/source-tree-git-manifest.txt vault/restored-source-tree-git-manifest.txt
           git -C work/restored fsck --full > vault/restored-git-fsck.txt 2>&1
 
+          restored_sha="$(git -C work/restored rev-parse HEAD)"
           if [[ "$BUNDLE_MODE" == "exact_history_to_commit" ]]; then
-            restored_sha="$(git -C work/restored rev-parse HEAD)"
             test "$restored_sha" = "$PINNED_SHA"
           fi
 
           cat > vault/RESTORE_TEST.txt <<EOF
           result=PASS
           original_commit=$PINNED_SHA
+          restored_commit=$restored_sha
           original_tree=$original_tree
           restored_tree=$restored_tree
           bundle_mode=$BUNDLE_MODE
+          restore_branch=$restore_branch
           EOF
 
       - name: Write donor manifest and hashes
@@ -176,7 +181,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, pathlib, subprocess, datetime
+          import hashlib, json, os, pathlib, datetime
           root = pathlib.Path('vault')
           def sha256(path):
               h = hashlib.sha256()
@@ -208,6 +213,7 @@ jobs:
               'git_bundle_sha256': sha256(root/'repo.bundle'),
               'bundle_mode': os.environ['BUNDLE_MODE'],
               'bundle_restore_ref': bundle_mode.get('bundle_ref'),
+              'bundle_restore_branch': bundle_mode.get('restore_branch'),
               'bundle_restores_original_commit': bundle_mode.get('restores_original_commit') == 'true',
               'snapshot_commit': bundle_mode.get('snapshot_commit'),
               'licence_identifier': os.environ['LICENCE_ID'],
