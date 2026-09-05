@@ -49,3 +49,12 @@ jobs:
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Execute wrapper-shape tests
         run: cargo test --locked --all-targets --verbose
+      - name: Upload exact Cargo.lock
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r8-private-wrapper-cargo-lock-${{ github.sha }}
+          path: qualification/mcr-r8-private-wrapper-shape-smoke/Cargo.lock
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
