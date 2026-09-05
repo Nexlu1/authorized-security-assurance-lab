@@ -58,6 +58,8 @@ jobs:
           Pop-Location
 
       - name: Run locked Shawl tests
+        id: tests
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -67,6 +69,8 @@ jobs:
           Pop-Location
 
       - name: Build locked release and smoke-test CLI
+        id: build
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -80,6 +84,8 @@ jobs:
           Pop-Location
 
       - name: Download and verify RustSec cargo-audit
+        id: audit_tool
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -100,6 +106,9 @@ jobs:
           "CARGO_AUDIT_DIR=$(Split-Path $exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Audit exact locked dependency graph against RustSec
+        id: audit
+        if: always() && steps.audit_tool.outcome == 'success'
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
@@ -116,6 +125,11 @@ jobs:
       - name: Write qualification manifest
         if: always()
         shell: pwsh
+        env:
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          AUDIT_TOOL_OUTCOME: ${{ steps.audit_tool.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
         run: |
           @(
             'donor=mtkennerly/shawl'
@@ -126,7 +140,29 @@ jobs:
             "runner=$env:RUNNER_OS/$env:RUNNER_ARCH"
             "run_id=$env:GITHUB_RUN_ID"
             "run_attempt=$env:GITHUB_RUN_ATTEMPT"
+            "tests_outcome=$env:TESTS_OUTCOME"
+            "build_outcome=$env:BUILD_OUTCOME"
+            "audit_tool_outcome=$env:AUDIT_TOOL_OUTCOME"
+            "audit_outcome=$env:AUDIT_OUTCOME"
           ) | Set-Content -Encoding utf8 receipts/donor-builds/shawl/manifest.txt
+
+      - name: Enforce qualification gate
+        if: always()
+        shell: pwsh
+        env:
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          AUDIT_TOOL_OUTCOME: ${{ steps.audit_tool.outcome }}
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          $failures = @()
+          if ($env:TESTS_OUTCOME -ne 'success') { $failures += "tests=$env:TESTS_OUTCOME" }
+          if ($env:BUILD_OUTCOME -ne 'success') { $failures += "build=$env:BUILD_OUTCOME" }
+          if ($env:AUDIT_TOOL_OUTCOME -ne 'success') { $failures += "audit_tool=$env:AUDIT_TOOL_OUTCOME" }
+          if ($env:AUDIT_OUTCOME -ne 'success') { $failures += "audit=$env:AUDIT_OUTCOME" }
+          if ($failures.Count -gt 0) {
+            throw "Shawl qualification gate failed: $($failures -join ', ')"
+          }
 
       - name: Upload Shawl qualification evidence
         if: always()
