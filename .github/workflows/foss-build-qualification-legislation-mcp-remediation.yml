@@ -1,0 +1,104 @@
+name: FOSS Qualification - legislation MCP lock remediation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/foss-build-qualification-legislation-mcp-remediation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-remediation:
+    name: Exact donor plus non-force lock-only remediation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      DONOR_REPO: https://github.com/legislation/legislation-mcp-ts.git
+      DONOR_SHA: 8261b2aada185aa846d34288790d1321ac79c8dc
+      NODE_VERSION: '22.16.0'
+    steps:
+      - name: Checkout qualification harness
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set up exact Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Fetch and verify exact donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p donor receipts/english-law/legislation-mcp-remediation
+          git clone --quiet --no-checkout "$DONOR_REPO" donor/legislation-mcp
+          git -C donor/legislation-mcp checkout --quiet "$DONOR_SHA"
+          actual="$(git -C donor/legislation-mcp rev-parse HEAD)"
+          test "$actual" = "$DONOR_SHA"
+          printf 'source_repo=%s\nsource_sha=%s\nnode=%s\n' "$DONOR_REPO" "$actual" "$(node --version)" > receipts/english-law/legislation-mcp-remediation/source.txt
+          sha256sum donor/legislation-mcp/package-lock.json > receipts/english-law/legislation-mcp-remediation/original-package-lock-sha256.txt
+
+      - name: Reproduce baseline production audit failure
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm ci >/dev/null
+          npm audit --omit=dev --audit-level=high --json > ../../receipts/english-law/legislation-mcp-remediation/baseline-production-audit.json
+
+      - name: Apply npm non-force package-lock-only remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm audit fix --package-lock-only --omit=dev 2>&1 | tee ../../receipts/english-law/legislation-mcp-remediation/audit-fix.txt
+          changed="$(git diff --name-only)"
+          printf '%s\n' "$changed" > ../../receipts/english-law/legislation-mcp-remediation/changed-files.txt
+          test "$changed" = "package-lock.json"
+          git diff -- package-lock.json > ../../receipts/english-law/legislation-mcp-remediation/package-lock.patch
+          sha256sum package-lock.json > ../../receipts/english-law/legislation-mcp-remediation/remediated-package-lock-sha256.txt
+
+      - name: Clean install remediated lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          rm -rf node_modules
+          npm ci 2>&1 | tee ../../receipts/english-law/legislation-mcp-remediation/npm-ci-remediated.txt
+          npm ls @hono/node-server @xmldom/xmldom hono fast-uri ip-address qs body-parser express-rate-limit --all > ../../receipts/english-law/legislation-mcp-remediation/resolved-security-packages.txt || true
+
+      - name: Enforce clean production audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm audit --omit=dev --audit-level=high --json > ../../receipts/english-law/legislation-mcp-remediation/remediated-production-audit.json
+
+      - name: Type-check, build and run all upstream tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          npm run check 2>&1 | tee ../../receipts/english-law/legislation-mcp-remediation/typecheck.txt
+          npm run build 2>&1 | tee ../../receipts/english-law/legislation-mcp-remediation/build.txt
+          npm test 2>&1 | tee ../../receipts/english-law/legislation-mcp-remediation/tests.txt
+
+      - name: Assert donor source remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd donor/legislation-mcp
+          changed="$(git diff --name-only)"
+          test "$changed" = "package-lock.json"
+          git diff --exit-code -- . ':(exclude)package-lock.json'
+
+      - name: Upload remediation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: english-law-legislation-mcp-remediation-r18
+          path: receipts/english-law/legislation-mcp-remediation/
+          if-no-files-found: error
+          retention-days: 30
