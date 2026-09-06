@@ -1,0 +1,196 @@
+name: Temporary MCR Tooling engineering preview app
+
+on:
+  push:
+    branches:
+      - temporary/mcr-engineering-preview-app-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-preview:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - name: Check out synthetic-only preview branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Download byte-reproducible R2.4 Windows engine
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          repository: Nexlu1/authorized-security-assurance-lab
+          run-id: 34040956531
+          name: mcr-r2-4-gnullvm-windows-2022-864cbf5928e00ba951286603a255ae005468aa2f
+          path: ${{ runner.temp }}/engine-artifact
+
+      - name: Stage exact engine and FOSS specialist runtimes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $stage=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_R2_4_2026-09-06'
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'bin') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'tools') -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $stage 'CONTROL') -Force | Out-Null
+
+          $engine=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'engine-artifact') -Recurse -Filter 'mcr-ingest.exe')
+          if ($engine.Count -ne 1) { throw "expected exactly one mcr-ingest.exe, found $($engine.Count)" }
+          $engineSha=(Get-FileHash -LiteralPath $engine[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch: $engineSha" }
+          Copy-Item -LiteralPath $engine[0].FullName -Destination (Join-Path $stage 'bin\mcr-ingest.exe')
+
+          $qzip=Join-Path $env:RUNNER_TEMP 'qpdf-12.4.1-msvc64.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qzip
+          $qzipSha=(Get-FileHash -LiteralPath $qzip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($qzipSha -ne '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6') { throw "qpdf ZIP SHA mismatch: $qzipSha" }
+          $qdir=Join-Path $stage 'tools\qpdf'
+          Expand-Archive -LiteralPath $qzip -DestinationPath $qdir -Force
+          $qexe=@(Get-ChildItem -LiteralPath $qdir -Recurse -Filter 'qpdf.exe')
+          if ($qexe.Count -ne 1) { throw "expected exactly one qpdf.exe, found $($qexe.Count)" }
+          $qexeSha=(Get-FileHash -LiteralPath $qexe[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($qexeSha -ne '59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d') { throw "qpdf EXE SHA mismatch: $qexeSha" }
+
+          $pzip=Join-Path $env:RUNNER_TEMP 'pdfcpu_0.15.0_Windows_x86_64.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pzip
+          $pzipSha=(Get-FileHash -LiteralPath $pzip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($pzipSha -ne '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6') { throw "pdfcpu ZIP SHA mismatch: $pzipSha" }
+          $pdir=Join-Path $stage 'tools\pdfcpu'
+          Expand-Archive -LiteralPath $pzip -DestinationPath $pdir -Force
+          $pexe=@(Get-ChildItem -LiteralPath $pdir -Recurse -Filter 'pdfcpu.exe')
+          if ($pexe.Count -ne 1) { throw "expected exactly one pdfcpu.exe, found $($pexe.Count)" }
+          $pexeSha=(Get-FileHash -LiteralPath $pexe[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          Copy-Item -LiteralPath 'preview-app\README_FIRST.txt' -Destination (Join-Path $stage 'README_FIRST.txt')
+          "MCR_PREVIEW_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PREVIEW_PDFCPU_SHA=$pexeSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PREVIEW_QPDF_ZIP_SHA=$qzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PREVIEW_PDFCPU_ZIP_SHA=$pzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Compile native Windows Forms preview launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $candidates=@(
+            (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'),
+            (Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe')
+          )
+          $csc=$candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $csc) { throw 'C# compiler not found' }
+          $out=Join-Path $env:MCR_PREVIEW_STAGE 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
+          & $csc /nologo /target:winexe /platform:anycpu /optimize+ /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll "/out:$out" 'preview-app\McrPreview.cs'
+          if ($LASTEXITCODE -ne 0) { throw "C# compile failed: $LASTEXITCODE" }
+          if (-not (Test-Path -LiteralPath $out)) { throw 'preview EXE missing after compile' }
+
+      - name: Write package control records
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $stage=$env:MCR_PREVIEW_STAGE
+          $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
+          $appSha=(Get-FileHash -LiteralPath $app -Algorithm SHA256).Hash.ToLowerInvariant()
+          [ordered]@{
+            schema='mcr-tooling-engineering-preview-package-v1'
+            status='ENGINEERING_PREVIEW_NOT_FINAL_PRODUCTION_CERTIFICATION'
+            built_utc=(Get-Date).ToUniversalTime().ToString('o')
+            gui='Windows Forms / .NET Framework'
+            engine='mcr-ingest R2.4 engineering head'
+            engine_sha256='d4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba'
+            engine_build_route='Rust 1.88.0 x86_64-pc-windows-gnullvm; LLVM-MinGW 20260826'
+            gui_sha256=$appSha
+            qpdf='12.4.1'
+            qpdf_exe_sha256='59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d'
+            qpdf_release_zip_sha256=$env:MCR_PREVIEW_QPDF_ZIP_SHA
+            pdfcpu='0.15.0'
+            pdfcpu_exe_sha256=$env:MCR_PREVIEW_PDFCPU_SHA
+            pdfcpu_release_zip_sha256=$env:MCR_PREVIEW_PDFCPU_ZIP_SHA
+            earlier_actual_target_windows='PASS_19_OF_19'
+            hostile_matrix='57_OF_57_FUNCTIONALLY_EXERCISED_IN_ENGINEERING_PROGRAMME'
+            network_during_app_runtime='NONE_BY_PREVIEW_OR_MCR_INGEST'
+            frozen_mcr_r59='UNCHANGED'
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\BUILD_INFO.json') -Encoding UTF8
+
+          $rows=@()
+          Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object { $_.Name -ne 'SHA256SUMS.txt' } | Sort-Object FullName | ForEach-Object {
+            $rel=$_.FullName.Substring($stage.Length).TrimStart('\').Replace('\','/')
+            $sha=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $rows += "$sha  $rel"
+          }
+          $rows | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\SHA256SUMS.txt') -Encoding ASCII
+
+      - name: Windows 2022 exact package self-test and functional smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $stage=$env:MCR_PREVIEW_STAGE
+          $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
+          $p=Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "preview self-test failed: $($p.ExitCode)" }
+
+          $ws=Join-Path $env:RUNNER_TEMP 'mcr-preview-smoke-workspace'
+          $sample=Join-Path $env:RUNNER_TEMP 'mcr-preview-smoke.txt'
+          Set-Content -LiteralPath $sample -Value 'synthetic engineering preview smoke' -Encoding UTF8
+          & (Join-Path $stage 'bin\mcr-ingest.exe') init $ws
+          if ($LASTEXITCODE -ne 0) { throw 'engine init smoke failed' }
+          & (Join-Path $stage 'bin\mcr-ingest.exe') ingest-file $ws $sample
+          if ($LASTEXITCODE -ne 0) { throw 'engine ingest smoke failed' }
+
+          $q=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\qpdf') -Recurse -Filter 'qpdf.exe')[0]
+          $pdc=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\pdfcpu') -Recurse -Filter 'pdfcpu.exe')[0]
+          & $q.FullName --version
+          if ($LASTEXITCODE -ne 0) { throw 'qpdf smoke failed' }
+          & $pdc.FullName version
+          if ($LASTEXITCODE -ne 0) { throw 'pdfcpu smoke failed' }
+
+      - name: Create portable preview ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_R2_4_2026-09-06.zip'
+          if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+          Compress-Archive -Path (Join-Path $env:MCR_PREVIEW_STAGE '*') -DestinationPath $zip -CompressionLevel Optimal
+          $sha=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "PREVIEW ZIP SHA-256 $sha"
+          "MCR_PREVIEW_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload preview package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-tooling-engineering-preview-r2-4-${{ github.sha }}
+          path: ${{ env.MCR_PREVIEW_ZIP }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  verify-windows-2025:
+    needs: build-preview
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Download exact preview package from this workflow
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: mcr-tooling-engineering-preview-r2-4-${{ github.sha }}
+          path: ${{ runner.temp }}/package
+
+      - name: Windows 2025 package extraction and exact self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'package') -Filter '*.zip')
+          if ($zip.Count -ne 1) { throw "expected one preview ZIP, found $($zip.Count)" }
+          $root=Join-Path $env:RUNNER_TEMP 'preview-expanded'
+          Expand-Archive -LiteralPath $zip[0].FullName -DestinationPath $root -Force
+          $app=Join-Path $root 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
+          if (-not (Test-Path -LiteralPath $app)) { throw 'preview EXE missing after extraction' }
+          $p=Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Windows 2025 self-test failed: $($p.ExitCode)" }
+          $engine=(Get-FileHash -LiteralPath (Join-Path $root 'bin\mcr-ingest.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($engine -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch after package roundtrip: $engine" }
+          Write-Host 'PASS Windows 2025 exact preview package self-test'
