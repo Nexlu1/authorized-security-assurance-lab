@@ -1,0 +1,80 @@
+name: Temporary MCR R2 target runner self-test
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-target-runner-selftest-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-selftest:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Check out synthetic-only runner payload
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Reconstruct and prove exact local runner bytes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $src = Join-Path $env:GITHUB_WORKSPACE 'qualification\mcr-r2-target-runner'
+          $stage = Join-Path $env:RUNNER_TEMP 'mcr-r2-target-runner'
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          $runnerB64 = (Get-Content -LiteralPath (Join-Path $src 'runner.part00') -Raw).Trim() + (Get-Content -LiteralPath (Join-Path $src 'runner.part01') -Raw).Trim() + (Get-Content -LiteralPath (Join-Path $src 'runner.part03') -Raw).Trim()
+          $cmdB64 = (Get-Content -LiteralPath (Join-Path $src 'cmd.b64') -Raw).Trim()
+          $runner = Join-Path $stage 'RUN_TARGET_WINDOWS_QUALIFICATION.ps1'
+          $cmd = Join-Path $stage 'RUN_ME_TARGET_WINDOWS_QUALIFICATION.cmd'
+          [IO.File]::WriteAllBytes($runner, [Convert]::FromBase64String($runnerB64))
+          [IO.File]::WriteAllBytes($cmd, [Convert]::FromBase64String($cmdB64))
+          $runnerHash = (Get-FileHash -LiteralPath $runner -Algorithm SHA256).Hash.ToLowerInvariant()
+          $cmdHash = (Get-FileHash -LiteralPath $cmd -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($runnerHash -ne 'dc93f9fb723ae91ac54571d7aac975a8d3adabb0d569648bfcaedf30bf030590') { throw "runner SHA mismatch: $runnerHash" }
+          if ($cmdHash -ne '4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa') { throw "cmd SHA mismatch: $cmdHash" }
+          "MCR_RUNNER_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Windows PowerShell 5.1 exact runner self-test through exact CMD
+        shell: pwsh
+        run: |
+          $env:MCR_SELFTEST = '1'
+          Push-Location $env:MCR_RUNNER_STAGE
+          try {
+            cmd.exe /d /c "echo.|RUN_ME_TARGET_WINDOWS_QUALIFICATION.cmd"
+            if ($LASTEXITCODE -ne 0) { throw "CMD/Windows PowerShell self-test failed: $LASTEXITCODE" }
+          } finally { Pop-Location }
+      - name: PowerShell 7 exact runner self-test
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -File (Join-Path $env:MCR_RUNNER_STAGE 'RUN_TARGET_WINDOWS_QUALIFICATION.ps1') -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw "PowerShell 7 self-test failed: $LASTEXITCODE" }
+      - name: Record exact-byte receipt
+        shell: pwsh
+        run: |
+          $r = [ordered]@{
+            schema='mcr-r2-target-runner-selftest-receipt-v1'
+            github_sha=$env:GITHUB_SHA
+            runner_os=$env:RUNNER_OS
+            runner_arch=$env:RUNNER_ARCH
+            runner_image=$env:ImageOS
+            runner_sha256='dc93f9fb723ae91ac54571d7aac975a8d3adabb0d569648bfcaedf30bf030590'
+            cmd_sha256='4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa'
+            windows_powershell_51='PASS'
+            powershell_7='PASS'
+          }
+          $r | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $env:MCR_RUNNER_STAGE 'RUNNER_SELFTEST_RECEIPT.json') -Encoding utf8
+      - name: Upload runner self-test receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-target-runner-selftest-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_RUNNER_STAGE }}/RUNNER_SELFTEST_RECEIPT.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
