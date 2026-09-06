@@ -36,6 +36,8 @@ jobs:
         run: python qualification/mcr-r2-durable/apply_runtime_repair.py
       - name: Apply fixture-coverage and PDF-encryption repair
         run: python qualification/mcr-r2-durable/apply_coverage_expansion.py
+      - name: Apply R2.1 OOXML/text fixture test expansion
+        run: python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
       - name: Normalize extracted working copy with rustfmt
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt
