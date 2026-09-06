@@ -1,0 +1,57 @@
+name: Temporary MCR R2 durable compile gate
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-durable-compile-gate-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out synthetic-only branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+      - name: Reconstruct and verify exact durable R2 source
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+      - name: Formatting
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo fmt --check
+      - name: Generate dependency lock
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo generate-lockfile
+      - name: Strict Clippy
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo clippy --locked --all-targets -- -D warnings
+      - name: Compile every test target without executing fixture-dependent tests
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo test --locked --all-targets --no-run
+      - name: Release build
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo build --locked --release
+      - name: Write build receipt
+        run: python qualification/mcr-r2-durable/write_compile_receipt.py
+      - name: Upload compile evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-durable-compile-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-compile-evidence
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
