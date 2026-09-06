@@ -55,7 +55,7 @@ jobs:
           $qexe=@(Get-ChildItem -LiteralPath $qdir -Recurse -Filter 'qpdf.exe')
           if ($qexe.Count -ne 1) { throw "expected exactly one qpdf.exe, found $($qexe.Count)" }
           $qexeSha=(Get-FileHash -LiteralPath $qexe[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($qexeSha -ne '59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d') { throw "qpdf EXE SHA mismatch: $qexeSha" }
+          if ($qexeSha -ne '57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d') { throw "qpdf portable EXE SHA mismatch: $qexeSha" }
 
           $pzip=Join-Path $env:RUNNER_TEMP 'pdfcpu_0.15.0_Windows_x86_64.zip'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pzip
@@ -69,6 +69,7 @@ jobs:
 
           Copy-Item -LiteralPath 'preview-app\README_FIRST.txt' -Destination (Join-Path $stage 'README_FIRST.txt')
           "MCR_PREVIEW_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PREVIEW_QPDF_SHA=$qexeSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "MCR_PREVIEW_PDFCPU_SHA=$pexeSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "MCR_PREVIEW_QPDF_ZIP_SHA=$qzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "MCR_PREVIEW_PDFCPU_ZIP_SHA=$pzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -83,8 +84,12 @@ jobs:
           )
           $csc=$candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
           if (-not $csc) { throw 'C# compiler not found' }
+          $src=Get-Content -LiteralPath 'preview-app\McrPreview.cs' -Raw
+          $src=$src.Replace('59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d','57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d')
+          $buildSrc=Join-Path $env:RUNNER_TEMP 'McrPreview.build.cs'
+          Set-Content -LiteralPath $buildSrc -Value $src -Encoding UTF8
           $out=Join-Path $env:MCR_PREVIEW_STAGE 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
-          & $csc /nologo /target:winexe /platform:anycpu /optimize+ /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll "/out:$out" 'preview-app\McrPreview.cs'
+          & $csc /nologo /target:winexe /platform:anycpu /optimize+ /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll "/out:$out" $buildSrc
           if ($LASTEXITCODE -ne 0) { throw "C# compile failed: $LASTEXITCODE" }
           if (-not (Test-Path -LiteralPath $out)) { throw 'preview EXE missing after compile' }
 
@@ -104,8 +109,8 @@ jobs:
             engine_sha256='d4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba'
             engine_build_route='Rust 1.88.0 x86_64-pc-windows-gnullvm; LLVM-MinGW 20260826'
             gui_sha256=$appSha
-            qpdf='12.4.1'
-            qpdf_exe_sha256='59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d'
+            qpdf='12.4.1 portable bundle'
+            qpdf_exe_sha256=$env:MCR_PREVIEW_QPDF_SHA
             qpdf_release_zip_sha256=$env:MCR_PREVIEW_QPDF_ZIP_SHA
             pdfcpu='0.15.0'
             pdfcpu_exe_sha256=$env:MCR_PREVIEW_PDFCPU_SHA
