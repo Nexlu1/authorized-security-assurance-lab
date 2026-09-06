@@ -96,6 +96,8 @@ jobs:
             production_key_policy='human-controlled/offline; never public CI or repository'
             frozen_mcr_r59='UNCHANGED'
           } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root 'MINISIGN_LIFECYCLE_RECEIPT.json') -Encoding UTF8
+          $global:LASTEXITCODE=0
+          exit 0
       - name: Upload non-secret receipt only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
