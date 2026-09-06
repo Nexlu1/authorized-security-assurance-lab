@@ -1,0 +1,106 @@
+name: Temporary MCR Pester dual-shell qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-pester-dualshell-qualification-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out synthetic qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Check out exact Pester 6.1.0 source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: pester/Pester
+          ref: 829890dd30dd2b28fc64904910661d16aaf3c005
+          path: upstream/pester
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Build exact Pester source
+        shell: pwsh
+        run: |
+          Push-Location upstream/pester
+          try { & ./build.ps1 -Clean -LockedRestore -Inline } finally { Pop-Location }
+          if (-not (Test-Path 'upstream/pester/bin/Pester.psd1')) { throw 'Pester build output missing' }
+      - name: Write synthetic MCR Pester test
+        shell: pwsh
+        run: |
+          @'
+          Describe 'MCR dual-shell FOSS test control' {
+            It 'parses PowerShell 5.1-compatible syntax without parser errors' {
+              $tokens = $null; $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseInput('$x = 1; if ($x -ne 1) { throw "bad" }', [ref]$tokens, [ref]$errors) | Out-Null
+              $errors.Count | Should -Be 0
+            }
+            It 'matches the SHA-256 known vector' {
+              $bytes = [Text.Encoding]::UTF8.GetBytes('abc')
+              $sha = [Security.Cryptography.SHA256]::Create()
+              try { $actual = [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant() } finally { $sha.Dispose() }
+              $actual | Should -Be 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+            }
+            It 'round-trips exact bytes through a private test path' {
+              $p = Join-Path $TestDrive 'exact.bin'
+              $expected = [byte[]](0,1,2,3,254,255)
+              [IO.File]::WriteAllBytes($p, $expected)
+              $actual = [IO.File]::ReadAllBytes($p)
+              [Convert]::ToBase64String($actual) | Should -Be ([Convert]::ToBase64String($expected))
+            }
+          }
+          '@ | Set-Content -LiteralPath MCR.DualShell.Tests.ps1 -Encoding UTF8
+      - name: Windows PowerShell 5.1 Pester qualification
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module "$env:GITHUB_WORKSPACE\upstream\pester\bin\Pester.psd1" -Force
+          $v = (Get-Module Pester).Version.ToString()
+          if ($v -ne '6.1.0') { throw "wrong Pester version: $v" }
+          $c = New-PesterConfiguration
+          $c.Run.Path = "$env:GITHUB_WORKSPACE\MCR.DualShell.Tests.ps1"
+          $c.Run.PassThru = $true
+          $c.Output.Verbosity = 'Detailed'
+          $r = Invoke-Pester -Configuration $c
+          if ($r.FailedCount -ne 0 -or $r.PassedCount -ne 3) { throw "Pester PS5.1 result failed: passed=$($r.PassedCount) failed=$($r.FailedCount)" }
+          [ordered]@{shell='Windows PowerShell';shell_version=$PSVersionTable.PSVersion.ToString();pester_version=$v;passed=$r.PassedCount;failed=$r.FailedCount} | ConvertTo-Json | Set-Content -LiteralPath pester-ps51.json -Encoding UTF8
+      - name: PowerShell 7 Pester qualification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module "$env:GITHUB_WORKSPACE\upstream\pester\bin\Pester.psd1" -Force
+          $v = (Get-Module Pester).Version.ToString()
+          if ($v -ne '6.1.0') { throw "wrong Pester version: $v" }
+          $c = New-PesterConfiguration
+          $c.Run.Path = "$env:GITHUB_WORKSPACE\MCR.DualShell.Tests.ps1"
+          $c.Run.PassThru = $true
+          $c.Output.Verbosity = 'Detailed'
+          $r = Invoke-Pester -Configuration $c
+          if ($r.FailedCount -ne 0 -or $r.PassedCount -ne 3) { throw "Pester PS7 result failed: passed=$($r.PassedCount) failed=$($r.FailedCount)" }
+          [ordered]@{shell='PowerShell';shell_version=$PSVersionTable.PSVersion.ToString();pester_version=$v;passed=$r.PassedCount;failed=$r.FailedCount} | ConvertTo-Json | Set-Content -LiteralPath pester-ps7.json -Encoding UTF8
+      - name: Record source identity
+        shell: pwsh
+        run: |
+          $src = git -C upstream/pester rev-parse HEAD
+          if ($src -ne '829890dd30dd2b28fc64904910661d16aaf3c005') { throw "Pester source SHA mismatch: $src" }
+          [ordered]@{schema='mcr-pester-dualshell-qualification-v1';status='PASS';pester='6.1.0';source_sha=$src;license='Apache-2.0';windows_image='${{ matrix.os }}';ps51=(Get-Content pester-ps51.json -Raw | ConvertFrom-Json);ps7=(Get-Content pester-ps7.json -Raw | ConvertFrom-Json);frozen_mcr_r59='UNCHANGED'} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath PESTER_DUALSHELL_RECEIPT.json -Encoding UTF8
+      - name: Upload receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-pester-dualshell-${{ matrix.os }}-${{ github.sha }}
+          path: PESTER_DUALSHELL_RECEIPT.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
