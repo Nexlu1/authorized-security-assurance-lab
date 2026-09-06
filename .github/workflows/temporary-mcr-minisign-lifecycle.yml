@@ -1,0 +1,101 @@
+name: Temporary MCR Minisign lifecycle qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-minisign-lifecycle-qualification-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Check out synthetic qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Acquire exact official Minisign 0.12 Windows release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'mcr-minisign'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $zip = Join-Path $root 'minisign-0.12-win64.zip'
+          $sig = "$zip.minisig"
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip' -OutFile $zip
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip.minisig' -OutFile $sig
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'tool') -Force
+          $exe = Get-ChildItem -LiteralPath (Join-Path $root 'tool') -Recurse -Filter minisign.exe | Select-Object -First 1
+          if (-not $exe) { throw 'minisign.exe missing' }
+          $archiveHash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $exeHash=(Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "MCR_MINISIGN_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_MINISIGN_EXE=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_MINISIGN_ARCHIVE_SHA=$archiveHash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_MINISIGN_EXE_SHA=$exeHash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Check official release sidecar with published upstream public key
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=Join-Path $env:MCR_MINISIGN_ROOT 'minisign-0.12-win64.zip'
+          $sig="$zip.minisig"
+          & $env:MCR_MINISIGN_EXE -Vm $zip -x $sig -P 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+          if ($LASTEXITCODE -ne 0) { throw "official sidecar verification failed: $LASTEXITCODE" }
+      - name: Synthetic sign verify and tamper qualification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=$env:MCR_MINISIGN_ROOT
+          $pub=Join-Path $root 'synthetic.pub'
+          $sec=Join-Path $root 'synthetic.key'
+          $msg=Join-Path $root 'synthetic-release.zip'
+          [IO.File]::WriteAllBytes($msg,[Text.Encoding]::UTF8.GetBytes("synthetic reproducible release`n"))
+          & $env:MCR_MINISIGN_EXE -G -p $pub -s $sec -W
+          if ($LASTEXITCODE -ne 0) { throw "key generation failed: $LASTEXITCODE" }
+          & $env:MCR_MINISIGN_EXE -S -s $sec -m $msg -t 'MCR synthetic CI only' -c 'MCR synthetic signing semantics qualification'
+          if ($LASTEXITCODE -ne 0) { throw "sign failed: $LASTEXITCODE" }
+          & $env:MCR_MINISIGN_EXE -Vm $msg -p $pub
+          if ($LASTEXITCODE -ne 0) { throw "verify failed: $LASTEXITCODE" }
+          Add-Content -LiteralPath $msg -Value 'tampered'
+          & $env:MCR_MINISIGN_EXE -Vm $msg -p $pub 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'tampered payload incorrectly verified' }
+          Remove-Item -LiteralPath $sec -Force
+          if (Test-Path -LiteralPath $sec) { throw 'synthetic secret key deletion failed' }
+          $pubHash=(Get-FileHash -LiteralPath $pub -Algorithm SHA256).Hash.ToLowerInvariant()
+          $signature=Get-Item -LiteralPath "$msg.minisig" -ErrorAction Stop
+          [ordered]@{
+            schema='mcr-minisign-lifecycle-qualification-v1'
+            status='PASS'
+            minisign='0.12'
+            license='ISC'
+            runner='${{ matrix.os }}'
+            official_release_archive_sha256=$env:MCR_MINISIGN_ARCHIVE_SHA
+            minisign_executable_sha256=$env:MCR_MINISIGN_EXE_SHA
+            official_release_sidecar='PASS'
+            synthetic_sign='PASS'
+            synthetic_verify='PASS'
+            tamper_rejection='PASS'
+            synthetic_private_key_uploaded=$false
+            synthetic_private_key_deleted=$true
+            synthetic_public_key_sha256=$pubHash
+            production_key_generated=$false
+            production_key_policy='human-controlled/offline; never public CI or repository'
+            frozen_mcr_r59='UNCHANGED'
+          } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $root 'MINISIGN_LIFECYCLE_RECEIPT.json') -Encoding UTF8
+      - name: Upload non-secret receipt only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-minisign-lifecycle-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_MINISIGN_ROOT }}/MINISIGN_LIFECYCLE_RECEIPT.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
