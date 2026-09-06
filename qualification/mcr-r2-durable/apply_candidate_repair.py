@@ -94,7 +94,7 @@ for rel in ("src/audit.rs", "src/workspace_lock.rs"):
         "Make the lock-file non-truncation policy explicit; lock files must not be truncated when reopened.",
     )
 
-# 6. Apply only the two Clippy format-argument modernizations surfaced by the strict gate.
+# 6. Apply only the Clippy format-argument modernizations surfaced by the strict gate.
 replace_exact(
     src / "src" / "audit.rs",
     '''            return Err(format!(\n                "audit recovery refused: JSONL head {:?} does not match pending event predecessor {:?}",\n                file_head, previous\n            ).into());''',
@@ -113,8 +113,27 @@ replace_exact(
     "Use captured format argument; emitted parser note is unchanged.",
 )
 
+replace_exact(
+    src / "src" / "main.rs",
+    'println!("PASS sha256={} size={}", actual, size);',
+    'println!("PASS sha256={actual} size={size}");',
+    1,
+    "format_cleanup",
+    "Use captured format arguments; CLI PASS output is unchanged.",
+)
+
+# 7. The duplicate-message integration test must borrow the digest for repeated SQL queries instead of moving it.
+replace_exact(
+    src / "tests" / "core_integration.rs",
+    "[d.sha256]",
+    "[&d.sha256]",
+    2,
+    "test_ownership_repair",
+    "Borrow the same captured SHA-256 in two duplicate-message queries; preserves the test value for the second assertion.",
+)
+
 receipt = {
-    "schema": "mcr-r2-candidate-repair-set-v3",
+    "schema": "mcr-r2-candidate-repair-set-v4",
     "generated_utc": datetime.now(timezone.utc).isoformat(),
     "purpose": "Bounded compile-repair experiment against the immutable durable R2 source ZIP; no original source bytes are overwritten.",
     "immutable_source_zip_sha256": "a029571403ee89d42848b90e419384e9d9138534b43733b81483ee2d296d7215",
