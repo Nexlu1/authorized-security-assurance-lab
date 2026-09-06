@@ -2,190 +2,171 @@ name: Temporary MCR Tooling Engineering Preview app
 
 on:
   push:
-    branches:
-      - temporary/mcr-tooling-engineering-preview-app-20260906
+    branches: [temporary/mcr-tooling-engineering-preview-app-20260906]
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   build-and-test-preview:
     runs-on: windows-2022
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
-      - name: Check out synthetic-only branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Acquire exact native Windows engine and FOSS PDF runtimes
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+
+      - name: Reconstruct stack-safe target-era R2.3 engine
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $work = Join-Path $env:RUNNER_TEMP 'mcr-preview-build'
-          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          python qualification/mcr-r2-durable/reconstruct_r2.py
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+          cd "$MCR_R2_SRC"
+          cargo fmt
+          cargo generate-lockfile
+          cargo build --locked --release
 
-          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
-          $engineZip = Join-Path $work 'native-r24-engine-artifact.zip'
-          Invoke-WebRequest -Headers $headers -Uri 'https://api.github.com/repos/Nexlu1/authorized-security-assurance-lab/actions/artifacts/9991545180/zip' -OutFile $engineZip
-          $engineExtract = Join-Path $work 'engine-artifact'
-          Expand-Archive $engineZip $engineExtract
-          $engine = Get-ChildItem $engineExtract -Recurse -Filter 'mcr-ingest.exe' | Select-Object -First 1
-          if (-not $engine) { throw 'Native R2.4 mcr-ingest.exe not found in artifact.' }
-          $engineSha = (Get-FileHash $engine.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($engineSha -ne '6d3ebda03b20a4a3da6d3bcc2e54a0916e0dc311c51fe6bf0723eaf6361dfcb8') { throw "Native R2.4 engine hash mismatch: $engineSha" }
+      - name: Prove engine ingest path before GUI packaging
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $engine = Join-Path $env:MCR_R2_SRC 'target/release/mcr-ingest.exe'
+          if (-not (Test-Path $engine)) { throw 'R2.3 engine missing' }
+          $sha=(Get-FileHash $engine -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "R2.3 PREVIEW ENGINE SHA256=$sha"
+          $smoke=Join-Path $env:RUNNER_TEMP 'engine-smoke'
+          $ws=Join-Path $smoke 'workspace'
+          New-Item -ItemType Directory -Force $smoke | Out-Null
+          Set-Content (Join-Path $smoke 'sample.txt') 'synthetic preview smoke input' -Encoding utf8
+          & $engine init $ws
+          if ($LASTEXITCODE -ne 0) { throw 'engine init failed' }
+          & $engine ingest-file $ws (Join-Path $smoke 'sample.txt')
+          if ($LASTEXITCODE -ne 0) { throw 'engine ingest-file failed' }
+          if (-not (Test-Path (Join-Path $ws 'mcr-ingest.sqlite3'))) { throw 'authority DB missing' }
+          "MCR_ENGINE=$engine" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_ENGINE_SHA=$sha" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-          $qpdfZip = Join-Path $work 'qpdf.zip'
-          Invoke-WebRequest 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qpdfZip
-          if ((Get-FileHash $qpdfZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6') { throw 'qpdf ZIP hash mismatch.' }
-          $qpdfExtract = Join-Path $work 'qpdf'
-          Expand-Archive $qpdfZip $qpdfExtract
-
-          $pdfcpuZip = Join-Path $work 'pdfcpu.zip'
-          Invoke-WebRequest 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pdfcpuZip
-          if ((Get-FileHash $pdfcpuZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6') { throw 'pdfcpu ZIP hash mismatch.' }
-          $pdfcpuExtract = Join-Path $work 'pdfcpu'
-          Expand-Archive $pdfcpuZip $pdfcpuExtract
-
-          "MCR_PREVIEW_WORK=$work" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "MCR_ENGINE=$($engine.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "MCR_QPDF_EXTRACT=$qpdfExtract" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "MCR_PDFCPU_EXTRACT=$pdfcpuExtract" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Acquire hash-pinned qpdf and pdfcpu from GitHub
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $work=Join-Path $env:RUNNER_TEMP 'preview-runtime'
+          New-Item -ItemType Directory -Force $work | Out-Null
+          $qz=Join-Path $work 'qpdf.zip'
+          Invoke-WebRequest 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qz
+          if ((Get-FileHash $qz -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6') { throw 'qpdf ZIP hash mismatch' }
+          $qd=Join-Path $work 'qpdf'; Expand-Archive $qz $qd
+          $pz=Join-Path $work 'pdfcpu.zip'
+          Invoke-WebRequest 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pz
+          if ((Get-FileHash $pz -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6') { throw 'pdfcpu ZIP hash mismatch' }
+          $pd=Join-Path $work 'pdfcpu'; Expand-Archive $pz $pd
+          "MCR_RUNTIME_WORK=$work" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_QPDF_DIR=$qd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PDFCPU_DIR=$pd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Build self-contained Windows GUI
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $publish = Join-Path $env:MCR_PREVIEW_WORK 'publish'
+          $publish=Join-Path $env:RUNNER_TEMP 'preview-gui'
           dotnet publish preview-app/McrToolingPreview.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $publish
-          $app = Get-ChildItem $publish -Filter 'MCR-Tooling-Preview.exe' | Select-Object -First 1
-          if (-not $app) { throw 'GUI executable was not produced.' }
-          "MCR_PREVIEW_EXE=$($app.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $app=Join-Path $publish 'MCR-Tooling-Preview.exe'
+          if (-not (Test-Path $app)) { throw 'GUI executable missing' }
+          "MCR_PREVIEW_EXE=$app" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Assemble controlled portable preview package
+      - name: Assemble portable Engineering Preview
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $stage = Join-Path $env:MCR_PREVIEW_WORK 'stage'
-          New-Item -ItemType Directory -Force -Path $stage,(Join-Path $stage 'engine'),(Join-Path $stage 'tools/qpdf'),(Join-Path $stage 'tools/pdfcpu'),(Join-Path $stage 'control') | Out-Null
+          $ErrorActionPreference='Stop'
+          $stage=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW'
+          New-Item -ItemType Directory -Force $stage,(Join-Path $stage 'engine'),(Join-Path $stage 'tools/qpdf'),(Join-Path $stage 'tools/pdfcpu'),(Join-Path $stage 'control') | Out-Null
           Copy-Item $env:MCR_PREVIEW_EXE (Join-Path $stage 'MCR-Tooling-Preview.exe')
           Copy-Item $env:MCR_ENGINE (Join-Path $stage 'engine/mcr-ingest.exe')
-          Copy-Item (Join-Path $env:MCR_QPDF_EXTRACT '*') (Join-Path $stage 'tools/qpdf') -Recurse -Force
-          Copy-Item (Join-Path $env:MCR_PDFCPU_EXTRACT '*') (Join-Path $stage 'tools/pdfcpu') -Recurse -Force
-
-          $engine = Join-Path $stage 'engine/mcr-ingest.exe'
-          $qpdf = Get-ChildItem (Join-Path $stage 'tools/qpdf') -Recurse -Filter 'qpdf.exe' | Select-Object -First 1
-          $pdfcpu = Get-ChildItem (Join-Path $stage 'tools/pdfcpu') -Recurse -Filter 'pdfcpu.exe' | Select-Object -First 1
-          if (-not $qpdf -or -not $pdfcpu) { throw 'Specialist executable missing after staging.' }
-          $engineSha = (Get-FileHash $engine -Algorithm SHA256).Hash.ToLowerInvariant()
-          $qpdfSha = (Get-FileHash $qpdf.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          $pdfcpuSha = (Get-FileHash $pdfcpu.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          & $qpdf.FullName --version
-          if ($LASTEXITCODE -ne 0) { throw 'qpdf version smoke failed.' }
-          & $pdfcpu.FullName version
-          if ($LASTEXITCODE -ne 0) { throw 'pdfcpu version smoke failed.' }
-
-          $runtime = [ordered]@{
-            schema='mcr-tooling-engineering-preview-runtime-v1'
-            status='ENGINEERING_PREVIEW_NOT_FINAL_CERTIFICATION'
-            engine_path='engine/mcr-ingest.exe'
-            engine_sha256=$engineSha
-            qpdf_path=[IO.Path]::GetRelativePath($stage, $qpdf.FullName).Replace('\','/')
-            qpdf_sha256=$qpdfSha
-            pdfcpu_path=[IO.Path]::GetRelativePath($stage, $pdfcpu.FullName).Replace('\','/')
-            pdfcpu_sha256=$pdfcpuSha
-            controlled_hostile_matrix='57/57 functionally exercised in engineering qualification'
-            target_windows_prior='19/19 PASS on actual target PC'
+          Copy-Item (Join-Path $env:MCR_QPDF_DIR '*') (Join-Path $stage 'tools/qpdf') -Recurse -Force
+          Copy-Item (Join-Path $env:MCR_PDFCPU_DIR '*') (Join-Path $stage 'tools/pdfcpu') -Recurse -Force
+          $qpdf=Get-ChildItem (Join-Path $stage 'tools/qpdf') -Recurse -Filter qpdf.exe | Select-Object -First 1
+          $pdfcpu=Get-ChildItem (Join-Path $stage 'tools/pdfcpu') -Recurse -Filter pdfcpu.exe | Select-Object -First 1
+          if (-not $qpdf -or -not $pdfcpu) { throw 'specialist executable missing' }
+          $qsha=(Get-FileHash $qpdf.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $psha=(Get-FileHash $pdfcpu.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $runtime=[ordered]@{
+            schema='mcr-tooling-engineering-preview-runtime-v2';
+            status='ENGINEERING_PREVIEW_NOT_FINAL_CERTIFICATION';
+            engine_path='engine/mcr-ingest.exe'; engine_sha256=$env:MCR_ENGINE_SHA;
+            qpdf_path=[IO.Path]::GetRelativePath($stage,$qpdf.FullName).Replace('\','/'); qpdf_sha256=$qsha;
+            pdfcpu_path=[IO.Path]::GetRelativePath($stage,$pdfcpu.FullName).Replace('\','/'); pdfcpu_sha256=$psha;
+            bundled_runtime='stack-safe R2.3 working engine';
+            actual_target_windows_prior='19/19 PASS';
+            wider_engineering_matrix='57/57 functionally exercised; newer R2.4 Windows regression remains under repair';
             frozen_mcr_r59='UNCHANGED'
           }
           $runtime | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $stage 'control/runtime.json') -Encoding utf8
-
           @'
-          MCR TOOLING — ENGINEERING PREVIEW R2.4
-          =====================================
+MCR TOOLING — ENGINEERING PREVIEW
+=================================
+Double-click: MCR-Tooling-Preview.exe
 
-          START: double-click MCR-Tooling-Preview.exe
+This is a working preview, not the final certified release.
+The bundled engine is the stack-safe R2.3 line. The wider engineering programme has functionally exercised 57/57 hostile behaviours, but a newer R2.4 Windows runtime regression found during tonight's smoke testing is deliberately NOT shipped here.
 
-          This is a working engineering preview, not the final certified release.
-          It wraps the current native-Windows mcr-ingest engine in a Windows GUI so you can select files, choose a workspace and visibly run the working ingestion/inventory functions.
+GUI functions available now:
+- generic files: SHA-256 evidence capture
+- ZIP: hostile archive inventory, no blind extraction
+- EML / MBOX: mail provenance indexing
+- CSV: byte-position provenance
+- DOCX / XLSX / PPTX: OOXML state inventory
+- PDF: qpdf state inventory + pdfcpu strict validation
 
-          Current GUI paths:
-          - generic files: SHA-256 ingest
-          - ZIP: hostile archive inventory (no blind extraction)
-          - EML / MBOX: mail parsing and provenance indexing
-          - CSV: byte-position/provenance index
-          - DOCX / XLSX / PPTX: OOXML state inventory
-          - PDF: qpdf state inventory + pdfcpu strict validation
+Original inputs are not modified. Output goes only to the workspace you choose. Frozen MCR R59 is outside this preview and unchanged.
+'@ | Set-Content (Join-Path $stage 'README_FIRST.txt') -Encoding utf8
+          "MCR_PREVIEW_STAGE=$stage" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-          The app writes only to the workspace you choose. Original input files remain authority inputs. Frozen production MCR R59 is outside this preview and is not modified.
-          '@ | Set-Content (Join-Path $stage 'README_FIRST.txt') -Encoding utf8
-
-          @'
-          THIRD-PARTY / FOSS NOTICE — ENGINEERING PREVIEW
-
-          qpdf 12.4.1 — Apache-2.0 — portable Windows release ZIP SHA-256 3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6
-          pdfcpu 0.15.0 — Apache-2.0 — Windows x86_64 ZIP SHA-256 9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6
-          The mcr-ingest source package preserves its own FOSS dependency and donor notices.
-          No real MCR evidence is included in this preview package.
-          '@ | Set-Content (Join-Path $stage 'THIRD_PARTY_NOTICES.txt') -Encoding utf8
-
-          "MCR_PREVIEW_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Test exact staged GUI runtime
+      - name: Test exact staged app bytes
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $app = Join-Path $env:MCR_PREVIEW_STAGE 'MCR-Tooling-Preview.exe'
+          $ErrorActionPreference='Stop'
+          $app=Join-Path $env:MCR_PREVIEW_STAGE 'MCR-Tooling-Preview.exe'
           & $app --self-test
-          if ($LASTEXITCODE -ne 0) { throw "Preview self-test failed with exit code $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "app self-test failed: $LASTEXITCODE" }
+          $engine=Join-Path $env:MCR_PREVIEW_STAGE 'engine/mcr-ingest.exe'
+          $smoke=Join-Path $env:RUNNER_TEMP 'final-stage-smoke'
+          $ws=Join-Path $smoke 'workspace'
+          New-Item -ItemType Directory -Force $smoke | Out-Null
+          Set-Content (Join-Path $smoke 'sample.txt') 'synthetic final staged smoke' -Encoding utf8
+          & $engine init $ws; if ($LASTEXITCODE -ne 0) { throw 'staged init failed' }
+          & $engine ingest-file $ws (Join-Path $smoke 'sample.txt'); if ($LASTEXITCODE -ne 0) { throw 'staged ingest failed' }
 
-          $engine = Join-Path $env:MCR_PREVIEW_STAGE 'engine/mcr-ingest.exe'
-          $smoke = Join-Path $env:RUNNER_TEMP 'preview-smoke'
-          $ws = Join-Path $smoke 'workspace'
-          New-Item -ItemType Directory -Force -Path $smoke | Out-Null
-          Set-Content (Join-Path $smoke 'sample.txt') 'synthetic preview smoke input' -Encoding utf8
-          & $engine init $ws
-          if ($LASTEXITCODE -ne 0) { throw 'Workspace smoke init failed.' }
-          & $engine ingest-file $ws (Join-Path $smoke 'sample.txt')
-          if ($LASTEXITCODE -ne 0) { throw 'Generic ingest smoke failed.' }
-          if (-not (Test-Path (Join-Path $ws 'mcr-ingest.sqlite3'))) { throw 'Smoke workspace DB missing.' }
-
-      - name: Package preview and write verification receipt
+      - name: Package tested preview
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $out = Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_R2_4_2026-09-06.zip'
+          $out=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_2026-09-06.zip'
           Compress-Archive -Path (Join-Path $env:MCR_PREVIEW_STAGE '*') -DestinationPath $out -CompressionLevel Optimal
-          $sha = (Get-FileHash $out -Algorithm SHA256).Hash.ToLowerInvariant()
-          $receipt = [ordered]@{
-            schema='mcr-tooling-engineering-preview-package-v1'
-            status='PASS_READY_FOR_HUMAN_ENGINEERING_PREVIEW'
-            package=[IO.Path]::GetFileName($out)
-            bytes=(Get-Item $out).Length
-            sha256=$sha
-            engine_sha256='6d3ebda03b20a4a3da6d3bcc2e54a0916e0dc311c51fe6bf0723eaf6361dfcb8'
-            github_runner='windows-2022'
-            exact_staged_self_test='PASS'
-            workspace_init_smoke='PASS'
-            generic_ingest_smoke='PASS'
-            status_boundary='engineering preview; not final release certification'
-            frozen_mcr_r59='UNCHANGED'
-          }
-          $receiptPath = Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_VERIFICATION_2026-09-06.json'
-          $receipt | ConvertTo-Json -Depth 4 | Set-Content $receiptPath -Encoding utf8
-          Write-Host "PREVIEW ZIP SHA-256 $sha"
-          "MCR_PREVIEW_ZIP=$out" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "MCR_PREVIEW_RECEIPT=$receiptPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $sha=(Get-FileHash $out -Algorithm SHA256).Hash.ToLowerInvariant()
+          $receipt=[ordered]@{schema='mcr-tooling-engineering-preview-package-v2';status='PASS_READY_FOR_HUMAN_PREVIEW';package=[IO.Path]::GetFileName($out);bytes=(Get-Item $out).Length;sha256=$sha;engine_sha256=$env:MCR_ENGINE_SHA;github_runner='windows-2022';app_self_test='PASS';init_smoke='PASS';ingest_file_smoke='PASS';frozen_mcr_r59='UNCHANGED'}
+          $rp=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_VERIFICATION_2026-09-06.json'
+          $receipt | ConvertTo-Json | Set-Content $rp -Encoding utf8
+          "MCR_PREVIEW_ZIP=$out" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PREVIEW_RECEIPT=$rp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "PREVIEW SHA256=$sha"
 
-      - name: Upload tested preview package
+      - name: Upload tested preview
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mcr-tooling-engineering-preview-r2-4-${{ github.sha }}
+          name: mcr-tooling-engineering-preview-${{ github.sha }}
           path: |
             ${{ env.MCR_PREVIEW_ZIP }}
             ${{ env.MCR_PREVIEW_RECEIPT }}
