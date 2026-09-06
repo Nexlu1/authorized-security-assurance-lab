@@ -1,0 +1,79 @@
+name: Temporary MCR R2.4 Windows release byte check
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-4-windows-release-bytecheck-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out synthetic qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+      - name: Reconstruct and apply exact R2.4 repair chain
+        shell: bash
+        run: |
+          python qualification/mcr-r2-durable/reconstruct_r2.py
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+          python qualification/mcr-r2-durable/apply_r24_resource_limits.py
+          python qualification/mcr-r2-durable/apply_r24_compile_fix.py
+      - name: Build exact release executable
+        shell: bash
+        run: |
+          cd "$MCR_R2_SRC"
+          cargo fmt
+          cargo generate-lockfile
+          cargo build --locked --release
+      - name: Record release executable identity
+        shell: pwsh
+        run: |
+          $exe=Join-Path $env:MCR_R2_SRC 'target\release\mcr-ingest.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'release executable missing' }
+          $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $out=Join-Path $env:RUNNER_TEMP 'mcr-r2-4-release-bytecheck'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          Copy-Item -LiteralPath $exe -Destination (Join-Path $out 'mcr-ingest.exe')
+          [ordered]@{
+            schema='mcr-r2-4-windows-release-bytecheck-v1'
+            status='PASS'
+            source_branch='temporary/mcr-r2-4-windows-release-bytecheck-20260906'
+            github_sha=$env:GITHUB_SHA
+            runner='${{ matrix.os }}'
+            rust='1.88.0'
+            exe_sha256=$sha
+            exe_bytes=(Get-Item -LiteralPath $exe).Length
+            frozen_mcr_r59='UNCHANGED'
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $out 'RELEASE_BYTECHECK_RECEIPT.json') -Encoding UTF8
+      - name: Upload release executable and receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-4-release-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-4-release-bytecheck
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
