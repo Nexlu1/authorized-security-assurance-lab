@@ -34,8 +34,9 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip' -OutFile $zip
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip.minisig' -OutFile $sig
           Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $root 'tool') -Force
-          $exe = Get-ChildItem -LiteralPath (Join-Path $root 'tool') -Recurse -Filter minisign.exe | Select-Object -First 1
-          if (-not $exe) { throw 'minisign.exe missing' }
+          $candidates = @(Get-ChildItem -LiteralPath (Join-Path $root 'tool') -Recurse -Filter minisign.exe | Where-Object { $_.FullName -match '(x86_64|amd64|x64)' -and $_.FullName -notmatch 'aarch64' })
+          if ($candidates.Count -ne 1) { throw "expected exactly one x64 minisign.exe; found $($candidates.Count): $($candidates.FullName -join ', ')" }
+          $exe = $candidates[0]
           $archiveHash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           $exeHash=(Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "MCR_MINISIGN_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -71,7 +72,6 @@ jobs:
           Remove-Item -LiteralPath $sec -Force
           if (Test-Path -LiteralPath $sec) { throw 'synthetic secret key deletion failed' }
           $pubHash=(Get-FileHash -LiteralPath $pub -Algorithm SHA256).Hash.ToLowerInvariant()
-          $signature=Get-Item -LiteralPath "$msg.minisig" -ErrorAction Stop
           [ordered]@{
             schema='mcr-minisign-lifecycle-qualification-v1'
             status='PASS'
