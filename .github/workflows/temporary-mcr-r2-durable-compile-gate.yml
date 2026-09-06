@@ -44,6 +44,8 @@ jobs:
         run: python qualification/mcr-r2-durable/apply_r22_compile_fix.py
       - name: Apply R2.3 mail warning/PDF damaged-state expansion
         run: python qualification/mcr-r2-durable/apply_r23_expansion.py
+      - name: Apply bounded R2.3 strict-Clippy correction
+        run: python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
       - name: Normalize extracted working copy with rustfmt
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt
