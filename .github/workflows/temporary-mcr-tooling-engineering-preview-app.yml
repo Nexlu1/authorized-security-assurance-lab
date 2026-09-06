@@ -2,7 +2,8 @@ name: Temporary MCR Tooling Engineering Preview app
 
 on:
   push:
-    branches: [temporary/mcr-tooling-engineering-preview-app-20260906]
+    branches:
+      - temporary/mcr-tooling-engineering-preview-app-20260906
   workflow_dispatch:
 
 permissions:
@@ -13,12 +14,13 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out synthetic branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Install exact Rust toolchain
+      - name: Install Rust 1.88
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: 1.88.0
@@ -45,7 +47,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $engine = Join-Path $env:MCR_R2_SRC 'target/release/mcr-ingest.exe'
+          $engine=Join-Path $env:MCR_R2_SRC 'target/release/mcr-ingest.exe'
           if (-not (Test-Path $engine)) { throw 'R2.3 engine missing' }
           $sha=(Get-FileHash $engine -Algorithm SHA256).Hash.ToLowerInvariant()
           Write-Host "R2.3 PREVIEW ENGINE SHA256=$sha"
@@ -70,12 +72,13 @@ jobs:
           $qz=Join-Path $work 'qpdf.zip'
           Invoke-WebRequest 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qz
           if ((Get-FileHash $qz -Algorithm SHA256).Hash.ToLowerInvariant() -ne '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6') { throw 'qpdf ZIP hash mismatch' }
-          $qd=Join-Path $work 'qpdf'; Expand-Archive $qz $qd
+          $qd=Join-Path $work 'qpdf'
+          Expand-Archive $qz $qd
           $pz=Join-Path $work 'pdfcpu.zip'
           Invoke-WebRequest 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pz
           if ((Get-FileHash $pz -Algorithm SHA256).Hash.ToLowerInvariant() -ne '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6') { throw 'pdfcpu ZIP hash mismatch' }
-          $pd=Join-Path $work 'pdfcpu'; Expand-Archive $pz $pd
-          "MCR_RUNTIME_WORK=$work" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          $pd=Join-Path $work 'pdfcpu'
+          Expand-Archive $pz $pd
           "MCR_QPDF_DIR=$qd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "MCR_PDFCPU_DIR=$pd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
@@ -88,7 +91,7 @@ jobs:
           if (-not (Test-Path $app)) { throw 'GUI executable missing' }
           "MCR_PREVIEW_EXE=$app" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Assemble portable Engineering Preview
+      - name: Assemble portable preview
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -103,36 +106,22 @@ jobs:
           if (-not $qpdf -or -not $pdfcpu) { throw 'specialist executable missing' }
           $qsha=(Get-FileHash $qpdf.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           $psha=(Get-FileHash $pdfcpu.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          $runtime=[ordered]@{
-            schema='mcr-tooling-engineering-preview-runtime-v2';
-            status='ENGINEERING_PREVIEW_NOT_FINAL_CERTIFICATION';
-            engine_path='engine/mcr-ingest.exe'; engine_sha256=$env:MCR_ENGINE_SHA;
-            qpdf_path=[IO.Path]::GetRelativePath($stage,$qpdf.FullName).Replace('\','/'); qpdf_sha256=$qsha;
-            pdfcpu_path=[IO.Path]::GetRelativePath($stage,$pdfcpu.FullName).Replace('\','/'); pdfcpu_sha256=$psha;
-            bundled_runtime='stack-safe R2.3 working engine';
-            actual_target_windows_prior='19/19 PASS';
-            wider_engineering_matrix='57/57 functionally exercised; newer R2.4 Windows regression remains under repair';
-            frozen_mcr_r59='UNCHANGED'
-          }
+          $runtime=[ordered]@{schema='mcr-tooling-engineering-preview-runtime-v2';status='ENGINEERING_PREVIEW_NOT_FINAL_CERTIFICATION';engine_path='engine/mcr-ingest.exe';engine_sha256=$env:MCR_ENGINE_SHA;qpdf_path=[IO.Path]::GetRelativePath($stage,$qpdf.FullName).Replace('\','/');qpdf_sha256=$qsha;pdfcpu_path=[IO.Path]::GetRelativePath($stage,$pdfcpu.FullName).Replace('\','/');pdfcpu_sha256=$psha;bundled_runtime='stack-safe R2.3 working engine';actual_target_windows_prior='19/19 PASS';wider_engineering_matrix='57/57 functionally exercised; newer R2.4 Windows regression remains under repair';frozen_mcr_r59='UNCHANGED'}
           $runtime | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $stage 'control/runtime.json') -Encoding utf8
-          @'
-MCR TOOLING — ENGINEERING PREVIEW
-=================================
-Double-click: MCR-Tooling-Preview.exe
-
-This is a working preview, not the final certified release.
-The bundled engine is the stack-safe R2.3 line. The wider engineering programme has functionally exercised 57/57 hostile behaviours, but a newer R2.4 Windows runtime regression found during tonight's smoke testing is deliberately NOT shipped here.
-
-GUI functions available now:
-- generic files: SHA-256 evidence capture
-- ZIP: hostile archive inventory, no blind extraction
-- EML / MBOX: mail provenance indexing
-- CSV: byte-position provenance
-- DOCX / XLSX / PPTX: OOXML state inventory
-- PDF: qpdf state inventory + pdfcpu strict validation
-
-Original inputs are not modified. Output goes only to the workspace you choose. Frozen MCR R59 is outside this preview and unchanged.
-'@ | Set-Content (Join-Path $stage 'README_FIRST.txt') -Encoding utf8
+          $readme=@(
+            'MCR TOOLING - ENGINEERING PREVIEW',
+            '=================================',
+            '',
+            'Double-click: MCR-Tooling-Preview.exe',
+            '',
+            'This is a working preview, not the final certified release.',
+            'Bundled engine: stack-safe R2.3 line. Wider engineering: 57/57 hostile behaviours functionally exercised.',
+            'A newer R2.4 Windows runtime regression found tonight is deliberately NOT shipped.',
+            '',
+            'GUI: SHA-256 ingest; ZIP inventory; EML/MBOX indexing; CSV provenance; OOXML inventory; PDF qpdf+pdfcpu inventory.',
+            'Original inputs are not modified. Output goes to the selected workspace. Frozen MCR R59 is unchanged.'
+          )
+          $readme | Set-Content (Join-Path $stage 'README_FIRST.txt') -Encoding utf8
           "MCR_PREVIEW_STAGE=$stage" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Test exact staged app bytes
@@ -147,8 +136,10 @@ Original inputs are not modified. Output goes only to the workspace you choose. 
           $ws=Join-Path $smoke 'workspace'
           New-Item -ItemType Directory -Force $smoke | Out-Null
           Set-Content (Join-Path $smoke 'sample.txt') 'synthetic final staged smoke' -Encoding utf8
-          & $engine init $ws; if ($LASTEXITCODE -ne 0) { throw 'staged init failed' }
-          & $engine ingest-file $ws (Join-Path $smoke 'sample.txt'); if ($LASTEXITCODE -ne 0) { throw 'staged ingest failed' }
+          & $engine init $ws
+          if ($LASTEXITCODE -ne 0) { throw 'staged init failed' }
+          & $engine ingest-file $ws (Join-Path $smoke 'sample.txt')
+          if ($LASTEXITCODE -ne 0) { throw 'staged ingest failed' }
 
       - name: Package tested preview
         shell: pwsh
