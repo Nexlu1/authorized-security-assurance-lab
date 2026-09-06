@@ -47,8 +47,8 @@ replace_exact(
     1,
     "dependency_pin",
     "0.40.1 calls cfg_select! but omits the compatibility macro; upstream 0.40.2 adds it.",
-    old="rusqlite =0.40.1",
-    new="rusqlite =0.40.2",
+    dependency_old="rusqlite =0.40.1",
+    dependency_new="rusqlite =0.40.2",
     upstream_old_tag_commit="6d3c282dc5531a57eb4e22ece3207f00c95d0fb0",
     upstream_new_tag_commit="e88f112bef7899234a497baed5cc3c3d553deeb8",
 )
