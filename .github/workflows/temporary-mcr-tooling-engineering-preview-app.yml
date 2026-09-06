@@ -58,9 +58,14 @@ jobs:
           $pd=Join-Path $w 'pdfcpu'; Expand-Archive $pz $pd
           "MCR_QPDF_DIR=$qd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "MCR_PDFCPU_DIR=$pd" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Build GUI
+      - name: Build accurately-labelled GUI
         shell: pwsh
         run: |
+          $src='preview-app/Program.cs'
+          $text=Get-Content $src -Raw
+          $text=$text.Replace('Text = "MCR Tooling — Engineering Preview R2.4";','Text = "MCR Tooling — Engineering Preview";')
+          $text=$text.Replace('Working R2.4 ingestion engine • 57/57 controlled hostile behaviours functionally exercised • Frozen MCR R59 is not modified','Stack-safe working runtime • wider engineering programme 57/57 hostile behaviours functionally exercised • Frozen MCR R59 unchanged')
+          Set-Content $src $text -Encoding utf8
           $p=Join-Path $env:RUNNER_TEMP 'gui'
           dotnet publish preview-app/McrToolingPreview.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o $p
           "MCR_PREVIEW_EXE=$(Join-Path $p 'MCR-Tooling-Preview.exe')" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
@@ -90,7 +95,7 @@ jobs:
         run: |
           $out=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_2026-09-06.zip'; Compress-Archive -Path (Join-Path $env:MCR_PREVIEW_STAGE '*') -DestinationPath $out -CompressionLevel Optimal
           $sha=(Get-FileHash $out -Algorithm SHA256).Hash.ToLowerInvariant(); $rp=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_VERIFICATION_2026-09-06.json'
-          [ordered]@{schema='mcr-tooling-engineering-preview-package-v2';status='PASS_READY_FOR_HUMAN_PREVIEW';package=[IO.Path]::GetFileName($out);bytes=(Get-Item $out).Length;sha256=$sha;engine_sha256=$env:MCR_ENGINE_SHA;runner='windows-2022';self_test='PASS';init='PASS';ingest='PASS';frozen_mcr_r59='UNCHANGED'} | ConvertTo-Json | Set-Content $rp -Encoding utf8
+          [ordered]@{schema='mcr-tooling-engineering-preview-package-v2';status='PASS_READY_FOR_HUMAN_PREVIEW';package=[IO.Path]::GetFileName($out);bytes=(Get-Item $out).Length;sha256=$sha;engine_sha256=$env:MCR_ENGINE_SHA;runner='windows-2022';self_test='PASS';init='PASS';ingest='PASS';branding='bounded_runtime_status';frozen_mcr_r59='UNCHANGED'} | ConvertTo-Json | Set-Content $rp -Encoding utf8
           "MCR_PREVIEW_ZIP=$out" | Out-File $env:GITHUB_ENV -Append -Encoding utf8; "MCR_PREVIEW_RECEIPT=$rp" | Out-File $env:GITHUB_ENV -Append -Encoding utf8; Write-Host "PREVIEW SHA256=$sha"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
