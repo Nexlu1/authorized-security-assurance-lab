@@ -28,10 +28,11 @@ jobs:
         with:
           toolchain: 1.88.0
           components: rustfmt,clippy
-      - name: Reconstruct and apply exact R2.4 repair chain
+      - name: Reconstruct exact R2.4 source
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+      - name: Apply exact R2.4 repair chain
         shell: bash
         run: |
-          python qualification/mcr-r2-durable/reconstruct_r2.py
           python qualification/mcr-r2-durable/apply_candidate_repair.py
           python qualification/mcr-r2-durable/apply_runtime_repair.py
           python qualification/mcr-r2-durable/apply_coverage_expansion.py
