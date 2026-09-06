@@ -32,6 +32,8 @@ jobs:
         run: python qualification/mcr-r2-durable/reconstruct_r2.py
       - name: Apply bounded candidate dependency repair
         run: python qualification/mcr-r2-durable/apply_candidate_repair.py
+      - name: Apply stack-safety runtime repair
+        run: python qualification/mcr-r2-durable/apply_runtime_repair.py
       - name: Normalize extracted working copy with rustfmt
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt
