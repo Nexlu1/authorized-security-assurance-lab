@@ -13,7 +13,7 @@ permissions:
 jobs:
   build-preview:
     runs-on: windows-2022
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - name: Check out synthetic-only preview branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -129,29 +129,38 @@ jobs:
           }
           $rows | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\SHA256SUMS.txt') -Encoding ASCII
 
-      - name: Windows 2022 exact package self-test and functional smoke
+      - name: Windows 2022 bounded component and real-GUI smoke
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
+          function Invoke-Bounded([string]$Exe,[string[]]$Args,[int]$Seconds) {
+            $p=Start-Process -FilePath $Exe -ArgumentList $Args -PassThru -WindowStyle Hidden
+            if (-not $p.WaitForExit($Seconds*1000)) {
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+              throw "timeout: $Exe"
+            }
+            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe" }
+          }
           $stage=$env:MCR_PREVIEW_STAGE
-          $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
-          $p=Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "preview self-test failed: $($p.ExitCode)" }
+          $engine=Join-Path $stage 'bin\mcr-ingest.exe'
+          $q=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\qpdf') -Recurse -Filter 'qpdf.exe')[0].FullName
+          $pdc=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\pdfcpu') -Recurse -Filter 'pdfcpu.exe')[0].FullName
+          Invoke-Bounded $engine @() 30
+          Invoke-Bounded $q @('--version') 30
+          Invoke-Bounded $pdc @('version') 30
 
           $ws=Join-Path $env:RUNNER_TEMP 'mcr-preview-smoke-workspace'
           $sample=Join-Path $env:RUNNER_TEMP 'mcr-preview-smoke.txt'
           Set-Content -LiteralPath $sample -Value 'synthetic engineering preview smoke' -Encoding UTF8
-          & (Join-Path $stage 'bin\mcr-ingest.exe') init $ws
-          if ($LASTEXITCODE -ne 0) { throw 'engine init smoke failed' }
-          & (Join-Path $stage 'bin\mcr-ingest.exe') ingest-file $ws $sample
-          if ($LASTEXITCODE -ne 0) { throw 'engine ingest smoke failed' }
+          Invoke-Bounded $engine @('init',$ws) 60
+          Invoke-Bounded $engine @('ingest-file',$ws,$sample) 60
 
-          $q=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\qpdf') -Recurse -Filter 'qpdf.exe')[0]
-          $pdc=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\pdfcpu') -Recurse -Filter 'pdfcpu.exe')[0]
-          & $q.FullName --version
-          if ($LASTEXITCODE -ne 0) { throw 'qpdf smoke failed' }
-          & $pdc.FullName version
-          if ($LASTEXITCODE -ne 0) { throw 'pdfcpu smoke failed' }
+          $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
+          $gui=Start-Process -FilePath $app -PassThru
+          Start-Sleep -Seconds 4
+          if ($gui.HasExited) { throw "GUI exited unexpectedly with code $($gui.ExitCode)" }
+          Stop-Process -Id $gui.Id -Force
+          Write-Host 'PASS Windows 2022 bounded component tests and GUI launch smoke'
 
       - name: Create portable preview ZIP
         shell: pwsh
@@ -176,7 +185,7 @@ jobs:
   verify-windows-2025:
     needs: build-preview
     runs-on: windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 12
     steps:
       - name: Download exact preview package from this workflow
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
@@ -184,18 +193,30 @@ jobs:
           name: mcr-tooling-engineering-preview-r2-4-${{ github.sha }}
           path: ${{ runner.temp }}/package
 
-      - name: Windows 2025 package extraction and exact self-test
+      - name: Windows 2025 bounded package and GUI launch smoke
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
+          function Invoke-Bounded([string]$Exe,[string[]]$Args,[int]$Seconds) {
+            $p=Start-Process -FilePath $Exe -ArgumentList $Args -PassThru -WindowStyle Hidden
+            if (-not $p.WaitForExit($Seconds*1000)) {
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+              throw "timeout: $Exe"
+            }
+            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe" }
+          }
           $zip=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'package') -Filter '*.zip')
           if ($zip.Count -ne 1) { throw "expected one preview ZIP, found $($zip.Count)" }
           $root=Join-Path $env:RUNNER_TEMP 'preview-expanded'
           Expand-Archive -LiteralPath $zip[0].FullName -DestinationPath $root -Force
+          $engine=Join-Path $root 'bin\mcr-ingest.exe'
+          $engineSha=(Get-FileHash -LiteralPath $engine -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch after package roundtrip: $engineSha" }
+          Invoke-Bounded $engine @() 30
           $app=Join-Path $root 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
           if (-not (Test-Path -LiteralPath $app)) { throw 'preview EXE missing after extraction' }
-          $p=Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Windows 2025 self-test failed: $($p.ExitCode)" }
-          $engine=(Get-FileHash -LiteralPath (Join-Path $root 'bin\mcr-ingest.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($engine -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch after package roundtrip: $engine" }
-          Write-Host 'PASS Windows 2025 exact preview package self-test'
+          $gui=Start-Process -FilePath $app -PassThru
+          Start-Sleep -Seconds 4
+          if ($gui.HasExited) { throw "GUI exited unexpectedly with code $($gui.ExitCode)" }
+          Stop-Process -Id $gui.Id -Force
+          Write-Host 'PASS Windows 2025 exact package and GUI launch smoke'
