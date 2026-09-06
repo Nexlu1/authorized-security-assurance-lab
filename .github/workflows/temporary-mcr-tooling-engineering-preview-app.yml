@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Acquire exact qualified engine and FOSS PDF runtimes
+      - name: Acquire exact native Windows engine and FOSS PDF runtimes
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -31,14 +31,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path $work | Out-Null
 
           $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
-          $engineZip = Join-Path $work 'qualified-engine-artifact.zip'
-          Invoke-WebRequest -Headers $headers -Uri 'https://api.github.com/repos/Nexlu1/authorized-security-assurance-lab/actions/artifacts/9991670232/zip' -OutFile $engineZip
+          $engineZip = Join-Path $work 'native-r24-engine-artifact.zip'
+          Invoke-WebRequest -Headers $headers -Uri 'https://api.github.com/repos/Nexlu1/authorized-security-assurance-lab/actions/artifacts/9991545180/zip' -OutFile $engineZip
           $engineExtract = Join-Path $work 'engine-artifact'
           Expand-Archive $engineZip $engineExtract
           $engine = Get-ChildItem $engineExtract -Recurse -Filter 'mcr-ingest.exe' | Select-Object -First 1
-          if (-not $engine) { throw 'Qualified mcr-ingest.exe not found in artifact.' }
+          if (-not $engine) { throw 'Native R2.4 mcr-ingest.exe not found in artifact.' }
           $engineSha = (Get-FileHash $engine.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "Qualified engine hash mismatch: $engineSha" }
+          if ($engineSha -ne '6d3ebda03b20a4a3da6d3bcc2e54a0916e0dc311c51fe6bf0723eaf6361dfcb8') { throw "Native R2.4 engine hash mismatch: $engineSha" }
 
           $qpdfZip = Join-Path $work 'qpdf.zip'
           Invoke-WebRequest 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qpdfZip
@@ -112,7 +112,7 @@ jobs:
           START: double-click MCR-Tooling-Preview.exe
 
           This is a working engineering preview, not the final certified release.
-          It wraps the current mcr-ingest engine in a Windows GUI so you can select files, choose a workspace and visibly run the working ingestion/inventory functions.
+          It wraps the current native-Windows mcr-ingest engine in a Windows GUI so you can select files, choose a workspace and visibly run the working ingestion/inventory functions.
 
           Current GUI paths:
           - generic files: SHA-256 ingest
@@ -168,7 +168,7 @@ jobs:
             package=[IO.Path]::GetFileName($out)
             bytes=(Get-Item $out).Length
             sha256=$sha
-            engine_sha256='d4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba'
+            engine_sha256='6d3ebda03b20a4a3da6d3bcc2e54a0916e0dc311c51fe6bf0723eaf6361dfcb8'
             github_runner='windows-2022'
             exact_staged_self_test='PASS'
             workspace_init_smoke='PASS'
