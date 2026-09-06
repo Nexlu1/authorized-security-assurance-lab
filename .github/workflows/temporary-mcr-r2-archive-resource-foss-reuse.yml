@@ -1,0 +1,95 @@
+name: Temporary MCR R2.4 archive-resource FOSS reuse gate
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-archive-resource-foss-reuse-ci-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Check out synthetic-only branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+      - name: Reconstruct and verify exact durable R2 source
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+      - name: Apply bounded R2 repairs through R2.3
+        shell: bash
+        run: |
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+      - name: Apply GitHub-first R2.4 archive-resource glue
+        shell: bash
+        run: |
+          python qualification/mcr-r2-durable/apply_r24_resource_limits.py
+          python qualification/mcr-r2-durable/apply_r24_compile_fix.py
+      - name: Normalize and strict static gates
+        shell: bash
+        run: |
+          cd "$MCR_R2_SRC"
+          cargo fmt
+          cargo fmt --check
+          cargo generate-lockfile
+          grep -A3 'name = "rusqlite"' Cargo.lock | grep 'version = "0.40.2"'
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked --all-targets --no-run
+      - name: Generate deterministic ARC-008/009/011 fixtures
+        run: python qualification/mcr-r2-durable/generate_r24_resource_fixtures.py
+      - name: Execute final three hostile resource tests
+        shell: bash
+        env:
+          MCR_FIXTURE_DIR: ${{ runner.temp }}/mcr-r24-resource-fixtures
+        run: cd "$MCR_R2_SRC" && cargo test --locked --test core_integration zip_resource_ -- --test-threads=1
+      - name: Release build
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo build --locked --release
+      - name: Smoke ARC-011 hard-streaming CLI
+        shell: bash
+        env:
+          MCR_FIXTURE_DIR: ${{ runner.temp }}/mcr-r24-resource-fixtures
+        run: cd "$MCR_R2_SRC" && cargo run --locked --quiet --release -- archive-resource-check "$MCR_FIXTURE_DIR/arc_header_size_lies.zip" 262144 4194304
+      - name: Write compile receipt
+        run: python qualification/mcr-r2-durable/write_compile_receipt.py
+      - name: Package exact promotable R2.4 source
+        if: matrix.os == 'ubuntu-24.04'
+        run: python qualification/mcr-r2-durable/package_promotable_source_r24.py
+      - name: Upload compile evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-4-foss-reuse-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-compile-evidence
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload promotable R2.4 source
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-4-promotable-source-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-promotable-source-r24
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
