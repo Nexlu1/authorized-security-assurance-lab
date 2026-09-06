@@ -20,13 +20,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Download exact reproducible R2.4 engine
+      - name: Download current R2.4 Windows MSVC engine artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           github-token: ${{ github.token }}
           repository: Nexlu1/authorized-security-assurance-lab
-          run-id: 34040956531
-          name: mcr-r2-4-gnullvm-windows-2022-864cbf5928e00ba951286603a255ae005468aa2f
+          run-id: 34037068978
+          name: mcr-r2-4-foss-reuse-windows-2022-49a8868153b8254216427dc644ae20cefaeebadf
           path: ${{ runner.temp }}/engine
 
       - name: Stage engine and qualified FOSS tools
@@ -38,9 +38,14 @@ jobs:
 
           $engine=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'engine') -Recurse -Filter 'mcr-ingest.exe')
           if ($engine.Count -ne 1) { throw "expected one mcr-ingest.exe, found $($engine.Count)" }
+          $receipts=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'engine') -Recurse -Filter 'COMPILE_RECEIPT.json')
+          if ($receipts.Count -ne 1) { throw "expected one COMPILE_RECEIPT.json, found $($receipts.Count)" }
+          $receipt=Get-Content -LiteralPath $receipts[0].FullName -Raw | ConvertFrom-Json
           $engineSha=(Get-FileHash -LiteralPath $engine[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch: $engineSha" }
+          if ($engineSha -ne [string]$receipt.release_binary.sha256) { throw "engine/receipt SHA mismatch: $engineSha" }
+          if ($engine[0].Length -ne [int64]$receipt.release_binary.bytes) { throw 'engine/receipt size mismatch' }
           Copy-Item -LiteralPath $engine[0].FullName -Destination (Join-Path $stage 'bin\mcr-ingest.exe')
+          Copy-Item -LiteralPath $receipts[0].FullName -Destination (Join-Path $stage 'CONTROL\R2_4_COMPILE_RECEIPT_WINDOWS2022.json')
 
           $qzip=Join-Path $env:RUNNER_TEMP 'qpdf.zip'
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qzip
@@ -65,12 +70,13 @@ jobs:
 
           Copy-Item -LiteralPath 'preview-app\README_FIRST.txt' -Destination (Join-Path $stage 'README_FIRST.txt')
           "PREVIEW_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ENGINE_SHA=$engineSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "QPDF_SHA=$qsha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "QPDF_ZIP_SHA=$qzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "PDFCPU_SHA=$psha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "PDFCPU_ZIP_SHA=$pzipSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Compile native Windows GUI
+      - name: Compile native Windows GUI bound to exact payload hashes
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -80,6 +86,7 @@ jobs:
           ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
           if (-not $csc) { throw 'csc.exe not found' }
           $src=Get-Content -LiteralPath 'preview-app\McrPreview.cs' -Raw
+          $src=$src.Replace('d4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba',$env:ENGINE_SHA)
           $src=$src.Replace('59fd63675fbc23787b6d29e0d16eb6f0ea3797920e77e23af86fc674c3425d0d','57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d')
           $tmp=Join-Path $env:RUNNER_TEMP 'McrPreview.final.cs'
           Set-Content -LiteralPath $tmp -Value $src -Encoding UTF8
@@ -87,7 +94,7 @@ jobs:
           & $csc /nologo /target:winexe /platform:anycpu /optimize+ /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll "/out:$app" $tmp
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $app)) { throw 'GUI compilation failed' }
 
-      - name: Real Windows 2022 command tests and GUI launch
+      - name: Real Windows 2022 engine commands, specialists and GUI launch
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -99,27 +106,24 @@ jobs:
             }
             if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe $($ProcArgs -join ' ')" }
           }
-
           $stage=$env:PREVIEW_STAGE
           $engine=Join-Path $stage 'bin\mcr-ingest.exe'
           $q=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\qpdf') -Recurse -Filter 'qpdf.exe')[0].FullName
           $pdfcpu=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\pdfcpu') -Recurse -Filter 'pdfcpu.exe')[0].FullName
           Run-Bounded $q @('--version') 30
           Run-Bounded $pdfcpu @('version') 30
-
           $ws=Join-Path $env:RUNNER_TEMP 'preview-smoke-workspace'
           $sample=Join-Path $env:RUNNER_TEMP 'preview-smoke.txt'
           Set-Content -LiteralPath $sample -Value 'synthetic preview smoke' -Encoding UTF8
           Run-Bounded $engine @('init',$ws) 60
           Run-Bounded $engine @('ingest-file',$ws,$sample) 60
           if (-not (Test-Path -LiteralPath (Join-Path $ws 'mcr-ingest.sqlite3'))) { throw 'workspace DB not created' }
-
           $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
           $gui=Start-Process -FilePath $app -PassThru
           Start-Sleep -Seconds 4
           if ($gui.HasExited) { throw "GUI exited unexpectedly: $($gui.ExitCode)" }
           Stop-Process -Id $gui.Id -Force
-          Write-Host 'PASS Windows 2022 engine commands, specialists and GUI launch'
+          Write-Host 'PASS Windows 2022 current R2.4 MSVC engine commands, specialists and GUI launch'
 
       - name: Write control records and package
         shell: pwsh
@@ -129,24 +133,26 @@ jobs:
           $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
           $appSha=(Get-FileHash -LiteralPath $app -Algorithm SHA256).Hash.ToLowerInvariant()
           [ordered]@{
-            schema='mcr-tooling-engineering-preview-package-v1'
+            schema='mcr-tooling-engineering-preview-package-v2'
             status='ENGINEERING_PREVIEW_NOT_FINAL_PRODUCTION_CERTIFICATION'
             built_utc=(Get-Date).ToUniversalTime().ToString('o')
             gui_sha256=$appSha
-            engine_sha256='d4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba'
-            engine_build='Rust 1.88.0 x86_64-pc-windows-gnullvm / LLVM-MinGW 20260826'
+            engine_sha256=$env:ENGINE_SHA
+            engine_source_head='49a8868153b8254216427dc644ae20cefaeebadf'
+            engine_build='Rust 1.88.0 x86_64-pc-windows-msvc; R2.4 Windows 2022 qualified artifact'
+            engine_compile_artifact_run='34037068978'
+            windows_2022_preview_runtime_smoke='PASS_INIT_INGEST_GUI'
             qpdf='12.4.1'
             qpdf_sha256=$env:QPDF_SHA
             qpdf_release_zip_sha256=$env:QPDF_ZIP_SHA
             pdfcpu='0.15.0'
             pdfcpu_sha256=$env:PDFCPU_SHA
             pdfcpu_release_zip_sha256=$env:PDFCPU_ZIP_SHA
-            windows_2022_preview_smoke='PASS'
-            earlier_real_target_windows='PASS_19_OF_19'
+            earlier_actual_target_windows='PASS_19_OF_19_ON_EARLIER_R2_TARGET_PACKAGE'
             hostile_matrix='57_OF_57_FUNCTIONALLY_EXERCISED_IN_ENGINEERING_PROGRAMME'
+            reproducible_gnullvm_candidate='REJECTED_FOR_PREVIEW_AFTER_WINDOWS_INIT_TIMEOUT'
             frozen_mcr_r59='UNCHANGED'
           } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\BUILD_INFO.json') -Encoding UTF8
-
           $sums=@()
           Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object Name -ne 'SHA256SUMS.txt' | Sort-Object FullName | ForEach-Object {
             $rel=$_.FullName.Substring($stage.Length).TrimStart('\').Replace('\','/')
@@ -154,7 +160,6 @@ jobs:
             $sums += "$sha  $rel"
           }
           $sums | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\SHA256SUMS.txt') -Encoding ASCII
-
           $zip=Join-Path $env:RUNNER_TEMP 'MCR_TOOLING_ENGINEERING_PREVIEW_R2_4_2026-09-06.zip'
           Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal -Force
           $zipSha=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -197,9 +202,10 @@ jobs:
           if ($zips.Count -ne 1) { throw "expected one ZIP, found $($zips.Count)" }
           $root=Join-Path $env:RUNNER_TEMP 'preview'
           Expand-Archive -LiteralPath $zips[0].FullName -DestinationPath $root -Force
+          $info=Get-Content -LiteralPath (Join-Path $root 'CONTROL\BUILD_INFO.json') -Raw | ConvertFrom-Json
           $engine=Join-Path $root 'bin\mcr-ingest.exe'
           $sha=(Get-FileHash -LiteralPath $engine -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($sha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch: $sha" }
+          if ($sha -ne [string]$info.engine_sha256) { throw "engine BUILD_INFO SHA mismatch: $sha" }
           $ws=Join-Path $env:RUNNER_TEMP 'preview-win2025-ws'
           $sample=Join-Path $env:RUNNER_TEMP 'preview-win2025.txt'
           Set-Content -LiteralPath $sample -Value 'synthetic preview Windows 2025' -Encoding UTF8
@@ -210,4 +216,4 @@ jobs:
           Start-Sleep -Seconds 4
           if ($gui.HasExited) { throw "GUI exited unexpectedly: $($gui.ExitCode)" }
           Stop-Process -Id $gui.Id -Force
-          Write-Host 'PASS Windows 2025 exact package, engine commands and GUI launch'
+          Write-Host 'PASS Windows 2025 exact package, current R2.4 engine commands and GUI launch'
