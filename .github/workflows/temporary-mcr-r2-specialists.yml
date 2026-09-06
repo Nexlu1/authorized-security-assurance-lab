@@ -1,0 +1,104 @@
+name: Temporary MCR R2 specialist runtime qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-specialists-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specialists:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Acquire, hash, extract and smoke-test exact portable releases
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'mcr-r2-specialists'
+          $downloads = Join-Path $root 'downloads'
+          $stage = Join-Path $root 'stage'
+          $qDir = Join-Path $stage 'qpdf'
+          $pDir = Join-Path $stage 'pdfcpu'
+          New-Item -ItemType Directory -Force -Path $downloads,$stage,$qDir,$pDir | Out-Null
+
+          $qUrl = 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip'
+          $qExpected = '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6'
+          $pUrl = 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip'
+          $pExpected = '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6'
+          $qZip = Join-Path $downloads 'qpdf-12.4.1-msvc64.zip'
+          $pZip = Join-Path $downloads 'pdfcpu_0.15.0_Windows_x86_64.zip'
+
+          & curl.exe -L --fail --retry 5 --retry-delay 2 -o $qZip $qUrl
+          if ($LASTEXITCODE -ne 0) { throw "qpdf download failed: $LASTEXITCODE" }
+          & curl.exe -L --fail --retry 5 --retry-delay 2 -o $pZip $pUrl
+          if ($LASTEXITCODE -ne 0) { throw "pdfcpu download failed: $LASTEXITCODE" }
+
+          $qHash = (Get-FileHash -LiteralPath $qZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $pHash = (Get-FileHash -LiteralPath $pZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($qHash -ne $qExpected) { throw "qpdf ZIP hash mismatch: $qHash" }
+          if ($pHash -ne $pExpected) { throw "pdfcpu ZIP hash mismatch: $pHash" }
+
+          Expand-Archive -LiteralPath $qZip -DestinationPath $qDir -Force
+          Expand-Archive -LiteralPath $pZip -DestinationPath $pDir -Force
+          $qExes = @(Get-ChildItem -LiteralPath $qDir -Recurse -File -Filter 'qpdf.exe')
+          $pExes = @(Get-ChildItem -LiteralPath $pDir -Recurse -File -Filter 'pdfcpu.exe')
+          if ($qExes.Count -ne 1) { throw "expected exactly one qpdf.exe; found $($qExes.Count)" }
+          if ($pExes.Count -ne 1) { throw "expected exactly one pdfcpu.exe; found $($pExes.Count)" }
+          $qExe = $qExes[0]
+          $pExe = $pExes[0]
+          $qExeHash = (Get-FileHash -LiteralPath $qExe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          $pExeHash = (Get-FileHash -LiteralPath $pExe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          $qVersion = (& $qExe.FullName --version 2>&1 | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "qpdf --version failed: $LASTEXITCODE" }
+          $pVersion = (& $pExe.FullName version 2>&1 | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "pdfcpu version failed: $LASTEXITCODE" }
+
+          $receipt = [ordered]@{
+            schema = 'mcr-r2-specialist-runtime-receipt-v1'
+            github_sha = $env:GITHUB_SHA
+            runner_os = $env:RUNNER_OS
+            runner_arch = $env:RUNNER_ARCH
+            runner_image = $env:ImageOS
+            qpdf = [ordered]@{
+              version = '12.4.1'
+              source_url = $qUrl
+              outer_zip_sha256 = $qHash
+              expected_outer_zip_sha256 = $qExpected
+              executable_relpath = $qExe.FullName.Substring($stage.Length + 1).Replace('\','/')
+              executable_bytes = [int64]$qExe.Length
+              executable_sha256 = $qExeHash
+              version_output = $qVersion
+            }
+            pdfcpu = [ordered]@{
+              version = '0.15.0'
+              source_url = $pUrl
+              outer_zip_sha256 = $pHash
+              expected_outer_zip_sha256 = $pExpected
+              executable_relpath = $pExe.FullName.Substring($stage.Length + 1).Replace('\','/')
+              executable_bytes = [int64]$pExe.Length
+              executable_sha256 = $pExeHash
+              version_output = $pVersion
+            }
+          }
+          $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $stage 'SPECIALIST_RECEIPT.json') -Encoding utf8
+          "qpdf=$qExeHash" | Add-Content -LiteralPath (Join-Path $stage 'SHA256SUMS.txt') -Encoding ascii
+          "pdfcpu=$pExeHash" | Add-Content -LiteralPath (Join-Path $stage 'SHA256SUMS.txt') -Encoding ascii
+          Write-Host ($receipt | ConvertTo-Json -Depth 8)
+          "MCR_SPECIALIST_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Upload qualified portable specialist runtime
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-specialists-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_SPECIALIST_STAGE }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
