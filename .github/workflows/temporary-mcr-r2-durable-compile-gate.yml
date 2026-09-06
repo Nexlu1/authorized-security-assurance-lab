@@ -69,11 +69,23 @@ jobs:
         run: cd "$MCR_R2_SRC" && cargo build --locked --release
       - name: Write build receipt
         run: python qualification/mcr-r2-durable/write_compile_receipt.py
+      - name: Package exact promotable R2.3 source
+        if: matrix.os == 'ubuntu-24.04'
+        run: python qualification/mcr-r2-durable/package_promotable_source.py
       - name: Upload compile evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: mcr-r2-durable-compile-${{ matrix.os }}-${{ github.sha }}
           path: ${{ runner.temp }}/mcr-r2-compile-evidence
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload promotable source
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-promotable-source-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-promotable-source
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
