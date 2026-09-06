@@ -1,0 +1,114 @@
+name: Temporary MCR R2.4 pinned LLVM-MinGW byte reproducibility
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-4-gnullvm-repro-bytecheck-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - name: Check out synthetic qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust toolchain and GNU-LLVM target
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          targets: x86_64-pc-windows-gnullvm
+      - name: Acquire exact LLVM-MinGW 20260826 UCRT x64 toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'llvm-mingw-pinned'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $zip=Join-Path $root 'llvm-mingw-20260826-ucrt-x86_64.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-x86_64.zip' -OutFile $zip
+          $actual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected='ae601f4e0f72bbdf441ad2df8bb16f037e2e9251559ea6b37b4057aef39c06c3'
+          if ($actual -ne $expected) { throw "LLVM-MinGW ZIP SHA mismatch: $actual" }
+          $tool=Join-Path $root 'tool'
+          Expand-Archive -LiteralPath $zip -DestinationPath $tool -Force
+          $clang=@(Get-ChildItem -LiteralPath $tool -Recurse -Filter 'x86_64-w64-mingw32-clang.exe')
+          $ar=@(Get-ChildItem -LiteralPath $tool -Recurse -Filter 'llvm-ar.exe')
+          if ($clang.Count -ne 1) { throw "expected one target clang, found $($clang.Count)" }
+          if ($ar.Count -lt 1) { throw 'llvm-ar missing' }
+          $arPath=$ar[0].FullName
+          "MCR_GNULLVM_CLANG=$($clang[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_GNULLVM_AR=$arPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_LLVM_MINGW_ZIP_SHA=$actual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Reconstruct exact R2.4 source
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+      - name: Apply exact R2.4 repair chain
+        shell: bash
+        run: |
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+          python qualification/mcr-r2-durable/apply_r24_resource_limits.py
+          python qualification/mcr-r2-durable/apply_r24_compile_fix.py
+      - name: Build deterministic gnullvm release executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER=$env:MCR_GNULLVM_CLANG
+          $env:CC_x86_64_pc_windows_gnullvm=$env:MCR_GNULLVM_CLANG
+          $env:AR_x86_64_pc_windows_gnullvm=$env:MCR_GNULLVM_AR
+          $env:SOURCE_DATE_EPOCH='0'
+          $env:RUSTFLAGS='-C link-arg=-Wl,--no-insert-timestamp'
+          Push-Location $env:MCR_R2_SRC
+          try {
+            cargo fmt
+            cargo generate-lockfile
+            cargo build --locked --release --target x86_64-pc-windows-gnullvm
+            if ($LASTEXITCODE -ne 0) { throw "gnullvm cargo build failed: $LASTEXITCODE" }
+          } finally { Pop-Location }
+      - name: Record deterministic executable identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $exe=Join-Path $env:MCR_R2_SRC 'target\x86_64-pc-windows-gnullvm\release\mcr-ingest.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'gnullvm release executable missing' }
+          $sha=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $out=Join-Path $env:RUNNER_TEMP 'mcr-r2-4-gnullvm-bytecheck'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          Copy-Item -LiteralPath $exe -Destination (Join-Path $out 'mcr-ingest.exe')
+          [ordered]@{
+            schema='mcr-r2-4-gnullvm-bytecheck-v1'
+            status='PASS'
+            runner='${{ matrix.os }}'
+            rust='1.88.0'
+            rust_target='x86_64-pc-windows-gnullvm'
+            llvm_mingw='20260826 / LLVM 23.1.0 / UCRT'
+            llvm_mingw_zip_sha256=$env:MCR_LLVM_MINGW_ZIP_SHA
+            exe_sha256=$sha
+            exe_bytes=(Get-Item -LiteralPath $exe).Length
+            source_date_epoch='0'
+            linker_flag='--no-insert-timestamp'
+            frozen_mcr_r59='UNCHANGED'
+          } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $out 'GNULLVM_BYTECHECK_RECEIPT.json') -Encoding UTF8
+      - name: Upload executable and receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-4-gnullvm-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-4-gnullvm-bytecheck
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
