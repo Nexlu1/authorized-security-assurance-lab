@@ -30,7 +30,10 @@ jobs:
           components: rustfmt,clippy
       - name: Reconstruct and verify exact durable R2 source
         run: python qualification/mcr-r2-durable/reconstruct_r2.py
-      - name: Formatting
+      - name: Normalize extracted working copy with rustfmt
+        shell: bash
+        run: cd "$MCR_R2_SRC" && cargo fmt
+      - name: Formatting gate after recorded normalization
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt --check
       - name: Generate dependency lock
