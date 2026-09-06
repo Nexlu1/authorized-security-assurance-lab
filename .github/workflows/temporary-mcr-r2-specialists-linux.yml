@@ -1,0 +1,82 @@
+name: Temporary MCR R2 Linux specialist runtime qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r2-specialists-20260906
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  specialists-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Acquire, hash, extract and smoke-test exact Linux releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/mcr-r2-specialists-linux"
+          downloads="$root/downloads"
+          stage="$root/stage"
+          qdir="$stage/qpdf"
+          pdir="$stage/pdfcpu"
+          mkdir -p "$downloads" "$qdir" "$pdir"
+
+          qurl='https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-bin-linux-x86_64.zip'
+          qexpected='db9122e88ec00c76ac6a14e09ffb92406db1773d47b968911ff6e69f28c09bf9'
+          purl='https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_x86_64.tar.xz'
+          pexpected='652830db95e81868dbe38fbb3f506365511c99a1831b5e8955deac38f3f645f8'
+          qzip="$downloads/qpdf-12.4.1-bin-linux-x86_64.zip"
+          ptar="$downloads/pdfcpu_0.15.0_Linux_x86_64.tar.xz"
+
+          curl -L --fail --retry 5 --retry-delay 2 -o "$qzip" "$qurl"
+          curl -L --fail --retry 5 --retry-delay 2 -o "$ptar" "$purl"
+          qhash="$(sha256sum "$qzip" | awk '{print $1}')"
+          phash="$(sha256sum "$ptar" | awk '{print $1}')"
+          test "$qhash" = "$qexpected"
+          test "$phash" = "$pexpected"
+
+          unzip -q "$qzip" -d "$qdir"
+          tar -xJf "$ptar" -C "$pdir"
+          mapfile -t qexes < <(find "$qdir" -type f -name qpdf -perm -111)
+          mapfile -t pexes < <(find "$pdir" -type f -name pdfcpu -perm -111)
+          test "${#qexes[@]}" -eq 1
+          test "${#pexes[@]}" -eq 1
+          qexe="${qexes[0]}"
+          pexe="${pexes[0]}"
+          qexehash="$(sha256sum "$qexe" | awk '{print $1}')"
+          pexehash="$(sha256sum "$pexe" | awk '{print $1}')"
+          qversion="$($qexe --version)"
+          pversion="$($pexe version)"
+
+          python - "$stage" "$qurl" "$qhash" "$qexpected" "$qexe" "$qexehash" "$qversion" "$purl" "$phash" "$pexpected" "$pexe" "$pexehash" "$pversion" <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          (stage,qurl,qhash,qexpected,qexe,qexehash,qversion,purl,phash,pexpected,pexe,pexehash,pversion)=sys.argv[1:]
+          stage=Path(stage)
+          def rel(p): return Path(p).relative_to(stage).as_posix()
+          receipt={
+            'schema':'mcr-r2-specialist-runtime-receipt-v1',
+            'github_sha':os.environ.get('GITHUB_SHA'),
+            'runner_os':os.environ.get('RUNNER_OS'),
+            'runner_arch':os.environ.get('RUNNER_ARCH'),
+            'runner_image':os.environ.get('ImageOS'),
+            'qpdf':{'version':'12.4.1','source_url':qurl,'outer_archive_sha256':qhash,'expected_outer_archive_sha256':qexpected,'executable_relpath':rel(qexe),'executable_bytes':Path(qexe).stat().st_size,'executable_sha256':qexehash,'version_output':qversion},
+            'pdfcpu':{'version':'0.15.0','source_url':purl,'outer_archive_sha256':phash,'expected_outer_archive_sha256':pexpected,'executable_relpath':rel(pexe),'executable_bytes':Path(pexe).stat().st_size,'executable_sha256':pexehash,'version_output':pversion},
+          }
+          (stage/'SPECIALIST_RECEIPT.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
+          (stage/'SHA256SUMS.txt').write_text(f'qpdf={qexehash}\npdfcpu={pexehash}\n',encoding='ascii')
+          print(json.dumps(receipt,indent=2))
+          PY
+          echo "MCR_SPECIALIST_LINUX_STAGE=$stage" >> "$GITHUB_ENV"
+      - name: Upload qualified Linux portable specialist runtime
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-specialists-linux-${{ github.sha }}
+          path: ${{ env.MCR_SPECIALIST_LINUX_STAGE }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
