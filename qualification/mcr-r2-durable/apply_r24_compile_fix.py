@@ -37,6 +37,7 @@ def replace_exact(path: Path, old: str, new: str, expected: int, reason: str):
 fixes = []
 archive = src / "src" / "archive.rs"
 main = src / "src" / "main.rs"
+tests = src / "tests" / "core_integration.rs"
 
 replace_exact(
     archive,
@@ -82,10 +83,18 @@ replace_exact(
     "Emit archive-resource-check JSON explicitly without enabling Serde derive.",
 )
 
+replace_exact(
+    tests,
+    "    assert!(summary.probed_uncompressed_bytes >= total_limit + 1);",
+    "    assert!(summary.probed_uncompressed_bytes > total_limit);",
+    1,
+    "Use the Clippy-preferred equivalent aggregate-overrun assertion.",
+)
+
 receipt = {
-    "schema": "mcr-r2-4-compile-fix-v1",
+    "schema": "mcr-r2-4-compile-fix-v2",
     "generated_utc": datetime.now(timezone.utc).isoformat(),
-    "purpose": "Remove an unnecessary Serde-derive dependency requirement from R2.4 resource-limit output.",
+    "purpose": "Remove an unnecessary Serde-derive dependency requirement and keep the R2.4 tests strict-Clippy clean.",
     "fixes": fixes,
     "dependency_surface_change": "none"
 }
