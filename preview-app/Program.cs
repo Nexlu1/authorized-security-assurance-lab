@@ -78,8 +78,20 @@ internal static class Program
                 if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException($"{name} SHA-256 mismatch: expected {expected}, actual {actual}");
                 Console.WriteLine($"PASS {name} sha256={actual}");
             }
-            var engine = ProcessRunner.RunAsync(Full(c.engine_path), Array.Empty<string>()).GetAwaiter().GetResult();
-            if (engine.ExitCode != 0) throw new InvalidOperationException($"mcr-ingest launch failed: {engine.StdErr}");
+
+            var smokeDir = Path.Combine(Path.GetTempPath(), "MCR-Tooling-Preview-SelfTest-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var engine = ProcessRunner.RunAsync(Full(c.engine_path), new[] { "init", smokeDir }).GetAwaiter().GetResult();
+                if (engine.ExitCode != 0) throw new InvalidOperationException($"mcr-ingest init smoke failed: {engine.StdErr}");
+                if (!File.Exists(Path.Combine(smokeDir, "mcr-ingest.sqlite3"))) throw new InvalidOperationException("mcr-ingest init smoke did not create its SQLite authority database");
+                Console.WriteLine("PASS mcr-ingest workspace-init smoke");
+            }
+            finally
+            {
+                try { if (Directory.Exists(smokeDir)) Directory.Delete(smokeDir, true); } catch { }
+            }
+
             var qpdf = ProcessRunner.RunAsync(Full(c.qpdf_path), new[] { "--version" }).GetAwaiter().GetResult();
             if (qpdf.ExitCode != 0) throw new InvalidOperationException($"qpdf launch failed: {qpdf.StdErr}");
             var pdfcpu = ProcessRunner.RunAsync(Full(c.pdfcpu_path), new[] { "version" }).GetAwaiter().GetResult();
