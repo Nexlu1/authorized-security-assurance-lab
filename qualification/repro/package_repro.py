@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib,json,os,shutil,subprocess,sys,tempfile,urllib.request,zipfile
+import hashlib,json,os,shutil,sys,tempfile,urllib.request,zipfile
 from pathlib import Path
 WHEEL_URL='https://github.com/drivendataorg/repro-zipfile/releases/download/v0.4.1/repro_zipfile-0.4.1-py3-none-any.whl'
 WHEEL_SHA='3061d5ab47064ce17255e0e7baa3f2f9128873e1ff49946ce13b73f405167763'
@@ -18,7 +18,10 @@ def main():
  whl=t/'repro_zipfile-0.4.1-py3-none-any.whl'; req=urllib.request.Request(WHEEL_URL,headers={'User-Agent':'mcr-synthetic-qualification'})
  with urllib.request.urlopen(req,timeout=60) as r,open(whl,'wb') as f: shutil.copyfileobj(r,f)
  if sha(whl)!=WHEEL_SHA: raise SystemExit('wheel SHA mismatch')
- subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','--no-deps','--no-index',str(whl)],check=True,capture_output=True,text=True)
+ # Pure-Python wheel: import directly from the exact verified ZIP bytes. No pip/site-packages state.
+ sys.path.insert(0,str(whl))
+ import repro_zipfile
+ if getattr(repro_zipfile,'__version__','0.4.1') not in ('0.4.1',): raise SystemExit('unexpected repro-zipfile version')
  a=t/'a'; b=t/'b'; a.mkdir(); b.mkdir()
  payloads={'alpha.txt':b'alpha\n','nested/beta.bin':bytes(range(256))*4,'nested/gamma.json':b'{"controlled":true,"version":1}\n'}
  for rel,data in payloads.items():
