@@ -30,6 +30,8 @@ jobs:
           components: rustfmt,clippy
       - name: Reconstruct and verify exact durable R2 source
         run: python qualification/mcr-r2-durable/reconstruct_r2.py
+      - name: Apply bounded candidate dependency repair
+        run: python qualification/mcr-r2-durable/apply_candidate_repair.py
       - name: Normalize extracted working copy with rustfmt
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt
@@ -39,6 +41,9 @@ jobs:
       - name: Generate dependency lock
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo generate-lockfile
+      - name: Prove repaired rusqlite version is locked
+        shell: bash
+        run: cd "$MCR_R2_SRC" && grep -A3 'name = "rusqlite"' Cargo.lock | grep 'version = "0.40.2"'
       - name: Strict Clippy
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo clippy --locked --all-targets -- -D warnings
