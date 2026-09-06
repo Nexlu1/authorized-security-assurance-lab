@@ -129,7 +129,7 @@ jobs:
           }
           $rows | Set-Content -LiteralPath (Join-Path $stage 'CONTROL\SHA256SUMS.txt') -Encoding ASCII
 
-      - name: Windows 2022 bounded component and real-GUI smoke
+      - name: Windows 2022 real-command and GUI smoke
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -137,15 +137,14 @@ jobs:
             $p=Start-Process -FilePath $Exe -ArgumentList $Args -PassThru -WindowStyle Hidden
             if (-not $p.WaitForExit($Seconds*1000)) {
               Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-              throw "timeout: $Exe"
+              throw "timeout: $Exe $($Args -join ' ')"
             }
-            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe" }
+            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe $($Args -join ' ')" }
           }
           $stage=$env:MCR_PREVIEW_STAGE
           $engine=Join-Path $stage 'bin\mcr-ingest.exe'
           $q=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\qpdf') -Recurse -Filter 'qpdf.exe')[0].FullName
           $pdc=@(Get-ChildItem -LiteralPath (Join-Path $stage 'tools\pdfcpu') -Recurse -Filter 'pdfcpu.exe')[0].FullName
-          Invoke-Bounded $engine @() 30
           Invoke-Bounded $q @('--version') 30
           Invoke-Bounded $pdc @('version') 30
 
@@ -154,13 +153,14 @@ jobs:
           Set-Content -LiteralPath $sample -Value 'synthetic engineering preview smoke' -Encoding UTF8
           Invoke-Bounded $engine @('init',$ws) 60
           Invoke-Bounded $engine @('ingest-file',$ws,$sample) 60
+          if (-not (Test-Path -LiteralPath (Join-Path $ws 'mcr-ingest.sqlite3'))) { throw 'workspace database missing after init/ingest smoke' }
 
           $app=Join-Path $stage 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
           $gui=Start-Process -FilePath $app -PassThru
           Start-Sleep -Seconds 4
           if ($gui.HasExited) { throw "GUI exited unexpectedly with code $($gui.ExitCode)" }
           Stop-Process -Id $gui.Id -Force
-          Write-Host 'PASS Windows 2022 bounded component tests and GUI launch smoke'
+          Write-Host 'PASS Windows 2022 real engine commands and GUI launch smoke'
 
       - name: Create portable preview ZIP
         shell: pwsh
@@ -193,7 +193,7 @@ jobs:
           name: mcr-tooling-engineering-preview-r2-4-${{ github.sha }}
           path: ${{ runner.temp }}/package
 
-      - name: Windows 2025 bounded package and GUI launch smoke
+      - name: Windows 2025 exact-package real-command and GUI smoke
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
@@ -201,9 +201,9 @@ jobs:
             $p=Start-Process -FilePath $Exe -ArgumentList $Args -PassThru -WindowStyle Hidden
             if (-not $p.WaitForExit($Seconds*1000)) {
               Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-              throw "timeout: $Exe"
+              throw "timeout: $Exe $($Args -join ' ')"
             }
-            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe" }
+            if ($p.ExitCode -ne 0) { throw "exit $($p.ExitCode): $Exe $($Args -join ' ')" }
           }
           $zip=@(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'package') -Filter '*.zip')
           if ($zip.Count -ne 1) { throw "expected one preview ZIP, found $($zip.Count)" }
@@ -212,11 +212,18 @@ jobs:
           $engine=Join-Path $root 'bin\mcr-ingest.exe'
           $engineSha=(Get-FileHash -LiteralPath $engine -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "engine SHA mismatch after package roundtrip: $engineSha" }
-          Invoke-Bounded $engine @() 30
+
+          $ws=Join-Path $env:RUNNER_TEMP 'mcr-preview-win2025-workspace'
+          $sample=Join-Path $env:RUNNER_TEMP 'mcr-preview-win2025.txt'
+          Set-Content -LiteralPath $sample -Value 'synthetic Windows 2025 package smoke' -Encoding UTF8
+          Invoke-Bounded $engine @('init',$ws) 60
+          Invoke-Bounded $engine @('ingest-file',$ws,$sample) 60
+          if (-not (Test-Path -LiteralPath (Join-Path $ws 'mcr-ingest.sqlite3'))) { throw 'workspace database missing after Windows 2025 smoke' }
+
           $app=Join-Path $root 'MCR_TOOLING_ENGINEERING_PREVIEW.exe'
           if (-not (Test-Path -LiteralPath $app)) { throw 'preview EXE missing after extraction' }
           $gui=Start-Process -FilePath $app -PassThru
           Start-Sleep -Seconds 4
           if ($gui.HasExited) { throw "GUI exited unexpectedly with code $($gui.ExitCode)" }
           Stop-Process -Id $gui.Id -Force
-          Write-Host 'PASS Windows 2025 exact package and GUI launch smoke'
+          Write-Host 'PASS Windows 2025 exact package, real engine commands and GUI launch smoke'
