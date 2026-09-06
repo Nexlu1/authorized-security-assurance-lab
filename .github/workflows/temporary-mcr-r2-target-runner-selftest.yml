@@ -38,7 +38,7 @@ jobs:
           [IO.File]::WriteAllBytes($cmd, [Convert]::FromBase64String($cmdB64))
           $runnerHash = (Get-FileHash -LiteralPath $runner -Algorithm SHA256).Hash.ToLowerInvariant()
           $cmdHash = (Get-FileHash -LiteralPath $cmd -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($runnerHash -ne 'dc93f9fb723ae91ac54571d7aac975a8d3adabb0d569648bfcaedf30bf030590') { throw "runner SHA mismatch: $runnerHash" }
+          if ($runnerHash -ne '41be563b28963198547e674aafad2aad42d9d4e81f6661375721bf75361d6793') { throw "runner SHA mismatch: $runnerHash" }
           if ($cmdHash -ne '4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa') { throw "cmd SHA mismatch: $cmdHash" }
           "MCR_RUNNER_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Windows PowerShell 5.1 exact runner self-test through exact CMD
@@ -64,7 +64,7 @@ jobs:
             runner_os=$env:RUNNER_OS
             runner_arch=$env:RUNNER_ARCH
             runner_image=$env:ImageOS
-            runner_sha256='dc93f9fb723ae91ac54571d7aac975a8d3adabb0d569648bfcaedf30bf030590'
+            runner_sha256='41be563b28963198547e674aafad2aad42d9d4e81f6661375721bf75361d6793'
             cmd_sha256='4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa'
             windows_powershell_51='PASS'
             powershell_7='PASS'
