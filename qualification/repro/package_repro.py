@@ -12,13 +12,18 @@ def build(root,out):
  from repro_zipfile import ReproducibleZipFile
  files=sorted((p for p in root.rglob('*') if p.is_file()),key=lambda p:p.relative_to(root).as_posix())
  with ReproducibleZipFile(out,'w',compression=zipfile.ZIP_STORED) as z:
-  for p in files: z.write(p,arcname=p.relative_to(root).as_posix())
+  for p in files:
+   arc=p.relative_to(root).as_posix()
+   # repro-zipfile fixes timestamps and permissions. Fix the remaining host-OS field
+   # so Unix and Windows emit identical central-directory bytes.
+   zi=zipfile.ZipInfo(arc)
+   zi.create_system=3
+   z.writestr(zi,p.read_bytes(),compress_type=zipfile.ZIP_STORED)
 def main():
  t=Path(os.environ.get('RUNNER_TEMP',tempfile.gettempdir()))/'mcr-repro'; shutil.rmtree(t,ignore_errors=True); t.mkdir()
  whl=t/'repro_zipfile-0.4.1-py3-none-any.whl'; req=urllib.request.Request(WHEEL_URL,headers={'User-Agent':'mcr-synthetic-qualification'})
  with urllib.request.urlopen(req,timeout=60) as r,open(whl,'wb') as f: shutil.copyfileobj(r,f)
  if sha(whl)!=WHEEL_SHA: raise SystemExit('wheel SHA mismatch')
- # Pure-Python wheel: import directly from the exact verified ZIP bytes. No pip/site-packages state.
  sys.path.insert(0,str(whl))
  import repro_zipfile
  if getattr(repro_zipfile,'__version__','0.4.1') not in ('0.4.1',): raise SystemExit('unexpected repro-zipfile version')
@@ -31,7 +36,9 @@ def main():
  z1=t/'one.zip'; z2=t/'two.zip'; build(a,z1); build(b,z2)
  h1,h2=sha(z1),sha(z2)
  if z1.read_bytes()!=z2.read_bytes(): raise SystemExit(f'local reproducibility failure {h1} {h2}')
- receipt={'schema':'mcr-repro-package-qualification-v1','status':'PASS','repro_zipfile':'0.4.1','wheel_sha256':sha(whl),'archive_sha256':h1,'archive_bytes':z1.stat().st_size,'member_order':sorted(payloads),'compression':'ZIP_STORED','source_date_epoch_behavior':'fixed metadata supplied by repro-zipfile; source mtimes intentionally differ','python':sys.version,'platform':sys.platform,'frozen_mcr_r59':'UNCHANGED'}
+ with zipfile.ZipFile(z1) as check:
+  if any(i.create_system!=3 for i in check.infolist()): raise SystemExit('create_system normalization failed')
+ receipt={'schema':'mcr-repro-package-qualification-v2','status':'PASS','repro_zipfile':'0.4.1','wheel_sha256':sha(whl),'archive_sha256':h1,'archive_bytes':z1.stat().st_size,'member_order':sorted(payloads),'compression':'ZIP_STORED','create_system':3,'source_date_epoch_behavior':'fixed metadata supplied by repro-zipfile; source mtimes intentionally differ','python':sys.version,'platform':sys.platform,'frozen_mcr_r59':'UNCHANGED'}
  (t/'REPRO_PACKAGING_RECEIPT.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
  shutil.copy2(z1,t/'MCR_SYNTHETIC_REPRO_PACKAGE.zip')
  print(json.dumps(receipt,indent=2))
