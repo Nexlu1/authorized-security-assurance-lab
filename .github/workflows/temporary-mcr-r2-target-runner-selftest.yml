@@ -23,7 +23,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
-      - name: Reconstruct and prove exact local runner bytes
+      - name: Reconstruct, patch and prove exact local runner bytes
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -36,9 +36,11 @@ jobs:
           $cmd = Join-Path $stage 'RUN_ME_TARGET_WINDOWS_QUALIFICATION.cmd'
           [IO.File]::WriteAllBytes($runner, [Convert]::FromBase64String($runnerB64))
           [IO.File]::WriteAllBytes($cmd, [Convert]::FromBase64String($cmdB64))
+          python (Join-Path $src 'apply_zero_arg_fix.py') $runner
+          if ($LASTEXITCODE -ne 0) { throw "runner patch failed: $LASTEXITCODE" }
           $runnerHash = (Get-FileHash -LiteralPath $runner -Algorithm SHA256).Hash.ToLowerInvariant()
           $cmdHash = (Get-FileHash -LiteralPath $cmd -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($runnerHash -ne '41be563b28963198547e674aafad2aad42d9d4e81f6661375721bf75361d6793') { throw "runner SHA mismatch: $runnerHash" }
+          if ($runnerHash -ne '3a6c5bbe0f987112a80ee78b3db5a76c72fa1a60019f17d8fe37816f616cf8eb') { throw "runner SHA mismatch: $runnerHash" }
           if ($cmdHash -ne '4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa') { throw "cmd SHA mismatch: $cmdHash" }
           "MCR_RUNNER_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Windows PowerShell 5.1 exact runner self-test through exact CMD
@@ -59,13 +61,14 @@ jobs:
         shell: pwsh
         run: |
           $r = [ordered]@{
-            schema='mcr-r2-target-runner-selftest-receipt-v1'
+            schema='mcr-r2-target-runner-selftest-receipt-v2'
             github_sha=$env:GITHUB_SHA
             runner_os=$env:RUNNER_OS
             runner_arch=$env:RUNNER_ARCH
             runner_image=$env:ImageOS
-            runner_sha256='41be563b28963198547e674aafad2aad42d9d4e81f6661375721bf75361d6793'
+            runner_sha256='3a6c5bbe0f987112a80ee78b3db5a76c72fa1a60019f17d8fe37816f616cf8eb'
             cmd_sha256='4dfa8d4f751d0dfaf96087785f36e71fa3e90ca7ac968451018b56bc9201cdfa'
+            zero_argument_start_process='PASS'
             windows_powershell_51='PASS'
             powershell_7='PASS'
           }
