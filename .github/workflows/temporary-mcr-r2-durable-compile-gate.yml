@@ -46,6 +46,8 @@ jobs:
         run: python qualification/mcr-r2-durable/apply_r23_expansion.py
       - name: Apply bounded R2.3 strict-Clippy correction
         run: python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+      - name: Apply R2.4 final archive-resource semantics
+        run: python qualification/mcr-r2-durable/apply_r24_resource_limits.py
       - name: Normalize extracted working copy with rustfmt
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo fmt
@@ -64,28 +66,49 @@ jobs:
       - name: Compile every test target without executing fixture-dependent tests
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo test --locked --all-targets --no-run
+      - name: Generate deterministic ARC-008/009/011 fixtures
+        run: python qualification/mcr-r2-durable/generate_r24_resource_fixtures.py
+      - name: Execute final three resource-limit regression tests
+        shell: bash
+        env:
+          MCR_FIXTURE_DIR: ${{ runner.temp }}/mcr-r24-resource-fixtures
+        run: cd "$MCR_R2_SRC" && cargo test --locked --test core_integration zip_resource_ -- --test-threads=1
       - name: Release build
         shell: bash
         run: cd "$MCR_R2_SRC" && cargo build --locked --release
+      - name: Smoke archive-resource-check CLI on ARC-011
+        shell: bash
+        env:
+          MCR_FIXTURE_DIR: ${{ runner.temp }}/mcr-r24-resource-fixtures
+        run: cd "$MCR_R2_SRC" && cargo run --locked --quiet --release -- archive-resource-check "$MCR_FIXTURE_DIR/arc_header_size_lies.zip" 262144 4194304
       - name: Write build receipt
         run: python qualification/mcr-r2-durable/write_compile_receipt.py
-      - name: Package exact promotable R2.3 source
+      - name: Package exact promotable R2.4 source
         if: matrix.os == 'ubuntu-24.04'
-        run: python qualification/mcr-r2-durable/package_promotable_source.py
+        run: python qualification/mcr-r2-durable/package_promotable_source_r24.py
       - name: Upload compile evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mcr-r2-durable-compile-${{ matrix.os }}-${{ github.sha }}
+          name: mcr-r2-4-durable-compile-${{ matrix.os }}-${{ github.sha }}
           path: ${{ runner.temp }}/mcr-r2-compile-evidence
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
-      - name: Upload promotable source
+      - name: Upload resource fixtures
         if: matrix.os == 'ubuntu-24.04'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: mcr-r2-promotable-source-${{ github.sha }}
-          path: ${{ runner.temp }}/mcr-r2-promotable-source
+          name: mcr-r2-4-resource-fixtures-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r24-resource-fixtures
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload promotable R2.4 source
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r2-4-promotable-source-${{ github.sha }}
+          path: ${{ runner.temp }}/mcr-r2-promotable-source-r24
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
