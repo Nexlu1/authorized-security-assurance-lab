@@ -67,8 +67,12 @@ jobs:
           & $env:MCR_MINISIGN_EXE -Vm $msg -p $pub
           if ($LASTEXITCODE -ne 0) { throw "verify failed: $LASTEXITCODE" }
           Add-Content -LiteralPath $msg -Value 'tampered'
+          $ErrorActionPreference='Continue'
+          $PSNativeCommandUseErrorActionPreference=$false
           & $env:MCR_MINISIGN_EXE -Vm $msg -p $pub 2>$null
-          if ($LASTEXITCODE -eq 0) { throw 'tampered payload incorrectly verified' }
+          $tamperExit=$LASTEXITCODE
+          $ErrorActionPreference='Stop'
+          if ($tamperExit -eq 0) { throw 'tampered payload incorrectly verified' }
           Remove-Item -LiteralPath $sec -Force
           if (Test-Path -LiteralPath $sec) { throw 'synthetic secret key deletion failed' }
           $pubHash=(Get-FileHash -LiteralPath $pub -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -84,6 +88,7 @@ jobs:
             synthetic_sign='PASS'
             synthetic_verify='PASS'
             tamper_rejection='PASS'
+            tamper_exit_code=$tamperExit
             synthetic_private_key_uploaded=$false
             synthetic_private_key_deleted=$true
             synthetic_public_key_sha256=$pubHash
