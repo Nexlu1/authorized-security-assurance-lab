@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib,json,os,shutil,subprocess,sys,tempfile,time,urllib.request,zipfile
+import hashlib,json,os,shutil,subprocess,sys,tempfile,urllib.request,zipfile
 from pathlib import Path
 WHEEL_URL='https://github.com/drivendataorg/repro-zipfile/releases/download/v0.4.1/repro_zipfile-0.4.1-py3-none-any.whl'
 WHEEL_SHA='3061d5ab47064ce17255e0e7baa3f2f9128873e1ff49946ce13b73f405167763'
@@ -15,7 +15,7 @@ def build(root,out):
   for p in files: z.write(p,arcname=p.relative_to(root).as_posix())
 def main():
  t=Path(os.environ.get('RUNNER_TEMP',tempfile.gettempdir()))/'mcr-repro'; shutil.rmtree(t,ignore_errors=True); t.mkdir()
- whl=t/'repro.whl'; req=urllib.request.Request(WHEEL_URL,headers={'User-Agent':'mcr-synthetic-qualification'})
+ whl=t/'repro_zipfile-0.4.1-py3-none-any.whl'; req=urllib.request.Request(WHEEL_URL,headers={'User-Agent':'mcr-synthetic-qualification'})
  with urllib.request.urlopen(req,timeout=60) as r,open(whl,'wb') as f: shutil.copyfileobj(r,f)
  if sha(whl)!=WHEEL_SHA: raise SystemExit('wheel SHA mismatch')
  subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','--no-deps','--no-index',str(whl)],check=True,capture_output=True,text=True)
