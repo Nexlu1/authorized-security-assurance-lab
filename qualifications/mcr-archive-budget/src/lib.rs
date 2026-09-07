@@ -273,6 +273,9 @@ mod tests {
             .unwrap_err()
             .to_string()
         });
-        assert!(error_text.contains("member actual-byte budget exceeded"));
+        assert!(
+            error_text.contains("member actual-byte budget exceeded"),
+            "unexpected ARC-011 rejection: {error_text}"
+        );
     }
 }
