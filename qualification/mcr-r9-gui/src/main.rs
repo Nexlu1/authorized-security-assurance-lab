@@ -1,7 +1,11 @@
-use iced::widget::{button, column, container, row, rule, scrollable, text, Space};
+use iced::widget::{button, column, container, row, rule, scrollable, text, Column, Space};
 use iced::{window, Alignment, Element, Length, Size, Theme};
+use rusqlite::{Connection, OpenFlags};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
+
+const DB_NAME: &str = "mcr-ingest.sqlite3";
 
 pub fn main() -> iced::Result {
     iced::application(App::default, App::update, App::view)
@@ -40,7 +44,36 @@ enum Message {
     ChooseEvidence,
     InitializeWorkspace,
     RunInspection,
+    RefreshWorkspace,
     ClearOutput,
+}
+
+#[derive(Debug, Clone)]
+struct Finding {
+    kind: String,
+    source: String,
+    detail: String,
+}
+
+#[derive(Debug, Clone)]
+struct AuditRow {
+    datetime: String,
+    event_type: String,
+    outcome: String,
+    linked_id: String,
+    event_sha256: String,
+}
+
+#[derive(Debug, Default)]
+struct WorkspaceSnapshot {
+    loaded: bool,
+    object_count: i64,
+    occurrence_count: i64,
+    finding_count: i64,
+    audit_count: i64,
+    findings: Vec<Finding>,
+    audit: Vec<AuditRow>,
+    error: Option<String>,
 }
 
 struct App {
@@ -50,6 +83,7 @@ struct App {
     engine_path: Option<PathBuf>,
     status: String,
     output: String,
+    snapshot: WorkspaceSnapshot,
 }
 
 impl Default for App {
@@ -66,6 +100,7 @@ impl Default for App {
             engine_path,
             status,
             output: String::new(),
+            snapshot: WorkspaceSnapshot::default(),
         }
     }
 }
@@ -73,15 +108,27 @@ impl Default for App {
 impl App {
     fn update(&mut self, message: Message) {
         match message {
-            Message::Navigate(page) => self.page = page,
+            Message::Navigate(page) => {
+                self.page = page;
+                if self.workspace.is_some() && page != Page::Evidence {
+                    self.refresh_workspace();
+                }
+            }
             Message::ChooseWorkspace => {
-                if let Some(path) = rfd::FileDialog::new().set_title("Choose MCR workspace").pick_folder() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("Choose MCR workspace")
+                    .pick_folder()
+                {
+                    self.workspace = Some(path.clone());
                     self.status = format!("Workspace selected: {}", path.display());
-                    self.workspace = Some(path);
+                    self.refresh_workspace();
                 }
             }
             Message::ChooseEvidence => {
-                if let Some(path) = rfd::FileDialog::new().set_title("Choose evidence file").pick_file() {
+                if let Some(path) = rfd::FileDialog::new()
+                    .set_title("Choose evidence file")
+                    .pick_file()
+                {
                     self.status = format!("Evidence selected: {}", path.display());
                     self.selected_file = Some(path);
                     self.page = Page::Evidence;
@@ -89,6 +136,7 @@ impl App {
             }
             Message::InitializeWorkspace => self.initialize_workspace(),
             Message::RunInspection => self.run_inspection(),
+            Message::RefreshWorkspace => self.refresh_workspace(),
             Message::ClearOutput => self.output.clear(),
         }
     }
@@ -156,9 +204,14 @@ impl App {
         } else {
             format!("    {}", page.label())
         };
-        button(text(label))
+        let control = button(text(label))
             .width(Length::Fill)
-            .on_press(Message::Navigate(page))
+            .on_press(Message::Navigate(page));
+        if self.page == page {
+            control.style(iced::widget::button::primary)
+        } else {
+            control.style(iced::widget::button::text)
+        }
     }
 
     fn overview(&self) -> Element<'_, Message> {
@@ -173,31 +226,100 @@ impl App {
             .map(display_path)
             .unwrap_or_else(|| "Not bundled in this development build".to_owned());
 
-        let cards = row![
-            self.metric_card("Target Windows", "PASS", "Earlier real-PC 19/19 gate"),
-            self.metric_card("Hostile matrix", "57 / 57", "Functional adversarial coverage"),
-            self.metric_card("Build route", "REPRODUCIBLE", "Pinned GNU-LLVM Windows route"),
-            self.metric_card("Ingest network", "OFF", "Local evidence path"),
+        let authority_cards = row![
+            metric_card(
+                "Authority objects",
+                snapshot_number(self.snapshot.loaded, self.snapshot.object_count),
+                "SHA-256 content identities",
+            ),
+            metric_card(
+                "Occurrences",
+                snapshot_number(self.snapshot.loaded, self.snapshot.occurrence_count),
+                "Separate evidential observations",
+            ),
+            metric_card(
+                "Findings",
+                snapshot_number(self.snapshot.loaded, self.snapshot.finding_count),
+                "Current warnings / state signals",
+            ),
+            metric_card(
+                "Audit events",
+                snapshot_number(self.snapshot.loaded, self.snapshot.audit_count),
+                "Hash-chained engine events",
+            ),
         ]
         .spacing(12);
 
+        let assurance_cards = row![
+            metric_card("Target Windows", "PASS".to_owned(), "Earlier real-PC 19/19 gate"),
+            metric_card("Hostile matrix", "57 / 57".to_owned(), "Functional adversarial coverage"),
+            metric_card("Build route", "CONTROLLED".to_owned(), "Pinned Windows toolchains"),
+            metric_card("Ingest network", "OFF".to_owned(), "Local evidence path"),
+        ]
+        .spacing(12);
+
+        let db_state: Element<'_, Message> = if let Some(error) = &self.snapshot.error {
+            container(
+                column![
+                    text("Workspace authority not loaded").size(15),
+                    text(error.as_str()).size(12),
+                ]
+                .spacing(5),
+            )
+            .padding(12)
+            .style(iced::widget::container::rounded_box)
+            .into()
+        } else if self.snapshot.loaded {
+            container(
+                column![
+                    text("Workspace authority loaded read-only").size(15),
+                    text("The GUI reads the engine's existing SQLite authority; it does not create a second findings or audit store.").size(12),
+                ]
+                .spacing(5),
+            )
+            .padding(12)
+            .style(iced::widget::container::rounded_box)
+            .into()
+        } else {
+            container(text("Choose or initialize a workspace to load authority data.").size(12))
+                .padding(12)
+                .style(iced::widget::container::rounded_box)
+                .into()
+        };
+
         column![
             text("Overview").size(24),
-            text("A human-facing shell around the existing provenance-first ingestion engine.")
-                .size(14),
+            text("A human-facing shell around the existing provenance-first ingestion engine.").size(14),
             Space::new().height(Length::Fixed(10.0)),
-            cards,
+            text("Workspace authority").size(16),
+            authority_cards,
+            Space::new().height(Length::Fixed(12.0)),
+            db_state,
+            Space::new().height(Length::Fixed(14.0)),
+            text("Engineering assurance").size(16),
+            assurance_cards,
             Space::new().height(Length::Fixed(16.0)),
             rule::horizontal(1),
             Space::new().height(Length::Fixed(12.0)),
             text("Current workspace").size(16),
             text(workspace).size(13),
             row![
-                button(text("Choose workspace")).on_press(Message::ChooseWorkspace),
-                button(text("Initialize workspace")).on_press_maybe(
-                    self.can_initialize()
-                        .then_some(Message::InitializeWorkspace)
-                ),
+                button(text("Choose workspace"))
+                    .style(iced::widget::button::primary)
+                    .on_press(Message::ChooseWorkspace),
+                button(text("Initialize workspace"))
+                    .style(iced::widget::button::secondary)
+                    .on_press_maybe(
+                        self.can_initialize()
+                            .then_some(Message::InitializeWorkspace)
+                    ),
+                button(text("Refresh"))
+                    .style(iced::widget::button::subtle)
+                    .on_press_maybe(
+                        self.workspace
+                            .is_some()
+                            .then_some(Message::RefreshWorkspace)
+                    ),
             ]
             .spacing(10),
             Space::new().height(Length::Fixed(12.0)),
@@ -227,20 +349,35 @@ impl App {
             text("Evidence").size(24),
             text("Choose a local file. The GUI routes it to the existing engine; it does not reimplement parser logic.").size(14),
             Space::new().height(Length::Fixed(8.0)),
-            button(text("Choose evidence file")).on_press(Message::ChooseEvidence),
+            row![
+                button(text("Choose evidence file"))
+                    .style(iced::widget::button::primary)
+                    .on_press(Message::ChooseEvidence),
+                button(text("Run current engine"))
+                    .style(iced::widget::button::success)
+                    .on_press_maybe(run_enabled.then_some(Message::RunInspection)),
+            ]
+            .spacing(10),
             Space::new().height(Length::Fixed(8.0)),
-            text("Selected file").size(15),
-            text(selected).size(13),
-            text("Planned engine route").size(15),
-            text(route).size(13),
-            Space::new().height(Length::Fixed(8.0)),
-            button(text("Run current engine"))
-                .on_press_maybe(run_enabled.then_some(Message::RunInspection)),
+            container(
+                column![
+                    text("Selected file").size(15),
+                    text(selected).size(13),
+                    Space::new().height(Length::Fixed(5.0)),
+                    text("Planned engine route").size(15),
+                    text(route).size(13),
+                ]
+                .spacing(4),
+            )
+            .padding(14)
+            .style(iced::widget::container::rounded_box),
             Space::new().height(Length::Fixed(12.0)),
             row![
                 text("Engine output").size(16),
                 Space::new().width(Length::Fill),
-                button(text("Clear")).on_press(Message::ClearOutput)
+                button(text("Clear"))
+                    .style(iced::widget::button::subtle)
+                    .on_press(Message::ClearOutput)
             ],
             container(
                 scrollable(
@@ -254,7 +391,8 @@ impl App {
                 .height(Length::Fill)
             )
             .padding(12)
-            .height(Length::Fill),
+            .height(Length::Fill)
+            .style(iced::widget::container::rounded_box),
         ]
         .spacing(8)
         .height(Length::Fill)
@@ -262,53 +400,112 @@ impl App {
     }
 
     fn findings(&self) -> Element<'_, Message> {
+        let mut list = Column::new().spacing(8);
+        if self.snapshot.findings.is_empty() {
+            list = list.push(
+                container(text(if self.snapshot.loaded {
+                    "No warning/state rows are currently present in the loaded workspace."
+                } else {
+                    "Choose a workspace to load engine-produced findings."
+                }))
+                .padding(14)
+                .style(iced::widget::container::rounded_box),
+            );
+        } else {
+            for finding in &self.snapshot.findings {
+                list = list.push(finding_card(finding));
+            }
+        }
+
         column![
-            text("Findings").size(24),
-            text("This surface will present engine-produced warnings and state signals in plain language.").size(14),
-            Space::new().height(Length::Fixed(12.0)),
-            text("Current rule").size(16),
-            text("The GUI must not invent findings independently of the engine or silently downgrade validation failures.").size(13),
-            Space::new().height(Length::Fixed(12.0)),
-            text("Next slice").size(16),
-            text("Read structured findings from the workspace authority database and link each item back to its source SHA-256/occurrence.").size(13),
+            row![
+                column![
+                    text("Findings").size(24),
+                    text("Read-only view of warnings and state signals already produced by the engine.").size(14),
+                ],
+                Space::new().width(Length::Fill),
+                button(text("Refresh"))
+                    .style(iced::widget::button::subtle)
+                    .on_press_maybe(
+                        self.workspace
+                            .is_some()
+                            .then_some(Message::RefreshWorkspace)
+                    ),
+            ]
+            .align_y(Alignment::Center),
+            text(format!(
+                "{} current warning/state rows across archive, mail, PDF and OOXML controls",
+                self.snapshot.finding_count
+            ))
+            .size(13),
+            Space::new().height(Length::Fixed(8.0)),
+            scrollable(list).height(Length::Fill),
         ]
         .spacing(8)
+        .height(Length::Fill)
         .into()
     }
 
     fn audit(&self) -> Element<'_, Message> {
+        let mut list = Column::new().spacing(8);
+        if self.snapshot.audit.is_empty() {
+            list = list.push(
+                container(text(if self.snapshot.loaded {
+                    "No audit events are currently present in the loaded workspace."
+                } else {
+                    "Choose a workspace to load the engine's audit chain."
+                }))
+                .padding(14)
+                .style(iced::widget::container::rounded_box),
+            );
+        } else {
+            for event in &self.snapshot.audit {
+                list = list.push(audit_card(event));
+            }
+        }
+
         column![
-            text("Audit").size(24),
-            text("The engine already writes hash-chained audit events. The GUI will expose that existing authority rather than create a second audit system.").size(14),
-            Space::new().height(Length::Fixed(12.0)),
-            text("Current status").size(16),
-            text("Audit display wiring is the next GUI data-binding slice after this shell compiles on both Windows CI targets.").size(13),
+            row![
+                column![
+                    text("Audit").size(24),
+                    text("Latest hash-chained engine events from the existing workspace authority.").size(14),
+                ],
+                Space::new().width(Length::Fill),
+                button(text("Refresh"))
+                    .style(iced::widget::button::subtle)
+                    .on_press_maybe(
+                        self.workspace
+                            .is_some()
+                            .then_some(Message::RefreshWorkspace)
+                    ),
+            ]
+            .align_y(Alignment::Center),
+            text(format!("{} audit events recorded in the workspace", self.snapshot.audit_count))
+                .size(13),
+            Space::new().height(Length::Fixed(8.0)),
+            scrollable(list).height(Length::Fill),
         ]
         .spacing(8)
-        .into()
-    }
-
-    fn metric_card<'a>(
-        &self,
-        title: &'a str,
-        value: &'a str,
-        note: &'a str,
-    ) -> Element<'a, Message> {
-        container(
-            column![
-                text(title).size(12),
-                text(value).size(19),
-                text(note).size(11)
-            ]
-            .spacing(4),
-        )
-        .padding(14)
-        .width(Length::FillPortion(1))
+        .height(Length::Fill)
         .into()
     }
 
     fn can_initialize(&self) -> bool {
         self.workspace.is_some() && self.engine_path.is_some()
+    }
+
+    fn refresh_workspace(&mut self) {
+        let Some(workspace) = self.workspace.as_deref() else {
+            self.snapshot = WorkspaceSnapshot::default();
+            return;
+        };
+        self.snapshot = match load_workspace_snapshot(workspace) {
+            Ok(snapshot) => snapshot,
+            Err(error) => WorkspaceSnapshot {
+                error: Some(error),
+                ..WorkspaceSnapshot::default()
+            },
+        };
     }
 
     fn initialize_workspace(&mut self) {
@@ -317,6 +514,7 @@ impl App {
             return;
         };
         self.capture_process(Command::new(engine).arg("init").arg(workspace));
+        self.refresh_workspace();
     }
 
     fn run_inspection(&mut self) {
@@ -352,6 +550,7 @@ impl App {
                 .arg(workspace)
                 .arg(file),
         );
+        self.refresh_workspace();
     }
 
     fn capture_process(&mut self, command: &mut Command) {
@@ -375,6 +574,263 @@ impl App {
             }
         }
     }
+}
+
+fn metric_card(
+    title: &'static str,
+    value: String,
+    note: &'static str,
+) -> Element<'static, Message> {
+    container(
+        column![
+            text(title).size(12),
+            text(value).size(20),
+            text(note).size(11),
+        ]
+        .spacing(4),
+    )
+    .padding(14)
+    .width(Length::FillPortion(1))
+    .style(iced::widget::container::rounded_box)
+    .into()
+}
+
+fn finding_card<'a>(finding: &'a Finding) -> Element<'a, Message> {
+    container(
+        column![
+            row![
+                text(finding.kind.as_str()).size(15),
+                Space::new().width(Length::Fill),
+                text(short_id(&finding.source)).size(11),
+            ],
+            text(finding.detail.as_str()).size(12),
+        ]
+        .spacing(5),
+    )
+    .padding(12)
+    .width(Length::Fill)
+    .style(iced::widget::container::rounded_box)
+    .into()
+}
+
+fn audit_card<'a>(event: &'a AuditRow) -> Element<'a, Message> {
+    container(
+        column![
+            row![
+                text(event.event_type.as_str()).size(15),
+                Space::new().width(Length::Fill),
+                text(event.outcome.as_str()).size(12),
+            ],
+            text(event.datetime.as_str()).size(11),
+            text(format!(
+                "Linked: {} · Event SHA-256: {}",
+                if event.linked_id.is_empty() {
+                    "—"
+                } else {
+                    event.linked_id.as_str()
+                },
+                short_id(&event.event_sha256)
+            ))
+            .size(11),
+        ]
+        .spacing(4),
+    )
+    .padding(12)
+    .width(Length::Fill)
+    .style(iced::widget::container::rounded_box)
+    .into()
+}
+
+fn snapshot_number(loaded: bool, value: i64) -> String {
+    if loaded {
+        value.to_string()
+    } else {
+        "—".to_owned()
+    }
+}
+
+fn short_id(value: &str) -> String {
+    if value.len() > 18 {
+        format!("{}…", &value[..18])
+    } else {
+        value.to_owned()
+    }
+}
+
+fn load_workspace_snapshot(workspace: &Path) -> Result<WorkspaceSnapshot, String> {
+    let db_path = workspace.join(DB_NAME);
+    if !db_path.is_file() {
+        return Err(format!(
+            "No {} exists in the selected workspace yet.",
+            DB_NAME
+        ));
+    }
+
+    let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let conn = Connection::open_with_flags(&db_path, flags).map_err(|error| error.to_string())?;
+    conn.busy_timeout(Duration::from_millis(750))
+        .map_err(|error| error.to_string())?;
+
+    let object_count = count(&conn, "SELECT COUNT(*) FROM blob_object")?;
+    let occurrence_count = count(&conn, "SELECT COUNT(*) FROM occurrence")?;
+    let audit_count = count(&conn, "SELECT COUNT(*) FROM audit_event")?;
+    let archive_blocks = count(
+        &conn,
+        "SELECT COUNT(*) FROM archive_member WHERE policy_status='BLOCK_MATERIALISATION'",
+    )?;
+    let mail_warnings = count(
+        &conn,
+        "SELECT COUNT(*) FROM mail_message WHERE parser_note IS NOT NULL OR duplicate_message_id=1 OR duplicate_message_id_conflict=1 OR thread_cycle=1",
+    )?;
+    let pdf_signals = count(&conn, "SELECT COUNT(*) FROM pdf_signal")?;
+    let ooxml_signals = count(&conn, "SELECT COUNT(*) FROM ooxml_signal")?;
+    let finding_count = archive_blocks
+        .checked_add(mail_warnings)
+        .and_then(|value| value.checked_add(pdf_signals))
+        .and_then(|value| value.checked_add(ooxml_signals))
+        .ok_or_else(|| "finding count overflow".to_owned())?;
+
+    Ok(WorkspaceSnapshot {
+        loaded: true,
+        object_count,
+        occurrence_count,
+        finding_count,
+        audit_count,
+        findings: load_findings(&conn).map_err(|error| error.to_string())?,
+        audit: load_audit(&conn).map_err(|error| error.to_string())?,
+        error: None,
+    })
+}
+
+fn count(conn: &Connection, sql: &str) -> Result<i64, String> {
+    conn.query_row(sql, [], |row| row.get(0))
+        .map_err(|error| error.to_string())
+}
+
+fn load_findings(conn: &Connection) -> rusqlite::Result<Vec<Finding>> {
+    let mut findings = Vec::new();
+
+    {
+        let mut stmt = conn.prepare(
+            "SELECT archive_sha256,name_text,policy_reasons_json
+             FROM archive_member
+             WHERE policy_status='BLOCK_MATERIALISATION'
+             ORDER BY id DESC LIMIT 20",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(Finding {
+                kind: "Archive blocked".to_owned(),
+                source: row.get(0)?,
+                detail: format!("{} · {}", row.get::<_, String>(1)?, row.get::<_, String>(2)?),
+            })
+        })?;
+        for row in rows {
+            findings.push(row?);
+        }
+    }
+
+    {
+        let mut stmt = conn.prepare(
+            "SELECT source_sha256,COALESCE(subject,'(no subject)'),parser_note,
+                    duplicate_message_id,duplicate_message_id_conflict,thread_cycle
+             FROM mail_message
+             WHERE parser_note IS NOT NULL OR duplicate_message_id=1
+                OR duplicate_message_id_conflict=1 OR thread_cycle=1
+             ORDER BY id DESC LIMIT 20",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let subject: String = row.get(1)?;
+            let note: Option<String> = row.get(2)?;
+            let duplicate: i64 = row.get(3)?;
+            let conflict: i64 = row.get(4)?;
+            let cycle: i64 = row.get(5)?;
+            let mut flags = Vec::new();
+            if duplicate != 0 {
+                flags.push("duplicate Message-ID");
+            }
+            if conflict != 0 {
+                flags.push("conflicting duplicate Message-ID");
+            }
+            if cycle != 0 {
+                flags.push("thread cycle");
+            }
+            let mut detail = subject;
+            if let Some(note) = note {
+                detail.push_str(" · ");
+                detail.push_str(&note);
+            }
+            if !flags.is_empty() {
+                detail.push_str(" · ");
+                detail.push_str(&flags.join(", "));
+            }
+            Ok(Finding {
+                kind: "Mail provenance warning".to_owned(),
+                source: row.get(0)?,
+                detail,
+            })
+        })?;
+        for row in rows {
+            findings.push(row?);
+        }
+    }
+
+    {
+        let mut stmt = conn.prepare(
+            "SELECT source_sha256,signal,signal_count
+             FROM pdf_signal ORDER BY source_sha256,signal LIMIT 20",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(Finding {
+                kind: "PDF state signal".to_owned(),
+                source: row.get(0)?,
+                detail: format!("{} · count {}", row.get::<_, String>(1)?, row.get::<_, i64>(2)?),
+            })
+        })?;
+        for row in rows {
+            findings.push(row?);
+        }
+    }
+
+    {
+        let mut stmt = conn.prepare(
+            "SELECT source_sha256,part_name,signal,signal_count
+             FROM ooxml_signal ORDER BY source_sha256,part_name,signal LIMIT 20",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(Finding {
+                kind: "OOXML state signal".to_owned(),
+                source: row.get(0)?,
+                detail: format!(
+                    "{} · {} · count {}",
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?
+                ),
+            })
+        })?;
+        for row in rows {
+            findings.push(row?);
+        }
+    }
+
+    Ok(findings)
+}
+
+fn load_audit(conn: &Connection) -> rusqlite::Result<Vec<AuditRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT event_datetime,event_type,outcome,COALESCE(linked_id,''),current_event_sha256
+         FROM audit_event ORDER BY id DESC LIMIT 100",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok(AuditRow {
+            datetime: row.get(0)?,
+            event_type: row.get(1)?,
+            outcome: row.get(2)?,
+            linked_id: row.get(3)?,
+            event_sha256: row.get(4)?,
+        })
+    })?;
+    rows.collect()
 }
 
 fn locate_engine() -> Option<PathBuf> {
@@ -412,4 +868,107 @@ fn route_for(path: &Path) -> &'static str {
 
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn snapshot_reads_authority_without_mutating_database() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let workspace = std::env::temp_dir().join(format!(
+            "mcr-r9-gui-test-{}-{unique}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&workspace).expect("create workspace");
+        let db_path = workspace.join(DB_NAME);
+
+        {
+            let conn = Connection::open(&db_path).expect("create synthetic db");
+            conn.execute_batch(
+                "
+                CREATE TABLE blob_object(sha256 TEXT PRIMARY KEY);
+                CREATE TABLE occurrence(id INTEGER PRIMARY KEY);
+                CREATE TABLE audit_event(
+                    id INTEGER PRIMARY KEY,
+                    event_datetime TEXT,
+                    event_type TEXT,
+                    outcome TEXT,
+                    linked_id TEXT,
+                    current_event_sha256 TEXT
+                );
+                CREATE TABLE archive_member(
+                    id INTEGER PRIMARY KEY,
+                    archive_sha256 TEXT,
+                    name_text TEXT,
+                    policy_status TEXT,
+                    policy_reasons_json TEXT
+                );
+                CREATE TABLE mail_message(
+                    id INTEGER PRIMARY KEY,
+                    source_sha256 TEXT,
+                    subject TEXT,
+                    parser_note TEXT,
+                    duplicate_message_id INTEGER,
+                    duplicate_message_id_conflict INTEGER,
+                    thread_cycle INTEGER
+                );
+                CREATE TABLE pdf_signal(source_sha256 TEXT,signal TEXT,signal_count INTEGER);
+                CREATE TABLE ooxml_signal(
+                    source_sha256 TEXT,
+                    part_name TEXT,
+                    signal TEXT,
+                    signal_count INTEGER
+                );
+                INSERT INTO blob_object VALUES('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+                INSERT INTO occurrence VALUES(1);
+                INSERT INTO audit_event VALUES(
+                    1,'2026-09-07T07:00:00Z','ingestion','PASS',
+                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+                );
+                INSERT INTO archive_member VALUES(
+                    1,
+                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    '../outside.txt','BLOCK_MATERIALISATION','[\"parent_traversal\"]'
+                );
+                INSERT INTO mail_message VALUES(
+                    1,
+                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    'Synthetic warning','raw ambiguity retained',1,1,0
+                );
+                INSERT INTO pdf_signal VALUES(
+                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    'action:JavaScript',1
+                );
+                INSERT INTO ooxml_signal VALUES(
+                    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                    'word/document.xml','word:hidden_text_vanish',1
+                );
+                ",
+            )
+            .expect("seed synthetic authority");
+        }
+
+        let before = fs::read(&db_path).expect("read database before");
+        let snapshot = load_workspace_snapshot(&workspace).expect("load snapshot");
+        let after = fs::read(&db_path).expect("read database after");
+
+        assert!(snapshot.loaded);
+        assert_eq!(snapshot.object_count, 1);
+        assert_eq!(snapshot.occurrence_count, 1);
+        assert_eq!(snapshot.audit_count, 1);
+        assert_eq!(snapshot.finding_count, 4);
+        assert_eq!(snapshot.findings.len(), 4);
+        assert_eq!(snapshot.audit.len(), 1);
+        assert_eq!(before, after, "read-only GUI must not mutate authority bytes");
+
+        fs::remove_dir_all(workspace).expect("clean synthetic workspace");
+    }
 }
