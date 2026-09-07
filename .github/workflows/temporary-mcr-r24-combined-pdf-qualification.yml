@@ -1,0 +1,277 @@
+name: Temporary MCR R2.4 combined Windows PDF package qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r24-combined-pdf-qualification-20260907
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - name: Check out synthetic-only qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Install exact Rust toolchain and GNU-LLVM target
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+          targets: x86_64-pc-windows-gnullvm
+
+      - name: Reconstruct exact R2 source
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+
+      - name: Apply exact R2.4 repair chain
+        shell: bash
+        run: |
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+          python qualification/mcr-r2-durable/apply_r24_resource_limits.py
+          python qualification/mcr-r2-durable/apply_r24_compile_fix.py
+
+      - name: Recover exact GitHub-hosted synthetic fixture corpus
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $checkpoint='qualification/mcr-r24-combined-pdf/MCR_INGEST_R2_GITHUB_FOSS_PDF_OOXML_SOURCE_CHECKPOINT_2026-09-04.zip'
+          $checkpointExpected='2bf606cbc6734ce02c01bf57128129bb36fa09d5ca596f79ca69e050c27f8bd7'
+          $checkpointActual=(Get-FileHash -LiteralPath $checkpoint -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($checkpointActual -ne $checkpointExpected) { throw "checkpoint SHA mismatch: $checkpointActual" }
+          $root=Join-Path $env:RUNNER_TEMP 'mcr-r24-fixture-recovery'
+          $project=Join-Path $root 'project'
+          if (Test-Path $root) { Remove-Item -LiteralPath $root -Recurse -Force }
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          Expand-Archive -LiteralPath $checkpoint -DestinationPath $project -Force
+          $fixtureZip=Join-Path $project 'qualification\MCR_TOOLING_SYNTHETIC_INGEST_FIXTURE_SEED_CORPUS_R1_2026-09-03.zip'
+          if (-not (Test-Path -LiteralPath $fixtureZip)) { throw 'nested synthetic fixture ZIP missing' }
+          $fixtureExpected='b9199cbe9c4627f4445167e82c0997edaad9e7b8ed98ec176f27641f317725dd'
+          $fixtureActual=(Get-FileHash -LiteralPath $fixtureZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($fixtureActual -ne $fixtureExpected) { throw "fixture ZIP SHA mismatch: $fixtureActual" }
+          $fixtures=Join-Path $root 'fixtures'
+          New-Item -ItemType Directory -Path $fixtures -Force | Out-Null
+          Expand-Archive -LiteralPath $fixtureZip -DestinationPath $fixtures -Force
+          $required=@(
+            'pdf_javascript.pdf',
+            'pdf_launch_action.pdf',
+            'pdf_embedded_attachment.pdf',
+            'pdf_acroform.pdf',
+            'pdf_encrypted.pdf',
+            'pdf_optional_content.pdf',
+            'pdf_javascript_nametree.pdf',
+            'pdf_open_action.pdf',
+            'pdf_additional_actions.pdf',
+            'pdf_uri_action.pdf',
+            'pdf_file_attachment_annotation.pdf',
+            'pdf_richmedia_annotation.pdf',
+            'pdf_signature_state.pdf',
+            'pdf_damaged_xref.pdf'
+          )
+          $missing=@()
+          foreach ($name in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $fixtures $name))) { $missing += $name }
+          }
+          if ($missing.Count -ne 0) { throw ('missing required R2.4 PDF fixtures: ' + ($missing -join ', ')) }
+          "MCR_FIXTURE_DIR=$fixtures" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_FIXTURE_ZIP_SHA256=$fixtureActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_SOURCE_CHECKPOINT_SHA256=$checkpointActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Recovered exact synthetic fixture corpus: $($required.Count) required PDF fixtures present"
+
+      - name: Acquire and verify exact GitHub qpdf and pdfcpu Windows releases
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'mcr-r24-specialists'
+          $downloads=Join-Path $root 'downloads'
+          $qdir=Join-Path $root 'qpdf'
+          $pdir=Join-Path $root 'pdfcpu'
+          New-Item -ItemType Directory -Path $downloads,$qdir,$pdir -Force | Out-Null
+          $qurl='https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip'
+          $qarchive=Join-Path $downloads 'qpdf-12.4.1-msvc64.zip'
+          $qarchiveExpected='3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6'
+          Invoke-WebRequest -UseBasicParsing -Uri $qurl -OutFile $qarchive
+          $qarchiveActual=(Get-FileHash -LiteralPath $qarchive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($qarchiveActual -ne $qarchiveExpected) { throw "qpdf archive SHA mismatch: $qarchiveActual" }
+          Expand-Archive -LiteralPath $qarchive -DestinationPath $qdir -Force
+          $qexes=@(Get-ChildItem -LiteralPath $qdir -Recurse -Filter 'qpdf.exe' -File)
+          if ($qexes.Count -ne 1) { throw "expected one qpdf.exe, found $($qexes.Count)" }
+          $qexe=$qexes[0].FullName
+          $qexeExpected='57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d'
+          $qexeActual=(Get-FileHash -LiteralPath $qexe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($qexeActual -ne $qexeExpected) { throw "qpdf executable SHA mismatch: $qexeActual" }
+          & $qexe --version
+          if ($LASTEXITCODE -ne 0) { throw "qpdf --version failed: $LASTEXITCODE" }
+
+          $purl='https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip'
+          $parchive=Join-Path $downloads 'pdfcpu_0.15.0_Windows_x86_64.zip'
+          $parchiveExpected='9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6'
+          Invoke-WebRequest -UseBasicParsing -Uri $purl -OutFile $parchive
+          $parchiveActual=(Get-FileHash -LiteralPath $parchive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($parchiveActual -ne $parchiveExpected) { throw "pdfcpu archive SHA mismatch: $parchiveActual" }
+          Expand-Archive -LiteralPath $parchive -DestinationPath $pdir -Force
+          $pexes=@(Get-ChildItem -LiteralPath $pdir -Recurse -Filter 'pdfcpu.exe' -File)
+          if ($pexes.Count -ne 1) { throw "expected one pdfcpu.exe, found $($pexes.Count)" }
+          $pexe=$pexes[0].FullName
+          $pexeExpected='94cafb66b508c2eb8648dffbb17fddb74b7a117fdc38846e36f9ec6322bdd05e'
+          $pexeActual=(Get-FileHash -LiteralPath $pexe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($pexeActual -ne $pexeExpected) { throw "pdfcpu executable SHA mismatch: $pexeActual" }
+          & $pexe version
+          if ($LASTEXITCODE -ne 0) { throw "pdfcpu version failed: $LASTEXITCODE" }
+
+          "MCR_QPDF_EXE=$qexe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_QPDF_SHA256=$qexeActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_QPDF_ARCHIVE_SHA256=$qarchiveActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_QPDF_ROOT=$qdir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PDFCPU_EXE=$pexe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PDFCPU_SHA256=$pexeActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PDFCPU_ARCHIVE_SHA256=$parchiveActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_PDFCPU_ROOT=$pdir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Strict R2.4 static and combined PDF specialist tests
+        shell: bash
+        run: |
+          cd "$MCR_R2_SRC"
+          cargo fmt
+          cargo fmt --check
+          cargo generate-lockfile
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('Cargo.lock')
+          b=p.read_bytes()
+          assert len(b)==19956, len(b)
+          assert hashlib.sha256(b).hexdigest()=='84fd6c943caa1798d1a54846665a2b8b65c93aa9cf58dd74c927475856daf955'
+          print('PASS exact R2.4 Cargo.lock')
+          PY
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo test --locked --test core_integration pdf -- --test-threads=1
+
+      - name: Prove PDF tool identity mismatch fails closed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Push-Location $env:MCR_R2_SRC
+          try {
+            cargo build --locked --release
+            if ($LASTEXITCODE -ne 0) { throw "MSVC release build failed: $LASTEXITCODE" }
+            $engine=Join-Path $env:MCR_R2_SRC 'target\release\mcr-ingest.exe'
+            $workspace=Join-Path $env:RUNNER_TEMP 'mcr-r24-tool-id-negative'
+            New-Item -ItemType Directory -Path $workspace -Force | Out-Null
+            $pdf=Join-Path $env:MCR_FIXTURE_DIR 'pdf_javascript.pdf'
+            $wrong=('0' * 64)
+            & $engine inventory-pdf $workspace $pdf $env:MCR_QPDF_EXE $wrong $env:MCR_PDFCPU_EXE $env:MCR_PDFCPU_SHA256
+            if ($LASTEXITCODE -eq 0) { throw 'inventory-pdf unexpectedly accepted incorrect qpdf SHA-256' }
+            Write-Host 'PASS fail-closed specialist identity mismatch'
+          } finally { Pop-Location }
+
+      - name: Build and execute exact deterministic R2.4 engine candidate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $toolRoot=Join-Path $env:RUNNER_TEMP 'llvm-mingw-pinned'
+          New-Item -ItemType Directory -Path $toolRoot -Force | Out-Null
+          $zip=Join-Path $toolRoot 'llvm-mingw-20260826-ucrt-x86_64.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-x86_64.zip' -OutFile $zip
+          $toolArchiveActual=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $toolArchiveExpected='ae601f4e0f72bbdf441ad2df8bb16f037e2e9251559ea6b37b4057aef39c06c3'
+          if ($toolArchiveActual -ne $toolArchiveExpected) { throw "LLVM-MinGW archive SHA mismatch: $toolArchiveActual" }
+          $tool=Join-Path $toolRoot 'tool'
+          Expand-Archive -LiteralPath $zip -DestinationPath $tool -Force
+          $clang=@(Get-ChildItem -LiteralPath $tool -Recurse -Filter 'x86_64-w64-mingw32-clang.exe' -File)
+          $ar=@(Get-ChildItem -LiteralPath $tool -Recurse -Filter 'llvm-ar.exe' -File)
+          if ($clang.Count -ne 1) { throw "expected one target clang, found $($clang.Count)" }
+          if ($ar.Count -lt 1) { throw 'llvm-ar missing' }
+          $env:CARGO_TARGET_X86_64_PC_WINDOWS_GNULLVM_LINKER=$clang[0].FullName
+          $env:CC_x86_64_pc_windows_gnullvm=$clang[0].FullName
+          $env:AR_x86_64_pc_windows_gnullvm=$ar[0].FullName
+          $env:SOURCE_DATE_EPOCH='0'
+          $env:RUSTFLAGS='-C link-arg=-Wl,--no-insert-timestamp'
+          Push-Location $env:MCR_R2_SRC
+          try {
+            cargo build --locked --release --target x86_64-pc-windows-gnullvm
+            if ($LASTEXITCODE -ne 0) { throw "gnullvm release build failed: $LASTEXITCODE" }
+          } finally { Pop-Location }
+          $engine=Join-Path $env:MCR_R2_SRC 'target\x86_64-pc-windows-gnullvm\release\mcr-ingest.exe'
+          $engineItem=Get-Item -LiteralPath $engine
+          $engineSha=(Get-FileHash -LiteralPath $engine -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($engineItem.Length -ne 3411456) { throw "deterministic engine byte count mismatch: $($engineItem.Length)" }
+          if ($engineSha -ne 'd4589f491c3232f58f34029a3f636d652784574324f881c957f70ad8d0b2f8ba') { throw "deterministic engine SHA mismatch: $engineSha" }
+
+          $workspace=Join-Path $env:RUNNER_TEMP 'mcr-r24-deterministic-pdf-smoke'
+          New-Item -ItemType Directory -Path $workspace -Force | Out-Null
+          $pdf=Join-Path $env:MCR_FIXTURE_DIR 'pdf_javascript.pdf'
+          $before=(Get-FileHash -LiteralPath $pdf -Algorithm SHA256).Hash.ToLowerInvariant()
+          & $engine inventory-pdf $workspace $pdf $env:MCR_QPDF_EXE $env:MCR_QPDF_SHA256 $env:MCR_PDFCPU_EXE $env:MCR_PDFCPU_SHA256
+          if ($LASTEXITCODE -ne 0) { throw "deterministic inventory-pdf failed: $LASTEXITCODE" }
+          $after=(Get-FileHash -LiteralPath $pdf -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($after -ne $before) { throw 'source PDF mutated during deterministic package smoke' }
+          "MCR_DETERMINISTIC_ENGINE=$engine" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_DETERMINISTIC_ENGINE_SHA256=$engineSha" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "MCR_LLVM_MINGW_ARCHIVE_SHA256=$toolArchiveActual" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host 'PASS deterministic R2.4 + exact specialists PDF smoke'
+
+      - name: Stage combined package candidate and receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $stage=Join-Path $env:RUNNER_TEMP 'mcr-r24-combined-pdf-package'
+          if (Test-Path $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
+          $engineDir=Join-Path $stage 'engine'
+          $toolsDir=Join-Path $stage 'tools'
+          $controlDir=Join-Path $stage 'CONTROL'
+          New-Item -ItemType Directory -Path $engineDir,$toolsDir,$controlDir -Force | Out-Null
+          Copy-Item -LiteralPath $env:MCR_DETERMINISTIC_ENGINE -Destination (Join-Path $engineDir 'mcr-ingest.exe')
+          Copy-Item -LiteralPath $env:MCR_QPDF_ROOT -Destination (Join-Path $toolsDir 'qpdf') -Recurse
+          Copy-Item -LiteralPath $env:MCR_PDFCPU_ROOT -Destination (Join-Path $toolsDir 'pdfcpu') -Recurse
+          $receipt=[ordered]@{
+            schema='mcr-r2.4-combined-windows-pdf-package-qualification-v1'
+            status='PASS'
+            github_sha=$env:GITHUB_SHA
+            runner='${{ matrix.os }}'
+            source_checkpoint_sha256=$env:MCR_SOURCE_CHECKPOINT_SHA256
+            fixture_zip_sha256=$env:MCR_FIXTURE_ZIP_SHA256
+            engine=[ordered]@{sha256=$env:MCR_DETERMINISTIC_ENGINE_SHA256;bytes=3411456;rust='1.88.0';target='x86_64-pc-windows-gnullvm';llvm_mingw_archive_sha256=$env:MCR_LLVM_MINGW_ARCHIVE_SHA256}
+            qpdf=[ordered]@{version='12.4.1';archive_sha256=$env:MCR_QPDF_ARCHIVE_SHA256;exe_sha256=$env:MCR_QPDF_SHA256}
+            pdfcpu=[ordered]@{version='0.15.0';archive_sha256=$env:MCR_PDFCPU_ARCHIVE_SHA256;exe_sha256=$env:MCR_PDFCPU_SHA256}
+            gates=[ordered]@{
+              specialist_tests='PASS'
+              specialist_identity_mismatch='FAIL_CLOSED_PASS'
+              deterministic_engine_identity='PASS'
+              deterministic_inventory_pdf_smoke='PASS'
+              source_pdf_immutability='PASS'
+            }
+            frozen_mcr_r59='UNCHANGED'
+            real_case_material='NONE'
+            pdf_a_certification='NOT_CLAIMED'
+            pdf_ua_certification='NOT_CLAIMED'
+            target_pc_acceptance='NOT_YET_COMPLETE'
+          }
+          $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $controlDir 'COMBINED_PDF_QUALIFICATION_RECEIPT.json') -Encoding UTF8
+          "MCR_COMBINED_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload combined package qualification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r24-combined-pdf-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_COMBINED_STAGE }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
