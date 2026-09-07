@@ -40,17 +40,10 @@ jobs:
         run: |
           $p = 'qualification/mcr-r9-gui/src/main.rs'
           $s = Get-Content -LiteralPath $p -Raw
-          $old = @'
-          return Err(format!(
-              "No {} exists in the selected workspace yet.",
-              DB_NAME
-          ));
-          '@
-          $new = @'
-          return Err(format!("No {DB_NAME} exists in the selected workspace yet."));
-          '@
-          if (-not $s.Contains($old.Trim())) { throw 'Expected bounded Clippy repair target not found' }
-          $s = $s.Replace($old.Trim(), $new.Trim())
+          $pattern = 'return\s+Err\(format!\(\s*"No \{\} exists in the selected workspace yet\.",\s*DB_NAME\s*\)\);'
+          $matches = [regex]::Matches($s, $pattern)
+          if ($matches.Count -ne 1) { throw "Expected exactly one bounded Clippy target, found $($matches.Count)" }
+          $s = [regex]::Replace($s, $pattern, 'return Err(format!("No {DB_NAME} exists in the selected workspace yet."));', 1)
           Set-Content -LiteralPath $p -Value $s -Encoding utf8NoBOM
       - name: Generate lockfile from exact GitHub revisions
         shell: pwsh
