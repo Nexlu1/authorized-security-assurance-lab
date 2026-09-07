@@ -25,9 +25,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.88.0'
+          components: rustfmt, clippy
       - name: rustfmt check
         run: cargo fmt --check
-      - name: cargo check locked dependencies
+      - name: cargo check
         run: cargo check
       - name: unit and hostile-fixture tests
         run: cargo test --all-targets --verbose
