@@ -1,4 +1,4 @@
-use iced::widget::{button, column, container, horizontal_rule, row, scrollable, text, Space};
+use iced::widget::{button, column, container, row, rule, scrollable, text, Space};
 use iced::{window, Alignment, Element, Length, Size, Theme};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -100,7 +100,7 @@ impl App {
                 text("Engineering Preview · local/offline evidence workflow").size(14),
             ]
             .spacing(3),
-            Space::with_width(Length::Fill),
+            Space::new().width(Length::Fill),
             column![
                 text("ENGINE QUALIFICATION").size(11),
                 text("57 / 57 hostile cases").size(16),
@@ -116,8 +116,8 @@ impl App {
             self.nav_button(Page::Evidence),
             self.nav_button(Page::Findings),
             self.nav_button(Page::Audit),
-            Space::with_height(Length::Fill),
-            horizontal_rule(1),
+            Space::new().height(Length::Fill),
+            rule::horizontal(1),
             text("Frozen MCR R59: unchanged").size(12),
             text("Network during ingest: off").size(12),
         ]
@@ -134,7 +134,7 @@ impl App {
 
         column![
             header,
-            horizontal_rule(1),
+            rule::horizontal(1),
             row![
                 container(sidebar).width(Length::Fixed(220.0)).height(Length::Fill),
                 container(body).padding(22).width(Length::Fill).height(Length::Fill),
@@ -169,11 +169,11 @@ impl App {
         column![
             text("Overview").size(24),
             text("A human-facing shell around the existing provenance-first ingestion engine.").size(14),
-            Space::with_height(Length::Fixed(10.0)),
+            Space::new().height(Length::Fixed(10.0)),
             cards,
-            Space::with_height(Length::Fixed(16.0)),
-            horizontal_rule(1),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(16.0)),
+            rule::horizontal(1),
+            Space::new().height(Length::Fixed(12.0)),
             text("Current workspace").size(16),
             text(workspace).size(13),
             row![
@@ -181,7 +181,7 @@ impl App {
                 button(text("Initialize workspace")).on_press_maybe(self.can_initialize().then_some(Message::InitializeWorkspace)),
             ]
             .spacing(10),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(12.0)),
             text("Engine").size(16),
             text(engine).size(13),
             text(self.status.as_str()).size(13),
@@ -198,17 +198,17 @@ impl App {
         column![
             text("Evidence").size(24),
             text("Choose a local file. The GUI routes it to the existing engine; it does not reimplement parser logic.").size(14),
-            Space::with_height(Length::Fixed(8.0)),
+            Space::new().height(Length::Fixed(8.0)),
             button(text("Choose evidence file")).on_press(Message::ChooseEvidence),
-            Space::with_height(Length::Fixed(8.0)),
+            Space::new().height(Length::Fixed(8.0)),
             text("Selected file").size(15),
             text(selected).size(13),
             text("Planned engine route").size(15),
             text(route).size(13),
-            Space::with_height(Length::Fixed(8.0)),
+            Space::new().height(Length::Fixed(8.0)),
             button(text("Run current engine")).on_press_maybe(run_enabled.then_some(Message::RunInspection)),
-            Space::with_height(Length::Fixed(12.0)),
-            row![text("Engine output").size(16), Space::with_width(Length::Fill), button(text("Clear")).on_press(Message::ClearOutput)],
+            Space::new().height(Length::Fixed(12.0)),
+            row![text("Engine output").size(16), Space::new().width(Length::Fill), button(text("Clear")).on_press(Message::ClearOutput)],
             container(scrollable(text(if self.output.is_empty() { "No run output yet." } else { self.output.as_str() }).size(13)).height(Length::Fill))
                 .padding(12)
                 .height(Length::Fill),
@@ -222,10 +222,10 @@ impl App {
         column![
             text("Findings").size(24),
             text("This surface will present engine-produced warnings and state signals in plain language.").size(14),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(12.0)),
             text("Current rule").size(16),
             text("The GUI must not invent findings independently of the engine or silently downgrade validation failures.").size(13),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(12.0)),
             text("Next slice").size(16),
             text("Read structured findings from the workspace authority database and link each item back to its source SHA-256/occurrence.").size(13),
         ]
@@ -237,7 +237,7 @@ impl App {
         column![
             text("Audit").size(24),
             text("The engine already writes hash-chained audit events. The GUI will expose that existing authority rather than create a second audit system.").size(14),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(12.0)),
             text("Current status").size(16),
             text("Audit display wiring is the next GUI data-binding slice after this shell compiles on both Windows CI targets.").size(13),
         ]
