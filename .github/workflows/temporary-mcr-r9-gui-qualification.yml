@@ -35,16 +35,16 @@ jobs:
           if ($control.iced.git_commit -ne '3997291f318a8bc06fa522f5579836fb3feb94df') { throw 'Iced pin mismatch' }
           if ($control.rfd.git_commit -ne 'cca0cfa5fc38c2752c9c98f9f5168904a515fd55') { throw 'rfd pin mismatch' }
           if ($control.rusqlite.git_commit -ne 'e88f112bef7899234a497baed5cc3c3d553deeb8') { throw 'rusqlite pin mismatch' }
-      - name: Apply bounded strict-Clippy repair
+      - name: Prove non-blocking GUI architecture
         shell: pwsh
         run: |
           $p = 'qualification/mcr-r9-gui/src/main.rs'
           $s = Get-Content -LiteralPath $p -Raw
-          $pattern = 'return\s+Err\(format!\(\s*"No \{\} exists in the selected workspace yet\.",\s*DB_NAME\s*\)\);'
-          $matches = [regex]::Matches($s, $pattern)
-          if ($matches.Count -ne 1) { throw "Expected exactly one bounded Clippy target, found $($matches.Count)" }
-          $s = [regex]::Replace($s, $pattern, 'return Err(format!("No {DB_NAME} exists in the selected workspace yet."));', 1)
-          Set-Content -LiteralPath $p -Value $s -Encoding utf8NoBOM
+          if ($s -notmatch 'fn update\(&mut self, message: Message\) -> Task<Message>') { throw 'Iced Task-returning update not found' }
+          if ($s -notmatch 'Task::perform') { throw 'Task::perform not found' }
+          if ($s -match 'fn capture_process\(') { throw 'Legacy synchronous UI capture_process remains' }
+          if ($s -notmatch 'busy: bool') { throw 'Busy-state guard missing' }
+          if ($s -match 'No \{\} exists in the selected workspace yet') { throw 'Stale Clippy target reintroduced' }
       - name: Generate lockfile from exact GitHub revisions
         shell: pwsh
         run: |
@@ -87,7 +87,7 @@ jobs:
           $exe = Join-Path $env:GITHUB_WORKSPACE 'qualification\mcr-r9-gui\target\release\mcr-tooling.exe'
           $h = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           $n = (Get-Item -LiteralPath $exe).Length
-          @{ schema='mcr-r9-gui-build-v2'; platform='${{ matrix.os }}'; sha256=$h; bytes=$n; iced_commit='3997291f318a8bc06fa522f5579836fb3feb94df'; rfd_commit='cca0cfa5fc38c2752c9c98f9f5168904a515fd55'; rusqlite_commit='e88f112bef7899234a497baed5cc3c3d553deeb8'; rust='1.88.0'; read_only_authority_test='PASS'; status='PASS' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'GUI_BUILD_RECEIPT.json') -Encoding utf8
+          @{ schema='mcr-r9-gui-build-v3'; platform='${{ matrix.os }}'; sha256=$h; bytes=$n; iced_commit='3997291f318a8bc06fa522f5579836fb3feb94df'; rfd_commit='cca0cfa5fc38c2752c9c98f9f5168904a515fd55'; rusqlite_commit='e88f112bef7899234a497baed5cc3c3d553deeb8'; rust='1.88.0'; read_only_authority_test='PASS'; non_blocking_task_architecture='PASS'; status='PASS' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'GUI_BUILD_RECEIPT.json') -Encoding utf8
           Write-Host "GUI preview EXE $n bytes SHA256 $h"
       - name: Upload qualified GUI preview
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

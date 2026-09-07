@@ -1,6 +1,7 @@
-use iced::widget::{button, column, container, row, rule, scrollable, text, Column, Space};
-use iced::{window, Alignment, Element, Length, Size, Theme};
+use iced::widget::{Column, Space, button, column, container, row, rule, scrollable, text};
+use iced::{Alignment, Element, Length, Size, Task, Theme, window};
 use rusqlite::{Connection, OpenFlags};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
@@ -46,6 +47,31 @@ enum Message {
     RunInspection,
     RefreshWorkspace,
     ClearOutput,
+    ProcessFinished(ProcessResult),
+    SnapshotLoaded(SnapshotResult),
+}
+
+#[derive(Debug, Clone)]
+struct ProcessRequest {
+    program: PathBuf,
+    args: Vec<OsString>,
+    operation: &'static str,
+}
+
+#[derive(Debug, Clone)]
+struct ProcessResult {
+    operation: &'static str,
+    exit_status: Option<String>,
+    success: bool,
+    stdout: String,
+    stderr: String,
+    launch_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct SnapshotResult {
+    workspace: PathBuf,
+    result: Result<WorkspaceSnapshot, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +90,7 @@ struct AuditRow {
     event_sha256: String,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 struct WorkspaceSnapshot {
     loaded: bool,
     object_count: i64,
@@ -84,6 +110,7 @@ struct App {
     status: String,
     output: String,
     snapshot: WorkspaceSnapshot,
+    busy: bool,
 }
 
 impl Default for App {
@@ -91,7 +118,8 @@ impl Default for App {
         let engine_path = locate_engine();
         let status = match &engine_path {
             Some(path) => format!("Engine detected: {}", path.display()),
-            None => "GUI ready. Engine binary is not bundled with this development build yet.".to_owned(),
+            None => "GUI ready. Engine binary is not bundled with this development build yet."
+                .to_owned(),
         };
         Self {
             page: Page::Overview,
@@ -101,30 +129,39 @@ impl Default for App {
             status,
             output: String::new(),
             snapshot: WorkspaceSnapshot::default(),
+            busy: false,
         }
     }
 }
 
 impl App {
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Navigate(page) => {
                 self.page = page;
                 if self.workspace.is_some() && page != Page::Evidence {
-                    self.refresh_workspace();
+                    return self.refresh_workspace_task();
                 }
+                Task::none()
             }
             Message::ChooseWorkspace => {
+                if self.busy {
+                    return Task::none();
+                }
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title("Choose MCR workspace")
                     .pick_folder()
                 {
                     self.workspace = Some(path.clone());
                     self.status = format!("Workspace selected: {}", path.display());
-                    self.refresh_workspace();
+                    return self.refresh_workspace_task();
                 }
+                Task::none()
             }
             Message::ChooseEvidence => {
+                if self.busy {
+                    return Task::none();
+                }
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title("Choose evidence file")
                     .pick_file()
@@ -133,11 +170,51 @@ impl App {
                     self.selected_file = Some(path);
                     self.page = Page::Evidence;
                 }
+                Task::none()
             }
             Message::InitializeWorkspace => self.initialize_workspace(),
             Message::RunInspection => self.run_inspection(),
-            Message::RefreshWorkspace => self.refresh_workspace(),
-            Message::ClearOutput => self.output.clear(),
+            Message::RefreshWorkspace => self.refresh_workspace_task(),
+            Message::ClearOutput => {
+                self.output.clear();
+                Task::none()
+            }
+            Message::ProcessFinished(result) => {
+                self.busy = false;
+                if let Some(error) = result.launch_error {
+                    self.output = format!("Failed to launch {}: {error}", result.operation);
+                    self.status = format!("{} launch failed.", result.operation);
+                } else {
+                    self.output = format!(
+                        "Operation: {}\nExit: {}\n\nSTDOUT\n{}\n\nSTDERR\n{}",
+                        result.operation,
+                        result.exit_status.as_deref().unwrap_or("unknown"),
+                        result.stdout,
+                        result.stderr
+                    );
+                    self.status = if result.success {
+                        format!("{} completed successfully.", result.operation)
+                    } else {
+                        format!(
+                            "{} returned a failure. Exact output is shown below.",
+                            result.operation
+                        )
+                    };
+                }
+                self.refresh_workspace_task()
+            }
+            Message::SnapshotLoaded(result) => {
+                if self.workspace.as_ref() == Some(&result.workspace) {
+                    self.snapshot = match result.result {
+                        Ok(snapshot) => snapshot,
+                        Err(error) => WorkspaceSnapshot {
+                            error: Some(error),
+                            ..WorkspaceSnapshot::default()
+                        },
+                    };
+                }
+                Task::none()
+            }
         }
     }
 
@@ -251,9 +328,21 @@ impl App {
         .spacing(12);
 
         let assurance_cards = row![
-            metric_card("Target Windows", "PASS".to_owned(), "Earlier real-PC 19/19 gate"),
-            metric_card("Hostile matrix", "57 / 57".to_owned(), "Functional adversarial coverage"),
-            metric_card("Build route", "CONTROLLED".to_owned(), "Pinned Windows toolchains"),
+            metric_card(
+                "Target Windows",
+                "PASS".to_owned(),
+                "Earlier real-PC 19/19 gate"
+            ),
+            metric_card(
+                "Hostile matrix",
+                "57 / 57".to_owned(),
+                "Functional adversarial coverage"
+            ),
+            metric_card(
+                "Build route",
+                "CONTROLLED".to_owned(),
+                "Pinned Windows toolchains"
+            ),
             metric_card("Ingest network", "OFF".to_owned(), "Local evidence path"),
         ]
         .spacing(12);
@@ -289,7 +378,8 @@ impl App {
 
         column![
             text("Overview").size(24),
-            text("A human-facing shell around the existing provenance-first ingestion engine.").size(14),
+            text("A human-facing shell around the existing provenance-first ingestion engine.")
+                .size(14),
             Space::new().height(Length::Fixed(10.0)),
             text("Workspace authority").size(16),
             authority_cards,
@@ -306,7 +396,7 @@ impl App {
             row![
                 button(text("Choose workspace"))
                     .style(iced::widget::button::primary)
-                    .on_press(Message::ChooseWorkspace),
+                    .on_press_maybe((!self.busy).then_some(Message::ChooseWorkspace)),
                 button(text("Initialize workspace"))
                     .style(iced::widget::button::secondary)
                     .on_press_maybe(
@@ -316,8 +406,7 @@ impl App {
                 button(text("Refresh"))
                     .style(iced::widget::button::subtle)
                     .on_press_maybe(
-                        self.workspace
-                            .is_some()
+                        (!self.busy && self.workspace.is_some())
                             .then_some(Message::RefreshWorkspace)
                     ),
             ]
@@ -342,8 +431,10 @@ impl App {
             .as_deref()
             .map(route_for)
             .unwrap_or("Select a file to determine the existing engine route");
-        let run_enabled =
-            self.workspace.is_some() && self.selected_file.is_some() && self.engine_path.is_some();
+        let run_enabled = !self.busy
+            && self.workspace.is_some()
+            && self.selected_file.is_some()
+            && self.engine_path.is_some();
 
         column![
             text("Evidence").size(24),
@@ -352,7 +443,7 @@ impl App {
             row![
                 button(text("Choose evidence file"))
                     .style(iced::widget::button::primary)
-                    .on_press(Message::ChooseEvidence),
+                    .on_press_maybe((!self.busy).then_some(Message::ChooseEvidence)),
                 button(text("Run current engine"))
                     .style(iced::widget::button::success)
                     .on_press_maybe(run_enabled.then_some(Message::RunInspection)),
@@ -427,8 +518,7 @@ impl App {
                 button(text("Refresh"))
                     .style(iced::widget::button::subtle)
                     .on_press_maybe(
-                        self.workspace
-                            .is_some()
+                        (!self.busy && self.workspace.is_some())
                             .then_some(Message::RefreshWorkspace)
                     ),
             ]
@@ -468,20 +558,25 @@ impl App {
             row![
                 column![
                     text("Audit").size(24),
-                    text("Latest hash-chained engine events from the existing workspace authority.").size(14),
+                    text(
+                        "Latest hash-chained engine events from the existing workspace authority."
+                    )
+                    .size(14),
                 ],
                 Space::new().width(Length::Fill),
                 button(text("Refresh"))
                     .style(iced::widget::button::subtle)
                     .on_press_maybe(
-                        self.workspace
-                            .is_some()
+                        (!self.busy && self.workspace.is_some())
                             .then_some(Message::RefreshWorkspace)
                     ),
             ]
             .align_y(Alignment::Center),
-            text(format!("{} audit events recorded in the workspace", self.snapshot.audit_count))
-                .size(13),
+            text(format!(
+                "{} audit events recorded in the workspace",
+                self.snapshot.audit_count
+            ))
+            .size(13),
             Space::new().height(Length::Fixed(8.0)),
             scrollable(list).height(Length::Fill),
         ]
@@ -491,39 +586,58 @@ impl App {
     }
 
     fn can_initialize(&self) -> bool {
-        self.workspace.is_some() && self.engine_path.is_some()
+        !self.busy && self.workspace.is_some() && self.engine_path.is_some()
     }
 
-    fn refresh_workspace(&mut self) {
-        let Some(workspace) = self.workspace.as_deref() else {
+    fn refresh_workspace_task(&mut self) -> Task<Message> {
+        let Some(workspace) = self.workspace.clone() else {
             self.snapshot = WorkspaceSnapshot::default();
-            return;
+            return Task::none();
         };
-        self.snapshot = match load_workspace_snapshot(workspace) {
-            Ok(snapshot) => snapshot,
-            Err(error) => WorkspaceSnapshot {
-                error: Some(error),
-                ..WorkspaceSnapshot::default()
+        let task_workspace = workspace.clone();
+        Task::perform(
+            async move {
+                SnapshotResult {
+                    workspace: task_workspace.clone(),
+                    result: load_workspace_snapshot(&task_workspace),
+                }
             },
-        };
+            Message::SnapshotLoaded,
+        )
     }
 
-    fn initialize_workspace(&mut self) {
-        let (Some(engine), Some(workspace)) = (&self.engine_path, &self.workspace) else {
+    fn initialize_workspace(&mut self) -> Task<Message> {
+        let (Some(engine), Some(workspace)) = (self.engine_path.clone(), self.workspace.clone()) else {
             self.status = "Choose a workspace and bundle the engine first.".to_owned();
-            return;
+            return Task::none();
         };
-        self.capture_process(Command::new(engine).arg("init").arg(workspace));
-        self.refresh_workspace();
+        if self.busy {
+            return Task::none();
+        }
+
+        self.busy = true;
+        self.status = "Initializing workspace…".to_owned();
+        let request = ProcessRequest {
+            program: engine,
+            args: vec![OsString::from("init"), workspace.as_os_str().to_owned()],
+            operation: "Workspace initialization",
+        };
+        Task::perform(async move { run_process(request) }, Message::ProcessFinished)
     }
 
-    fn run_inspection(&mut self) {
-        let (Some(engine), Some(workspace), Some(file)) =
-            (&self.engine_path, &self.workspace, &self.selected_file)
-        else {
+    fn run_inspection(&mut self) -> Task<Message> {
+        let (Some(engine), Some(workspace), Some(file)) = (
+            self.engine_path.clone(),
+            self.workspace.clone(),
+            self.selected_file.clone(),
+        ) else {
             self.status = "Engine, workspace and evidence file are all required.".to_owned();
-            return;
+            return Task::none();
         };
+
+        if self.busy {
+            return Task::none();
+        }
 
         let extension = file
             .extension()
@@ -540,41 +654,50 @@ impl App {
             _ => "ingest-file",
         };
 
-        if extension == "pdf" {
-            self.status = "PDF bytes will be captured now; qpdf/pdfcpu state inventory is deliberately not wired into this GUI preview yet.".to_owned();
-        }
+        self.busy = true;
+        self.status = if extension == "pdf" {
+            "Capturing PDF bytes… qpdf/pdfcpu state inventory is deliberately not wired into this GUI preview yet.".to_owned()
+        } else {
+            format!("Running {command_name}…")
+        };
 
-        self.capture_process(
-            Command::new(engine)
-                .arg(command_name)
-                .arg(workspace)
-                .arg(file),
-        );
-        self.refresh_workspace();
-    }
-
-    fn capture_process(&mut self, command: &mut Command) {
-        match command.output() {
-            Ok(result) => {
-                let stdout = String::from_utf8_lossy(&result.stdout);
-                let stderr = String::from_utf8_lossy(&result.stderr);
-                self.output = format!(
-                    "Exit: {}\n\nSTDOUT\n{}\n\nSTDERR\n{}",
-                    result.status, stdout, stderr
-                );
-                self.status = if result.status.success() {
-                    "Engine run completed successfully.".to_owned()
-                } else {
-                    "Engine run returned a failure. Exact output is shown below.".to_owned()
-                };
-            }
-            Err(error) => {
-                self.output = format!("Failed to launch engine: {error}");
-                self.status = "Engine launch failed.".to_owned();
-            }
-        }
+        let request = ProcessRequest {
+            program: engine,
+            args: vec![
+                OsString::from(command_name),
+                workspace.as_os_str().to_owned(),
+                file.as_os_str().to_owned(),
+            ],
+            operation: "Evidence inspection",
+        };
+        Task::perform(async move { run_process(request) }, Message::ProcessFinished)
     }
 }
+
+fn run_process(request: ProcessRequest) -> ProcessResult {
+    let mut command = Command::new(&request.program);
+    command.args(&request.args);
+
+    match command.output() {
+        Ok(result) => ProcessResult {
+            operation: request.operation,
+            exit_status: Some(result.status.to_string()),
+            success: result.status.success(),
+            stdout: String::from_utf8_lossy(&result.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&result.stderr).into_owned(),
+            launch_error: None,
+        },
+        Err(error) => ProcessResult {
+            operation: request.operation,
+            exit_status: None,
+            success: false,
+            stdout: String::new(),
+            stderr: String::new(),
+            launch_error: Some(error.to_string()),
+        },
+    }
+}
+
 
 fn metric_card(
     title: &'static str,
@@ -661,8 +784,7 @@ fn load_workspace_snapshot(workspace: &Path) -> Result<WorkspaceSnapshot, String
     let db_path = workspace.join(DB_NAME);
     if !db_path.is_file() {
         return Err(format!(
-            "No {} exists in the selected workspace yet.",
-            DB_NAME
+            "No {DB_NAME} exists in the selected workspace yet."
         ));
     }
 
@@ -721,7 +843,11 @@ fn load_findings(conn: &Connection) -> rusqlite::Result<Vec<Finding>> {
             Ok(Finding {
                 kind: "Archive blocked".to_owned(),
                 source: row.get(0)?,
-                detail: format!("{} · {}", row.get::<_, String>(1)?, row.get::<_, String>(2)?),
+                detail: format!(
+                    "{} · {}",
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?
+                ),
             })
         })?;
         for row in rows {
@@ -783,7 +909,11 @@ fn load_findings(conn: &Connection) -> rusqlite::Result<Vec<Finding>> {
             Ok(Finding {
                 kind: "PDF state signal".to_owned(),
                 source: row.get(0)?,
-                detail: format!("{} · count {}", row.get::<_, String>(1)?, row.get::<_, i64>(2)?),
+                detail: format!(
+                    "{} · count {}",
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)?
+                ),
             })
         })?;
         for row in rows {
@@ -882,10 +1012,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("clock")
             .as_nanos();
-        let workspace = std::env::temp_dir().join(format!(
-            "mcr-r9-gui-test-{}-{unique}",
-            std::process::id()
-        ));
+        let workspace =
+            std::env::temp_dir().join(format!("mcr-r9-gui-test-{}-{unique}", std::process::id()));
         fs::create_dir_all(&workspace).expect("create workspace");
         let db_path = workspace.join(DB_NAME);
 
@@ -967,7 +1095,10 @@ mod tests {
         assert_eq!(snapshot.finding_count, 4);
         assert_eq!(snapshot.findings.len(), 4);
         assert_eq!(snapshot.audit.len(), 1);
-        assert_eq!(before, after, "read-only GUI must not mutate authority bytes");
+        assert_eq!(
+            before, after,
+            "read-only GUI must not mutate authority bytes"
+        );
 
         fs::remove_dir_all(workspace).expect("clean synthetic workspace");
     }

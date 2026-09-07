@@ -1,11 +1,12 @@
 {
-  "schema": "mcr-r9-gui-public-qualification-v2",
-  "scope": "synthetic-only GUI compile/qualification/data-binding mirror",
+  "schema": "mcr-r9-gui-public-qualification-v3",
+  "scope": "synthetic-only GUI compile/qualification/data-binding/non-blocking process mirror",
   "private_product_source_commit": "84bc8dcf09380583495bb14ce75ae12bd06b912d",
   "iced": {
     "version": "0.14.0",
     "git_commit": "3997291f318a8bc06fa522f5579836fb3feb94df",
-    "license": "MIT"
+    "license": "MIT",
+    "task_executor": "thread-pool"
   },
   "rfd": {
     "version": "0.17.2",
@@ -20,6 +21,7 @@
   },
   "renderer": "iced tiny-skia software renderer",
   "rust": "1.88.0",
+  "non_blocking_engine_execution": "Iced Task::perform with thread-pool executor; legacy synchronous UI capture_process removed",
   "real_case_material": false,
   "frozen_mcr_r59": "UNCHANGED"
 }
