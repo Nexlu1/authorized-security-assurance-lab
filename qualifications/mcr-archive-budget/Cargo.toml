@@ -9,3 +9,4 @@ license = "MIT"
 [dependencies]
 rawzip = "=0.5.1"
 flate2 = "=1.1.10"
+hex = "=0.4.3"
