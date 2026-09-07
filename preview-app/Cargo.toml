@@ -1,0 +1,18 @@
+[package]
+name = "mcr-engineering-preview"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+license = "MIT"
+description = "Local Windows engineering-preview shell for the MCR evidence-ingestion engine"
+
+[dependencies]
+eframe = { git = "https://github.com/emilk/egui", tag = "0.36.1", package = "eframe", features = ["accesskit"] }
+rfd = { git = "https://github.com/PolyMeilex/rfd", tag = "0.17.2" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

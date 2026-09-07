@@ -1,0 +1,160 @@
+name: Temporary MCR Engineering Preview App
+
+on:
+  push:
+    branches:
+      - temporary/mcr-engineering-preview-app-20260907
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-preview:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - name: Checkout synthetic-only branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Install Rust toolchains
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup toolchain install 1.95.0 --profile minimal
+
+      - name: Reconstruct current R2 source
+        shell: pwsh
+        run: python qualification/mcr-r2-durable/reconstruct_r2.py
+
+      - name: Apply controlled R2.1-R2.4 repairs
+        shell: pwsh
+        run: |
+          python qualification/mcr-r2-durable/apply_candidate_repair.py
+          python qualification/mcr-r2-durable/apply_runtime_repair.py
+          python qualification/mcr-r2-durable/apply_coverage_expansion.py
+          python qualification/mcr-r2-durable/apply_fixture_r21_tests.py
+          python qualification/mcr-r2-durable/apply_r22_expansion.py
+          python qualification/mcr-r2-durable/apply_r22_compile_fix.py
+          python qualification/mcr-r2-durable/apply_r23_expansion.py
+          python qualification/mcr-r2-durable/apply_r23_clippy_fix.py
+          python qualification/mcr-r2-durable/apply_r24_resource_limits.py
+          python qualification/mcr-r2-durable/apply_r24_compile_fix.py
+
+      - name: Build exact engine lane with Rust 1.88
+        shell: pwsh
+        run: |
+          Push-Location $env:MCR_R2_SRC
+          cargo +1.88.0 generate-lockfile
+          cargo +1.88.0 build --locked --release
+          Pop-Location
+
+      - name: Build GitHub-first GUI shell
+        shell: pwsh
+        run: cargo +1.95.0 build --release --manifest-path preview-app/Cargo.toml
+
+      - name: Acquire and verify portable PDF specialists from GitHub
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\pdf-tools" | Out-Null
+
+          $qpdfZip = "$env:RUNNER_TEMP\qpdf.zip"
+          Invoke-WebRequest -Uri 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip' -OutFile $qpdfZip
+          $qpdfZipHash = (Get-FileHash -Algorithm SHA256 $qpdfZip).Hash.ToLowerInvariant()
+          if ($qpdfZipHash -ne '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6') { throw "qpdf ZIP hash mismatch: $qpdfZipHash" }
+          Expand-Archive -LiteralPath $qpdfZip -DestinationPath "$env:RUNNER_TEMP\pdf-tools\qpdf" -Force
+
+          $pdfcpuZip = "$env:RUNNER_TEMP\pdfcpu.zip"
+          Invoke-WebRequest -Uri 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip' -OutFile $pdfcpuZip
+          $pdfcpuZipHash = (Get-FileHash -Algorithm SHA256 $pdfcpuZip).Hash.ToLowerInvariant()
+          if ($pdfcpuZipHash -ne '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6') { throw "pdfcpu ZIP hash mismatch: $pdfcpuZipHash" }
+          Expand-Archive -LiteralPath $pdfcpuZip -DestinationPath "$env:RUNNER_TEMP\pdf-tools\pdfcpu" -Force
+
+      - name: Assemble preview folder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $stage = "$env:RUNNER_TEMP\MCR Engineering Preview"
+          New-Item -ItemType Directory -Force -Path $stage, "$stage\engine", "$stage\tools" | Out-Null
+
+          Copy-Item 'target\release\mcr-engineering-preview.exe' "$stage\MCR Engineering Preview.exe"
+          Copy-Item "$env:MCR_R2_SRC\target\release\mcr-ingest.exe" "$stage\engine\mcr-ingest.exe"
+          Copy-Item 'preview-app\README_FIRST.txt' "$stage\README_FIRST.txt"
+          Copy-Item "$env:RUNNER_TEMP\pdf-tools\qpdf" "$stage\tools\qpdf" -Recurse
+          Copy-Item "$env:RUNNER_TEMP\pdf-tools\pdfcpu" "$stage\tools\pdfcpu" -Recurse
+
+          $qpdfExe = Get-ChildItem "$stage\tools\qpdf" -Recurse -Filter 'qpdf.exe' | Select-Object -First 1
+          if (-not $qpdfExe) { throw 'qpdf.exe not found after portable extraction' }
+          $pdfcpuExe = Get-ChildItem "$stage\tools\pdfcpu" -Recurse -Filter 'pdfcpu.exe' | Select-Object -First 1
+          if (-not $pdfcpuExe) { throw 'pdfcpu.exe not found after portable extraction' }
+
+          $qpdfSha = (Get-FileHash -Algorithm SHA256 $qpdfExe.FullName).Hash.ToLowerInvariant()
+          $pdfcpuSha = (Get-FileHash -Algorithm SHA256 $pdfcpuExe.FullName).Hash.ToLowerInvariant()
+          $qpdfRel = [IO.Path]::GetRelativePath($stage, $qpdfExe.FullName).Replace('\','/')
+          $pdfcpuRel = [IO.Path]::GetRelativePath($stage, $pdfcpuExe.FullName).Replace('\','/')
+          @(
+            "QPDF_REL=$qpdfRel",
+            "QPDF_SHA256=$qpdfSha",
+            "PDFCPU_REL=$pdfcpuRel",
+            "PDFCPU_SHA256=$pdfcpuSha"
+          ) | Set-Content -Encoding ASCII "$stage\tools.env"
+
+          @(
+            'MCR Engineering Preview — third-party notices',
+            'egui/eframe 0.36.1 — Apache-2.0 — https://github.com/emilk/egui',
+            'rfd 0.17.2 — MIT — https://github.com/PolyMeilex/rfd',
+            'qpdf 12.4.1 — Apache-2.0 — https://github.com/qpdf/qpdf',
+            'pdfcpu 0.15.0 — Apache-2.0 — https://github.com/pdfcpu/pdfcpu',
+            '',
+            'This engineering preview is not the final production-certified release.'
+          ) | Set-Content -Encoding UTF8 "$stage\THIRD_PARTY_NOTICES.txt"
+
+          "MCR_PREVIEW_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Exact packaged self-test
+        shell: pwsh
+        run: '& "$env:MCR_PREVIEW_STAGE\MCR Engineering Preview.exe" --self-test'
+
+      - name: Write preview receipt
+        shell: pwsh
+        run: |
+          $app = "$env:MCR_PREVIEW_STAGE\MCR Engineering Preview.exe"
+          $engine = "$env:MCR_PREVIEW_STAGE\engine\mcr-ingest.exe"
+          $receipt = [ordered]@{
+            schema = 'mcr-engineering-preview-build-v1'
+            status = 'PASS_SELF_TESTED_ENGINEERING_PREVIEW'
+            os = '${{ matrix.os }}'
+            github_sha = '${{ github.sha }}'
+            gui = 'egui/eframe 0.36.1'
+            file_dialog = 'rfd 0.17.2'
+            app_sha256 = (Get-FileHash -Algorithm SHA256 $app).Hash.ToLowerInvariant()
+            engine_sha256 = (Get-FileHash -Algorithm SHA256 $engine).Hash.ToLowerInvariant()
+            pdf_specialists = 'qpdf 12.4.1 + pdfcpu 0.15.0'
+            frozen_mcr_r59 = 'UNCHANGED'
+            release_claim = 'ENGINEERING_PREVIEW_ONLY'
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 "$env:MCR_PREVIEW_STAGE\BUILD_RECEIPT.json"
+
+      - name: Package preview
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\MCR_ENGINEERING_PREVIEW_${{ matrix.os }}_2026-09-07.zip"
+          Compress-Archive -Path "$env:MCR_PREVIEW_STAGE\*" -DestinationPath $zip -Force
+          "MCR_PREVIEW_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-engineering-preview-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.MCR_PREVIEW_ZIP }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
