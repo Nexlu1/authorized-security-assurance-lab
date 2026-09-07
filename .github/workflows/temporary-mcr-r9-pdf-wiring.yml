@@ -1,0 +1,128 @@
+name: Temporary MCR R9 PDF wiring qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r9-pdf-wiring-20260907
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-pdf-gui:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - name: Check out synthetic-only qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust 1.88 toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+      - name: Normalize and prove exact previously-qualified GUI baseline
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo fmt
+          cargo fmt --check
+          $p = 'src/main.rs'
+          $h = (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($h -ne '39d5def947b8e3930ebec9bd118c2111f226ec9f3961a81da18c400116604331') { throw "unexpected normalized GUI baseline: $h" }
+      - name: Apply bounded PDF specialist wiring
+        shell: pwsh
+        run: python qualification/mcr-r9-gui/apply_pdf_wiring.py
+      - name: Prove visible and fail-closed PDF route
+        shell: pwsh
+        run: |
+          $p = 'qualification/mcr-r9-gui/src/main.rs'
+          $s = Get-Content -LiteralPath $p -Raw
+          if ($s -notmatch 'OsString::from\("inventory-pdf"\)') { throw 'inventory-pdf GUI route missing' }
+          if ($s -notmatch '57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d') { throw 'qpdf executable hash pin missing' }
+          if ($s -notmatch '94cafb66b508c2eb8648dffbb17fddb74b7a117fdc38846e36f9ec6322bdd05e') { throw 'pdfcpu executable hash pin missing' }
+          if ($s -notmatch 'PDF specialists not packaged: PDF analysis is disabled rather than weakened') { throw 'fail-closed user state missing' }
+          if ($s -match 'Capturing PDF bytes… qpdf/pdfcpu state inventory is deliberately not wired') { throw 'legacy generic-PDF preview route remains' }
+      - name: Prove non-blocking architecture remains intact
+        shell: pwsh
+        run: |
+          $s = Get-Content qualification/mcr-r9-gui/src/main.rs -Raw
+          if ($s -notmatch 'fn update\(&mut self, message: Message\) -> Task<Message>') { throw 'Task-returning update missing' }
+          if ($s -notmatch 'Task::perform') { throw 'Task::perform missing' }
+          if ($s -match 'fn capture_process\(') { throw 'legacy synchronous capture returned' }
+          if ($s -notmatch 'busy: bool') { throw 'busy guard missing' }
+      - name: Generate and verify exact GUI dependency lock
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo generate-lockfile
+          $lock = Get-Item Cargo.lock
+          if ($lock.Length -ne 61677) { throw "Cargo.lock byte mismatch: $($lock.Length)" }
+          $h = (Get-FileHash Cargo.lock -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($h -ne '070944b0cc7bca238e48d6eaef335212160426e051f6263c67ac5b1f6795c6bd') { throw "Cargo.lock SHA mismatch: $h" }
+      - name: Normalize patched source
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo fmt
+          cargo fmt --check
+      - name: Strict Clippy
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo clippy --locked --all-targets -- -D warnings
+      - name: GUI authority and PDF-route tests
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo test --locked --all-targets -- --test-threads=1
+      - name: Release build
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo build --locked --release
+      - name: Record qualified PDF-wired GUI receipt
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'qualification\mcr-r9-gui'
+          $src = Join-Path $root 'src\main.rs'
+          $exe = Join-Path $root 'target\release\mcr-tooling.exe'
+          $receipt = [ordered]@{
+            schema = 'mcr-r9-pdf-wired-gui-qualification-v1'
+            platform = '${{ matrix.os }}'
+            github_sha = '${{ github.sha }}'
+            rust = '1.88.0'
+            source_sha256 = (Get-FileHash $src -Algorithm SHA256).Hash.ToLowerInvariant()
+            source_bytes = (Get-Item $src).Length
+            cargo_lock_sha256 = (Get-FileHash (Join-Path $root 'Cargo.lock') -Algorithm SHA256).Hash.ToLowerInvariant()
+            gui_exe_sha256 = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            gui_exe_bytes = (Get-Item $exe).Length
+            pdf_route = 'inventory-pdf'
+            qpdf_executable_sha256 = '57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d'
+            pdfcpu_executable_sha256 = '94cafb66b508c2eb8648dffbb17fddb74b7a117fdc38846e36f9ec6322bdd05e'
+            missing_specialists = 'FAIL_CLOSED'
+            non_blocking_task_architecture = 'PASS'
+            read_only_authority_test = 'PASS'
+            status = 'PASS'
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $env:RUNNER_TEMP 'R9_PDF_GUI_RECEIPT.json') -Encoding utf8
+          Write-Host ($receipt | ConvertTo-Json -Depth 5)
+      - name: Upload exact qualified source and preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r9-pdf-wired-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            qualification/mcr-r9-gui/src/main.rs
+            qualification/mcr-r9-gui/Cargo.lock
+            qualification/mcr-r9-gui/target/release/mcr-tooling.exe
+            ${{ runner.temp }}/R9_PDF_GUI_RECEIPT.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
