@@ -1,0 +1,38 @@
+name: mcr-archive-budget-qualification
+
+on:
+  pull_request:
+    paths:
+      - 'qualifications/mcr-archive-budget/**'
+      - '.github/workflows/mcr-archive-budget-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: qualifications/mcr-archive-budget
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: '1.88.0'
+          components: rustfmt, clippy
+      - name: rustfmt check
+        run: cargo fmt --check
+      - name: cargo check
+        run: cargo check --locked
+      - name: unit and hostile-fixture tests
+        run: cargo test --locked --all-targets --verbose
+      - name: strict clippy
+        run: cargo clippy --locked --all-targets -- -D warnings

@@ -1,0 +1,281 @@
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
+
+pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
+pub type Result<T> = std::result::Result<T, BoxError>;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ArchiveByteBudgetPolicy {
+    pub max_member_actual_bytes: u64,
+    pub max_total_actual_bytes: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ArchiveByteBudgetSummary {
+    pub members_verified: u64,
+    pub actual_uncompressed_bytes: u64,
+}
+
+struct ActualByteBudgetReader<'a, R> {
+    inner: R,
+    member_limit: u64,
+    total_limit: u64,
+    member_actual: u64,
+    total_actual: &'a mut u64,
+}
+
+impl<'a, R> ActualByteBudgetReader<'a, R> {
+    fn new(inner: R, member_limit: u64, total_limit: u64, total_actual: &'a mut u64) -> Self {
+        Self {
+            inner,
+            member_limit,
+            total_limit,
+            member_actual: 0,
+            total_actual,
+        }
+    }
+}
+
+impl<R: Read> Read for ActualByteBudgetReader<'_, R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        let member_remaining = self.member_limit.saturating_sub(self.member_actual);
+        let total_remaining = self.total_limit.saturating_sub(*self.total_actual);
+        let allowed_u64 = member_remaining.min(total_remaining).min(buf.len() as u64);
+
+        if allowed_u64 == 0 {
+            let mut probe = [0u8; 1];
+            return match self.inner.read(&mut probe)? {
+                0 => Ok(0),
+                _ if self.member_actual >= self.member_limit => Err(io::Error::other(format!(
+                    "archive member actual-byte budget exceeded: limit={} actual_at_least={}",
+                    self.member_limit,
+                    self.member_actual.saturating_add(1)
+                ))),
+                _ => Err(io::Error::other(format!(
+                    "archive total actual-byte budget exceeded: limit={} actual_at_least={}",
+                    self.total_limit,
+                    (*self.total_actual).saturating_add(1)
+                ))),
+            };
+        }
+
+        let allowed = usize::try_from(allowed_u64).unwrap_or(buf.len());
+        let n = self.inner.read(&mut buf[..allowed])?;
+        let n_u64 = u64::try_from(n).map_err(io::Error::other)?;
+        self.member_actual = self
+            .member_actual
+            .checked_add(n_u64)
+            .ok_or_else(|| io::Error::other("archive member actual-byte counter overflow"))?;
+        *self.total_actual = (*self.total_actual)
+            .checked_add(n_u64)
+            .ok_or_else(|| io::Error::other("archive total actual-byte counter overflow"))?;
+        Ok(n)
+    }
+}
+
+pub fn verify_zip_actual_byte_budgets(
+    object_path: &Path,
+    policy: ArchiveByteBudgetPolicy,
+) -> Result<ArchiveByteBudgetSummary> {
+    let file = File::open(object_path)?;
+    let mut buffer = vec![0u8; rawzip::RECOMMENDED_BUFFER_SIZE];
+    let archive = rawzip::ZipArchive::from_file(file, &mut buffer)?;
+    let expected_entries = archive.entries_hint();
+    let mut entries = archive.entries(&mut buffer);
+    let mut entries_seen = 0u64;
+    let mut actual_total = 0u64;
+    let mut members_verified = 0u64;
+
+    while let Some(entry) = entries.next_entry()? {
+        entries_seen = entries_seen
+            .checked_add(1)
+            .ok_or("archive entry counter overflow")?;
+        if entries_seen > expected_entries {
+            return Err(format!(
+                "ZIP central-directory entry count exceeded EOCD hint: expected {expected_entries}, observed at least {entries_seen}"
+            )
+            .into());
+        }
+        if entry.is_dir() {
+            continue;
+        }
+        if entry.flags().is_encrypted()
+            || entry.compression_method() == rawzip::CompressionMethod::AES
+        {
+            return Err("encrypted archive member is outside bounded verification path".into());
+        }
+
+        let local_entry = archive.get_entry(entry.wayfinder())?;
+        let reader = local_entry.reader();
+        match entry.compression_method() {
+            rawzip::CompressionMethod::STORE => {
+                let budget = ActualByteBudgetReader::new(
+                    reader,
+                    policy.max_member_actual_bytes,
+                    policy.max_total_actual_bytes,
+                    &mut actual_total,
+                );
+                let mut verifier = local_entry.verifying_reader(budget);
+                io::copy(&mut verifier, &mut io::sink())?;
+            }
+            rawzip::CompressionMethod::DEFLATE => {
+                let decoder = flate2::read::DeflateDecoder::new(reader);
+                let budget = ActualByteBudgetReader::new(
+                    decoder,
+                    policy.max_member_actual_bytes,
+                    policy.max_total_actual_bytes,
+                    &mut actual_total,
+                );
+                let mut verifier = local_entry.verifying_reader(budget);
+                io::copy(&mut verifier, &mut io::sink())?;
+            }
+            method => {
+                return Err(format!(
+                    "compression method outside bounded verification allowlist: {}",
+                    method.as_u16()
+                )
+                .into());
+            }
+        }
+        members_verified = members_verified
+            .checked_add(1)
+            .ok_or("archive verified-member counter overflow")?;
+    }
+
+    if entries_seen != expected_entries {
+        return Err(format!(
+            "ZIP central-directory entry count mismatch: EOCD expected {expected_entries}, iterator observed {entries_seen}"
+        )
+        .into());
+    }
+
+    Ok(ArchiveByteBudgetSummary {
+        members_verified,
+        actual_uncompressed_bytes: actual_total,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    const STORE_ZIP_HEX: &str = "504b0304140000000000e075275d3a7081390a0000000a00000005000000612e7478746162636465666768696a504b01021403140000000000e075275d3a7081390a0000000a000000050000000000000000000000800100000000612e747874504b05060000000001000100330000002d0000000000";
+    const DEFLATE_ZIP_HEX: &str = "504b0304140000000800e075275d647a70af060000006400000005000000612e7478744b4ca43d0000504b01021403140000000800e075275d647a70af0600000064000000050000000000000000000000800100000000612e747874504b0506000000000100010033000000290000000000";
+    const DISHONEST_ZIP_HEX: &str = "504b0304140000000800e075275d647a70af06000000e803000005000000612e7478744b4ca43d0000504b01021403140000000800e075275d647a70af06000000e8030000050000000000000000000000800100000000612e747874504b0506000000000100010033000000290000000000";
+    const TWO_STORE_ZIP_HEX: &str = "504b0304140000000000f375275def398e4b060000000600000005000000612e747874616263646566504b0304140000000000f375275dadcb12cc060000000600000005000000622e7478746768696a6b6c504b01021403140000000000f375275def398e4b0600000006000000050000000000000000000000800100000000612e747874504b01021403140000000000f375275dadcb12cc0600000006000000050000000000000000000000800129000000622e747874504b0506000000000200020066000000520000000000";
+
+    fn with_fixture<T>(hex_text: &str, f: impl FnOnce(&Path) -> T) -> T {
+        let bytes = hex::decode(hex_text).expect("synthetic fixture hex must decode");
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock must be after epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "mcr-archive-budget-{}-{nonce}.zip",
+            std::process::id()
+        ));
+        std::fs::write(&path, bytes).expect("synthetic fixture must be writable");
+        let result = f(&path);
+        std::fs::remove_file(&path).expect("synthetic fixture must be removable");
+        result
+    }
+
+    #[test]
+    fn store_member_is_verified_without_materialisation() {
+        let summary = with_fixture(STORE_ZIP_HEX, |path| {
+            verify_zip_actual_byte_budgets(
+                path,
+                ArchiveByteBudgetPolicy {
+                    max_member_actual_bytes: 10,
+                    max_total_actual_bytes: 10,
+                },
+            )
+            .unwrap()
+        });
+        assert_eq!(
+            summary,
+            ArchiveByteBudgetSummary {
+                members_verified: 1,
+                actual_uncompressed_bytes: 10,
+            }
+        );
+    }
+
+    #[test]
+    fn deflate_member_is_verified_without_materialisation() {
+        let summary = with_fixture(DEFLATE_ZIP_HEX, |path| {
+            verify_zip_actual_byte_budgets(
+                path,
+                ArchiveByteBudgetPolicy {
+                    max_member_actual_bytes: 100,
+                    max_total_actual_bytes: 100,
+                },
+            )
+            .unwrap()
+        });
+        assert_eq!(
+            summary,
+            ArchiveByteBudgetSummary {
+                members_verified: 1,
+                actual_uncompressed_bytes: 100,
+            }
+        );
+    }
+
+    #[test]
+    fn arc_008_member_limit_fails_closed() {
+        let error_text = with_fixture(DEFLATE_ZIP_HEX, |path| {
+            verify_zip_actual_byte_budgets(
+                path,
+                ArchiveByteBudgetPolicy {
+                    max_member_actual_bytes: 50,
+                    max_total_actual_bytes: 1000,
+                },
+            )
+            .unwrap_err()
+            .to_string()
+        });
+        assert!(error_text.contains("member actual-byte budget exceeded"));
+    }
+
+    #[test]
+    fn arc_009_total_limit_is_cumulative_across_members() {
+        let error_text = with_fixture(TWO_STORE_ZIP_HEX, |path| {
+            verify_zip_actual_byte_budgets(
+                path,
+                ArchiveByteBudgetPolicy {
+                    max_member_actual_bytes: 10,
+                    max_total_actual_bytes: 10,
+                },
+            )
+            .unwrap_err()
+            .to_string()
+        });
+        assert!(error_text.contains("total actual-byte budget exceeded"));
+    }
+
+    #[test]
+    fn arc_011_hard_actual_byte_limit_wins_over_dishonest_metadata() {
+        let error_text = with_fixture(DISHONEST_ZIP_HEX, |path| {
+            verify_zip_actual_byte_budgets(
+                path,
+                ArchiveByteBudgetPolicy {
+                    max_member_actual_bytes: 50,
+                    max_total_actual_bytes: 1000,
+                },
+            )
+            .unwrap_err()
+            .to_string()
+        });
+        assert!(
+            error_text.contains("member actual-byte budget exceeded"),
+            "unexpected ARC-011 rejection: {error_text}"
+        );
+    }
+}
