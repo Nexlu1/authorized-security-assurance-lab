@@ -1,0 +1,18 @@
+[package]
+name = "mcr-tooling"
+version = "0.1.0-preview.1"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Synthetic-only qualification mirror of the MCR Windows GUI shell"
+publish = false
+
+[dependencies]
+iced = { git = "https://github.com/iced-rs/iced", rev = "3997291f318a8bc06fa522f5579836fb3feb94df", default-features = false, features = ["tiny-skia", "thread-pool"] }
+rfd = { git = "https://github.com/PolyMeilex/rfd", rev = "cca0cfa5fc38c2752c9c98f9f5168904a515fd55" }
+
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+panic = "abort"

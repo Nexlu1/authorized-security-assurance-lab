@@ -1,0 +1,19 @@
+{
+  "schema": "mcr-r9-gui-public-qualification-v1",
+  "scope": "synthetic-only GUI compile/qualification mirror",
+  "private_product_source_commit": "d1ad2631693b1b5e32cac5eb98834dea79697578",
+  "iced": {
+    "version": "0.14.0",
+    "git_commit": "3997291f318a8bc06fa522f5579836fb3feb94df",
+    "license": "MIT"
+  },
+  "rfd": {
+    "version": "0.17.2",
+    "git_commit": "cca0cfa5fc38c2752c9c98f9f5168904a515fd55",
+    "license": "MIT"
+  },
+  "renderer": "iced tiny-skia software renderer",
+  "rust": "1.88.0",
+  "real_case_material": false,
+  "frozen_mcr_r59": "UNCHANGED"
+}

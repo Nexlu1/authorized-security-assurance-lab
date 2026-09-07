@@ -1,0 +1,74 @@
+name: Temporary MCR R9 GUI qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r9-gui-qualification-20260907
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-gui:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - name: Check out synthetic-only branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install exact Rust toolchain
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.88.0
+          components: rustfmt,clippy
+      - name: Prove GitHub-first pins
+        shell: pwsh
+        run: |
+          $control = Get-Content qualification/mcr-r9-gui/CONTROL.json -Raw | ConvertFrom-Json
+          if ($control.iced.git_commit -ne '3997291f318a8bc06fa522f5579836fb3feb94df') { throw 'Iced pin mismatch' }
+          if ($control.rfd.git_commit -ne 'cca0cfa5fc38c2752c9c98f9f5168904a515fd55') { throw 'rfd pin mismatch' }
+      - name: Generate lockfile from exact GitHub revisions
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo generate-lockfile
+      - name: Formatting gate
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo fmt --check
+      - name: Strict Clippy
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo clippy --locked --all-targets -- -D warnings
+      - name: Release build
+        shell: pwsh
+        run: |
+          Set-Location qualification/mcr-r9-gui
+          cargo build --locked --release
+      - name: Record preview EXE
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'qualification\mcr-r9-gui\target\release\mcr-tooling.exe'
+          $h = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $n = (Get-Item -LiteralPath $exe).Length
+          @{ schema='mcr-r9-gui-build-v1'; platform='${{ matrix.os }}'; sha256=$h; bytes=$n; iced_commit='3997291f318a8bc06fa522f5579836fb3feb94df'; rfd_commit='cca0cfa5fc38c2752c9c98f9f5168904a515fd55'; rust='1.88.0'; status='PASS' } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'GUI_BUILD_RECEIPT.json') -Encoding utf8
+          Write-Host "GUI preview EXE $n bytes SHA256 $h"
+      - name: Upload qualified GUI preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r9-gui-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            qualification/mcr-r9-gui/target/release/mcr-tooling.exe
+            ${{ runner.temp }}/GUI_BUILD_RECEIPT.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
