@@ -213,11 +213,11 @@ impl PreviewApp {
         }
     }
 
-    fn sidebar(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("navigation")
+    fn sidebar(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::left("navigation")
             .resizable(false)
-            .default_width(220.0)
-            .show(ctx, |ui| {
+            .default_size(220.0)
+            .show(ui, |ui| {
                 ui.add_space(18.0);
                 ui.label(egui::RichText::new("MCR").size(13.0).strong());
                 ui.label(egui::RichText::new("Engineering Preview").size(20.0).strong());
@@ -238,21 +238,23 @@ impl PreviewApp {
             });
     }
 
-    fn topbar(&self, ctx: &egui::Context) {
-        egui::TopBottomPanel::top("topbar").show(ctx, |ui| {
-            ui.add_space(8.0);
-            ui.horizontal_wrapped(|ui| {
-                ui.heading("MCR Future Tooling");
-                ui.separator();
-                ui.strong("ENGINEERING PREVIEW");
-                ui.separator();
-                ui.label("LOCAL ONLY");
-                if self.pending.is_some() {
-                    ui.spinner();
-                }
+    fn topbar(&self, ui: &mut egui::Ui) {
+        egui::Panel::top("topbar")
+            .resizable(false)
+            .show(ui, |ui| {
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.heading("MCR Future Tooling");
+                    ui.separator();
+                    ui.strong("ENGINEERING PREVIEW");
+                    ui.separator();
+                    ui.label("LOCAL ONLY");
+                    if self.pending.is_some() {
+                        ui.spinner();
+                    }
+                });
+                ui.add_space(8.0);
             });
-            ui.add_space(8.0);
-        });
     }
 
     fn overview(&mut self, ui: &mut egui::Ui) {
@@ -329,7 +331,16 @@ impl PreviewApp {
             egui::ComboBox::from_id_salt("operation")
                 .selected_text(self.action.label())
                 .show_ui(ui, |ui| {
-                    for action in [Action::Auto, Action::Ingest, Action::Archive, Action::Email, Action::Mbox, Action::Csv, Action::Office, Action::Pdf] {
+                    for action in [
+                        Action::Auto,
+                        Action::Ingest,
+                        Action::Archive,
+                        Action::Email,
+                        Action::Mbox,
+                        Action::Csv,
+                        Action::Office,
+                        Action::Pdf,
+                    ] {
                         ui.selectable_value(&mut self.action, action, action.label());
                     }
                 });
@@ -341,7 +352,10 @@ impl PreviewApp {
         ui.add_space(18.0);
         ui.horizontal(|ui| {
             let ready = self.selected_file.is_some() && self.pending.is_none();
-            if ui.add_enabled(ready, egui::Button::new("Run local inspection")).clicked() {
+            if ui
+                .add_enabled(ready, egui::Button::new("Run local inspection"))
+                .clicked()
+            {
                 self.start_run();
             }
             if self.pending.is_some() {
@@ -412,14 +426,16 @@ impl PreviewApp {
 }
 
 impl eframe::App for PreviewApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.poll_run();
         if self.pending.is_some() {
-            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+            ui.ctx()
+                .request_repaint_after(std::time::Duration::from_millis(100));
         }
-        self.sidebar(ctx);
-        self.topbar(ctx);
-        egui::CentralPanel::default().show(ctx, |ui| {
+
+        self.sidebar(ui);
+        self.topbar(ui);
+        egui::CentralPanel::default().show(ui, |ui| {
             ui.add_space(18.0);
             match self.nav {
                 Nav::Overview => self.overview(ui),
@@ -446,7 +462,11 @@ fn status_card(ui: &mut egui::Ui, title: &str, pass: bool, detail: &str) {
 }
 
 fn detect_action(path: &Path) -> Action {
-    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_ascii_lowercase();
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
     match ext.as_str() {
         "zip" => Action::Archive,
         "eml" => Action::Email,
@@ -463,22 +483,34 @@ fn run_request(request: RunRequest) -> RunResult {
     let action = request.action;
     match action {
         Action::Auto | Action::Ingest => {
-            cmd.arg("ingest-file").arg(&request.workspace).arg(&request.file);
+            cmd.arg("ingest-file")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Archive => {
-            cmd.arg("inventory-zip").arg(&request.workspace).arg(&request.file);
+            cmd.arg("inventory-zip")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Email => {
-            cmd.arg("index-eml").arg(&request.workspace).arg(&request.file);
+            cmd.arg("index-eml")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Mbox => {
-            cmd.arg("index-mbox").arg(&request.workspace).arg(&request.file);
+            cmd.arg("index-mbox")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Csv => {
-            cmd.arg("index-csv").arg(&request.workspace).arg(&request.file);
+            cmd.arg("index-csv")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Office => {
-            cmd.arg("inventory-ooxml").arg(&request.workspace).arg(&request.file);
+            cmd.arg("inventory-ooxml")
+                .arg(&request.workspace)
+                .arg(&request.file);
         }
         Action::Pdf => {
             let Some(qpdf_rel) = request.tools.qpdf_rel.as_ref() else {
@@ -561,11 +593,19 @@ fn self_test() -> i32 {
     }
     let qpdf = base.join(tools.qpdf_rel.as_ref().unwrap());
     let pdfcpu = base.join(tools.pdfcpu_rel.as_ref().unwrap());
-    if !Command::new(&qpdf).arg("--version").output().is_ok_and(|o| o.status.success()) {
+    if !Command::new(&qpdf)
+        .arg("--version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+    {
         eprintln!("FAIL qpdf launch");
         return 5;
     }
-    if !Command::new(&pdfcpu).arg("version").output().is_ok_and(|o| o.status.success()) {
+    if !Command::new(&pdfcpu)
+        .arg("version")
+        .output()
+        .is_ok_and(|o| o.status.success())
+    {
         eprintln!("FAIL pdfcpu launch");
         return 6;
     }
@@ -588,12 +628,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "MCR Engineering Preview",
         native_options,
-        Box::new(|cc| {
-            cc.egui_ctx.style_mut(|style| {
-                style.spacing.item_spacing = egui::vec2(10.0, 8.0);
-                style.spacing.button_padding = egui::vec2(12.0, 8.0);
-            });
-            Ok(Box::new(PreviewApp::new()))
-        }),
+        Box::new(|_cc| Ok(Box::new(PreviewApp::new()))),
     )
 }
