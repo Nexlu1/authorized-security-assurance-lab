@@ -31,11 +31,8 @@ jobs:
       - name: rustfmt check
         run: cargo fmt --check
       - name: cargo check
-        run: cargo check
-      - name: emit generated lockfile for controlled commit
-        if: runner.os == 'Linux'
-        run: cat Cargo.lock
+        run: cargo check --locked
       - name: unit and hostile-fixture tests
-        run: cargo test --all-targets --verbose
+        run: cargo test --locked --all-targets --verbose
       - name: strict clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
