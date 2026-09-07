@@ -39,11 +39,22 @@ jobs:
         run: |
           Set-Location qualification/mcr-r9-gui
           cargo generate-lockfile
-      - name: Formatting gate
+      - name: Normalize once with exact rustfmt
         shell: pwsh
         run: |
           Set-Location qualification/mcr-r9-gui
+          cargo fmt
           cargo fmt --check
+      - name: Upload normalized source checkpoint
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r9-gui-normalized-source-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            qualification/mcr-r9-gui/src/main.rs
+            qualification/mcr-r9-gui/Cargo.lock
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
       - name: Strict Clippy
         shell: pwsh
         run: |
