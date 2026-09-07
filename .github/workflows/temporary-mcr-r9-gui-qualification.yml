@@ -35,6 +35,23 @@ jobs:
           if ($control.iced.git_commit -ne '3997291f318a8bc06fa522f5579836fb3feb94df') { throw 'Iced pin mismatch' }
           if ($control.rfd.git_commit -ne 'cca0cfa5fc38c2752c9c98f9f5168904a515fd55') { throw 'rfd pin mismatch' }
           if ($control.rusqlite.git_commit -ne 'e88f112bef7899234a497baed5cc3c3d553deeb8') { throw 'rusqlite pin mismatch' }
+      - name: Apply bounded strict-Clippy repair
+        shell: pwsh
+        run: |
+          $p = 'qualification/mcr-r9-gui/src/main.rs'
+          $s = Get-Content -LiteralPath $p -Raw
+          $old = @'
+          return Err(format!(
+              "No {} exists in the selected workspace yet.",
+              DB_NAME
+          ));
+          '@
+          $new = @'
+          return Err(format!("No {DB_NAME} exists in the selected workspace yet."));
+          '@
+          if (-not $s.Contains($old.Trim())) { throw 'Expected bounded Clippy repair target not found' }
+          $s = $s.Replace($old.Trim(), $new.Trim())
+          Set-Content -LiteralPath $p -Value $s -Encoding utf8NoBOM
       - name: Generate lockfile from exact GitHub revisions
         shell: pwsh
         run: |
