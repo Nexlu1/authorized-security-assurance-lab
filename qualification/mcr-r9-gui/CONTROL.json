@@ -1,7 +1,7 @@
 {
-  "schema": "mcr-r9-gui-public-qualification-v1",
-  "scope": "synthetic-only GUI compile/qualification mirror",
-  "private_product_source_commit": "d1ad2631693b1b5e32cac5eb98834dea79697578",
+  "schema": "mcr-r9-gui-public-qualification-v2",
+  "scope": "synthetic-only GUI compile/qualification/data-binding mirror",
+  "private_product_source_commit": "84bc8dcf09380583495bb14ce75ae12bd06b912d",
   "iced": {
     "version": "0.14.0",
     "git_commit": "3997291f318a8bc06fa522f5579836fb3feb94df",
@@ -11,6 +11,12 @@
     "version": "0.17.2",
     "git_commit": "cca0cfa5fc38c2752c9c98f9f5168904a515fd55",
     "license": "MIT"
+  },
+  "rusqlite": {
+    "version": "0.40.2",
+    "git_commit": "e88f112bef7899234a497baed5cc3c3d553deeb8",
+    "license": "MIT",
+    "usage": "read-only binding to existing mcr-ingest.sqlite3 authority; bundled SQLite; extension loading not enabled"
   },
   "renderer": "iced tiny-skia software renderer",
   "rust": "1.88.0",
