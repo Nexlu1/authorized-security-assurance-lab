@@ -31,7 +31,7 @@ function Assert-Sha256([string]$Path, [string]$Expected, [string]$Label) {
 
 function Normalize-QualificationSource {
     $path = Join-Path $PSScriptRoot 'src/main.rs'
-    $text = [IO.File]::ReadAllText($path)
+    $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
 
     foreach ($line in @(
         "        assert!(FULL_EXPECTED_PAGES > 100);`n",
@@ -59,6 +59,13 @@ function Normalize-QualificationSource {
         throw 'expected exactly one OpenAction 100% verifier block'
     }
     $text = $text.Replace($old, $new)
+
+    # PDF 1.6 is sufficient for all bundle features used here and avoids pdfcpu v0.15.0's
+    # strict-mode requirement to populate the full Type1 standard-font metrics block at PDF 1.7.
+    $versionCount = ([regex]::Matches($text, [regex]::Escape('Document::with_version("1.7")'))).Count
+    if ($versionCount -lt 3) { throw "expected at least three PDF 1.7 constructor sites, found $versionCount" }
+    $text = $text.Replace('Document::with_version("1.7")', 'Document::with_version("1.6")')
+
     [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
 }
 
@@ -138,7 +145,6 @@ try {
     if ($hearingPages -ne '109') { throw "hearing page count $hearingPages != 109" }
     if ($corePages -ne '37') { throw "core page count $corePages != 37" }
 
-    # pdfcpu v0.15.0 uses Cobra: --mode strict (or -m strict). Single-dash '-mode' is invalid.
     Invoke-Checked { & $pdfcpu validate --mode strict $hearing } 'pdfcpu strict hearing validation'
     Invoke-Checked { & $pdfcpu validate --mode strict $core } 'pdfcpu strict core validation'
 
