@@ -1,0 +1,66 @@
+{
+  "schema": "mcr-r59-court-bundle-qualified-baseline-v1",
+  "date": "2026-09-08",
+  "status": "QUALIFIED_SYNTHETIC_BASELINE",
+  "scope": "Synthetic-only court-bundle builder qualification; no live case evidence or R59 source material was uploaded.",
+  "authority": {
+    "repository": "Nexlu1/authorized-security-assurance-lab",
+    "qualification_branch": "temporary/mcr-r59-court-bundle-qualification-20260908",
+    "qualification_commit": "0d5af45b407211d7e30c61b5f56aa80e3371bd22",
+    "workflow_run": 34249162506,
+    "result": "PASS_3_OF_3"
+  },
+  "platforms": [
+    {
+      "runner": "ubuntu-24.04",
+      "result": "PASS",
+      "artifact_id": 10065335073,
+      "artifact_zip_sha256": "9bef63f49b00b7053fd7c5e82845069ab3affcf5aa4ec3509fdc39129acacbb8"
+    },
+    {
+      "runner": "windows-2022",
+      "result": "PASS",
+      "artifact_id": 10065407925,
+      "artifact_zip_sha256": "974b9f8dfa187afa6723efdf02dc12d7169550a756a87f5e5943ca303df89643"
+    },
+    {
+      "runner": "windows-2025",
+      "result": "PASS",
+      "artifact_id": 10065411377,
+      "artifact_zip_sha256": "e8eceda34c73ac72c458a71e57f2684300d3a3c36b6d9340cfe02d9d59df80dc"
+    }
+  ],
+  "cross_platform_identities": {
+    "qualified_main_rs_sha256": "e369cd07d421e579ef65d843c11f0d04e093dbe652ddeea3f43923ab13eed875",
+    "cargo_lock_sha256": "b4ecd4f22926a6e92d5400e23a2ed5729e75d26c124d1d1ba4fb9bb5fa6af36d",
+    "hearing_bundle_pages": 109,
+    "hearing_bundle_sha256": "f7022f3271cd1b566d4bebfe06a79733496cbae58caa28ae866b46d3cc88133b",
+    "core_bundle_pages": 37,
+    "core_bundle_sha256": "e0334d0b8ae43dd4366908f448f72326ccf51a35e21e3f8c4fb3201a1a83db31",
+    "qualification_receipt_sha256": "419699d1bfee5d5d916786b44ed371d916bba9ae1a028793b94d2d08434296a8"
+  },
+  "validators": {
+    "qpdf_version": "12.4.1",
+    "pdfcpu_version": "0.15.0",
+    "windows_qpdf_exe_sha256": "57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d",
+    "windows_pdfcpu_exe_sha256": "94cafb66b508c2eb8648dffbb17fddb74b7a117fdc38846e36f9ec6322bdd05e",
+    "qpdf_check": "PASS_3_OF_3",
+    "pdfcpu_strict_validation": "PASS_3_OF_3"
+  },
+  "behaviours": {
+    "source_immutability": "PASS_3_OF_3",
+    "malformed_input_rejected": true,
+    "encrypted_input_rejected": true,
+    "clickable_index": "PASS",
+    "continuous_visible_pagination": "PASS",
+    "nested_bookmarks": "PASS",
+    "searchable_text": "PASS",
+    "landscape_handling": "PASS",
+    "default_view_100_percent": "PASS"
+  },
+  "boundaries": {
+    "r59_master": "UNCHANGED_FROZEN",
+    "legal_compliance_claim": "NONE. This is technical qualification only; live forum rules, directions and current official guidance control outward use.",
+    "next_gate": "SSCS_DWP_OUTWARD_PROFILE"
+  }
+}
