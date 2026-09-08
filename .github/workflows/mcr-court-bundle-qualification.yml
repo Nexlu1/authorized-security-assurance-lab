@@ -73,17 +73,8 @@ jobs:
               if s.count(target) != 1:
                   raise SystemExit(f'expected exactly one redundant assertion: {target!r}')
               s = s.replace(target, '')
-          old = '''    match action[4] {
-        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),
-        _ => Err("default PDF zoom is not 100%".into()),
-    }
-'''
-          new = '''    match action[4] {
-        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),
-        Object::Integer(1) => Ok(()),
-        _ => Err("default PDF zoom is not 100%".into()),
-    }
-'''
+          old = '    match action[4] {\n        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),\n        _ => Err("default PDF zoom is not 100%".into()),\n    }\n'
+          new = '    match action[4] {\n        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),\n        Object::Integer(1) => Ok(()),\n        _ => Err("default PDF zoom is not 100%".into()),\n    }\n'
           if s.count(old) != 1:
               raise SystemExit('expected exactly one OpenAction 100% verifier block')
           s = s.replace(old, new)
