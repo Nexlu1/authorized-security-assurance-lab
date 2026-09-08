@@ -63,6 +63,8 @@ jobs:
                       .set("Count", outline_count as i64);
                   let catalog = document.get_object_mut(catalog_id)?.as_dict_mut()?;
           '@
+          $old = $old.Replace("`r`n", "`n")
+          $new = $new.Replace("`r`n", "`n")
           if (([regex]::Matches($text, [regex]::Escape($old))).Count -ne 1) {
             throw 'expected exactly one build_outline catalog block'
           }
