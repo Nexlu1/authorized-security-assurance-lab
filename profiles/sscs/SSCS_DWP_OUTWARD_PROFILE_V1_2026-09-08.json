@@ -1,0 +1,194 @@
+{
+  "schema": "mcr-r59-sscs-dwp-outward-profile-v1",
+  "date": "2026-09-08",
+  "status": "PROFILE_DEFINED_NOT_LIVE_CASE_GENERATED",
+  "forum": "First-tier Tribunal (Social Entitlement Chamber) - Social Security and Child Support",
+  "purpose": "Create a proportionate, issue-led derivative from a frozen internal master without serving the whole master record.",
+  "authority_order": [
+    "live tribunal directions and orders",
+    "Tribunal Procedure (First-tier Tribunal) (Social Entitlement Chamber) Rules 2008 as currently in force",
+    "current Social Security and Child Support Tribunal practice statements/guidance",
+    "current GOV.UK appeal process guidance",
+    "technical qualification controls"
+  ],
+  "master_boundary": {
+    "r59_role": "FROZEN_INTERNAL_MASTER",
+    "serve_r59_wholesale": false,
+    "source_documents_mutable": false,
+    "derivatives_must_remain_traceable_to_source": true
+  },
+  "required_case_inputs": [
+    "decision_under_appeal",
+    "mandatory_reconsideration_notice_or_record_of_exception",
+    "appeal_reference_if_issued",
+    "appellant_notice_or_grounds_of_appeal",
+    "respondent_rule_24_response_and_bundle_when_received",
+    "all_live_tribunal_directions_orders_and_deadlines"
+  ],
+  "pack_sections": [
+    {
+      "id": "A",
+      "title": "Appeal control sheet",
+      "contents": [
+        "appeal reference",
+        "decision date and decision under appeal",
+        "mandatory reconsideration date/status",
+        "live issue list",
+        "directions/deadlines register",
+        "requested outcome"
+      ]
+    },
+    {
+      "id": "B",
+      "title": "Concise appellant case",
+      "contents": [
+        "short written submission",
+        "issue-by-issue propositions",
+        "burden or evidential point only where legally material",
+        "adverse material and answer",
+        "relief/outcome sought"
+      ]
+    },
+    {
+      "id": "C",
+      "title": "Issue-led chronology",
+      "contents": [
+        "only events necessary to decide the appealed issues",
+        "each material entry linked to an exact source/document/page"
+      ]
+    },
+    {
+      "id": "D",
+      "title": "Evidence relied upon",
+      "contents": [
+        "unedited original-form documentary evidence unless a lawful redaction applies",
+        "medical or functional evidence where relevant",
+        "official correspondence and decision material",
+        "financial or administrative evidence only where relevant to the appealed issue",
+        "witness/supporting letters where relevant",
+        "adverse evidence necessary for fair presentation"
+      ]
+    },
+    {
+      "id": "E",
+      "title": "Respondent response audit",
+      "contents": [
+        "Rule 24 response received/date",
+        "respondent propositions mapped to evidence",
+        "missing relevant documents",
+        "internal contradictions",
+        "documents relied upon but not supplied",
+        "decision-maker/assessor/examiner/witness identity controls"
+      ]
+    },
+    {
+      "id": "F",
+      "title": "Appellant reply and further evidence",
+      "contents": [
+        "reply only to live disputed points",
+        "further evidence ledger with date supplied and source",
+        "late-evidence reason where needed",
+        "duplicate/redundant material excluded"
+      ]
+    },
+    {
+      "id": "G",
+      "title": "Participation and reasonable adjustments",
+      "contents": [
+        "specific barrier or need",
+        "specific adjustment requested",
+        "evidential basis where available",
+        "communication preference",
+        "mode-of-hearing request where relevant",
+        "record of request and tribunal response"
+      ]
+    },
+    {
+      "id": "H",
+      "title": "Hearing-day control",
+      "contents": [
+        "one-page issue list",
+        "key document/page table",
+        "questions likely to require factual answer",
+        "points conceded/not disputed",
+        "outcome sought",
+        "post-hearing actions and decision receipt"
+      ]
+    },
+    {
+      "id": "I",
+      "title": "Filing and service receipt",
+      "contents": [
+        "exact file name",
+        "SHA-256",
+        "page count",
+        "date/time supplied",
+        "method/portal/post route",
+        "recipient/tribunal destination",
+        "acknowledgement or receipt"
+      ]
+    }
+  ],
+  "evidence_rules": {
+    "relevance_gate": "EXCLUDE material that does not help decide a live appealed issue or comply with a direction.",
+    "original_form": "Documentary evidence is supplied unedited in original form unless the tribunal rules/guidance permit withholding/redaction.",
+    "redaction": {
+      "default": "NO substantive redaction",
+      "rule_14": "Use tribunal confidentiality procedure where serious harm/interests-of-justice test is engaged.",
+      "administrative_contact_exception": "Non-material administrator contact details may be removed where current SEC guidance permits, with an explanation of what was removed and why.",
+      "must_not_remove": [
+        "decision maker identity",
+        "assessor identity",
+        "examiner identity",
+        "witness of fact or opinion identity"
+      ]
+    },
+    "duplicate_control": "Only one authoritative copy unless duplication is necessary to explain a chronology or direction.",
+    "adverse_material": "Do not hide materially adverse evidence; identify it and address its weight/relevance.",
+    "provenance": "Every derivative item must map to an immutable source identity and exact page/occurrence where possible."
+  },
+  "respondent_rule_24_control": {
+    "required_checks": [
+      "response received and dated",
+      "all documents in respondent possession relevant to the case appear to have been supplied unless directed otherwise",
+      "decision rationale matches source evidence",
+      "material omissions recorded",
+      "new reasons distinguished from original decision reasons",
+      "each respondent assertion mapped to a document/page or marked unsupported",
+      "reply deadline/directions captured"
+    ]
+  },
+  "technical_output_gate": {
+    "builder_baseline": "qualification/mcr-r59-court-bundle/CONTROL/QUALIFIED_BASELINE_2026-09-08.json",
+    "source_immutability_required": true,
+    "searchability_required": true,
+    "page_count_receipt_required": true,
+    "sha256_receipt_required": true,
+    "qpdf_check_required": true,
+    "pdfcpu_strict_validation_required": true,
+    "clickable_index": "OPTIONAL_FOR_SSCS_UNLESS_USEFUL_OR_DIRECTED; do not import civil-court bundle rules wholesale into tribunal procedure",
+    "bookmarks": "RECOMMENDED_FOR_LARGE_DERIVATIVES; case-specific directions control",
+    "continuous_pagination": "USE_FOR_GENERATED_DERIVATIVE_CONTROL, but do not assert civil court e-bundle guidance governs SSCS"
+  },
+  "release_gates_before_live_use": [
+    "identify exact appealed decision and live issues",
+    "capture every current direction/order/deadline",
+    "fresh official-source rules/guidance check",
+    "select only relevant R59 material",
+    "build respondent Rule 24 audit when response exists",
+    "prepare concise submission and chronology",
+    "run adverse-evidence/contradiction review",
+    "run privacy/redaction review",
+    "run technical PDF QA",
+    "record filing/service receipt"
+  ],
+  "prohibited_shortcuts": [
+    "serve all 54 R59 PDFs merely because they exist",
+    "edit source evidence to improve presentation",
+    "remove names of material decision makers/assessors/examiners/witnesses",
+    "treat internal analysis as expert evidence",
+    "claim the technical builder itself establishes legal compliance",
+    "use civil court e-bundle guidance as if it automatically governs SSCS"
+  ],
+  "next_gate": "SYNTHETIC_SSCS_PROFILE_QUALIFICATION"
+}
