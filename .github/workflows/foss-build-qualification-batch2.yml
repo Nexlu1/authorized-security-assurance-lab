@@ -105,17 +105,20 @@ jobs:
           test -z "$(git -C donor remote)"
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
 
-      - name: Install core package and pytest only
+      - name: Install declared test extras and bounded qualification dependency
         id: install
         working-directory: donor
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install -e '.[dev]'
+          python -m pip install -e '.[dev,pcap]'
+          python -m pip install 'pytz==2026.3.post1'
+          mkdir -p ../evidence
+          python -m pip freeze --all > ../evidence/python-environment.txt
 
       - name: Run focused evidence and case-control tests
         id: tests
@@ -167,6 +170,11 @@ jobs:
               'runner': 'ubuntu-24.04',
               'python': '3.12',
               'scope': 'evidence/audit/export/hash/store/case/finding/timeline/pipeline/report plus package build',
+              'qualification_dependencies': {
+                  'donor_extras': ['dev', 'pcap'],
+                  'qualification_only': ['pytz==2026.3.post1'],
+                  'reason': 'selected donor tests require scapy via the declared pcap extra; DuckDB 1.5.5 timestamp reads require pytz in this resolved environment',
+              },
               'optional_ai_services_executed': False,
               'network_intel_services_executed': False,
               'package_artifacts_uploaded': False,
@@ -190,6 +198,7 @@ jobs:
           name: build-netforensicai-evidence-core-receipt
           path: |
             evidence/qualification.json
+            evidence/python-environment.txt
             evidence/package-hashes.sha256
           if-no-files-found: error
           retention-days: 30
