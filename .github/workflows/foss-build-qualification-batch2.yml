@@ -149,6 +149,7 @@ jobs:
           python -m twine check dist/*
           mkdir -p ../evidence
           sha256sum dist/* > ../evidence/package-hashes.sha256
+          python -m pip freeze --all > ../evidence/python-environment.txt
           rm -rf dist
 
       - name: Record qualification receipt
