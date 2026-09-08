@@ -1,0 +1,204 @@
+name: Temporary MCR R59 synthetic court bundle qualification
+
+on:
+  push:
+    branches:
+      - temporary/mcr-r59-court-bundle-qualification-20260908
+    paths:
+      - 'qualification/mcr-r59-court-bundle/**'
+      - '.github/workflows/mcr-court-bundle-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  court-bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: qualification/mcr-r59-court-bundle
+    steps:
+      - name: Check out synthetic-only qualification branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Install exact Rust 1.88 toolchain
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: '1.88.0'
+          components: rustfmt, clippy
+
+      - name: Generate first-run dependency lock candidate
+        shell: bash
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          cargo generate-lockfile
+          sha256sum Cargo.lock | tee Cargo.lock.sha256.txt
+          cp Cargo.lock "$RUNNER_TEMP/Cargo.lock"
+          cp Cargo.lock.sha256.txt "$RUNNER_TEMP/Cargo.lock.sha256.txt"
+
+      - name: Generate first-run dependency lock candidate
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cargo generate-lockfile
+          $hash = (Get-FileHash -Algorithm SHA256 Cargo.lock).Hash.ToLowerInvariant()
+          "$hash  Cargo.lock" | Set-Content -Encoding ascii Cargo.lock.sha256.txt
+          Copy-Item Cargo.lock "$env:RUNNER_TEMP\Cargo.lock" -Force
+          Copy-Item Cargo.lock.sha256.txt "$env:RUNNER_TEMP\Cargo.lock.sha256.txt" -Force
+          Get-Content Cargo.lock.sha256.txt
+
+      - name: Rust formatting
+        run: cargo fmt --check
+
+      - name: Cargo check with generated lock
+        run: cargo check --locked
+
+      - name: Rust tests
+        run: cargo test --locked --all-targets --verbose
+
+      - name: Strict Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Build and run synthetic bundle qualification
+        shell: bash
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/mcr-court-bundle"
+          cargo run --locked --release -- "$out"
+          test -f "$out/SYN001_Synthetic-v-Respondent_Hearing_Bundle.pdf"
+          test -f "$out/SYN001_Synthetic-v-Respondent_Core_Bundle.pdf"
+          echo "COURT_BUNDLE_OUT=$out" >> "$GITHUB_ENV"
+
+      - name: Build and run synthetic bundle qualification
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'mcr-court-bundle'
+          cargo run --locked --release -- $out
+          if (!(Test-Path (Join-Path $out 'SYN001_Synthetic-v-Respondent_Hearing_Bundle.pdf'))) { throw 'hearing bundle missing' }
+          if (!(Test-Path (Join-Path $out 'SYN001_Synthetic-v-Respondent_Core_Bundle.pdf'))) { throw 'core bundle missing' }
+          "COURT_BUNDLE_OUT=$out" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Acquire exact qpdf/pdfcpu and externally validate output
+        shell: bash
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/court-pdf-tools"
+          mkdir -p "$root/qpdf" "$root/pdfcpu"
+          qzip="$root/qpdf.zip"
+          ptar="$root/pdfcpu.tar.xz"
+          qurl='https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-bin-linux-x86_64.zip'
+          purl='https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_x86_64.tar.xz'
+          qexpected='db9122e88ec00c76ac6a14e09ffb92406db1773d47b968911ff6e69f28c09bf9'
+          pexpected='652830db95e81868dbe38fbb3f506365511c99a1831b5e8955deac38f3f645f8'
+          curl -L --fail --retry 5 --retry-delay 2 -o "$qzip" "$qurl"
+          curl -L --fail --retry 5 --retry-delay 2 -o "$ptar" "$purl"
+          test "$(sha256sum "$qzip" | awk '{print $1}')" = "$qexpected"
+          test "$(sha256sum "$ptar" | awk '{print $1}')" = "$pexpected"
+          unzip -q "$qzip" -d "$root/qpdf"
+          tar -xJf "$ptar" -C "$root/pdfcpu"
+          mapfile -t qexes < <(find "$root/qpdf" -type f -name qpdf -perm -111)
+          mapfile -t pexes < <(find "$root/pdfcpu" -type f -name pdfcpu -perm -111)
+          test "${#qexes[@]}" -eq 1
+          test "${#pexes[@]}" -eq 1
+          qexe="${qexes[0]}"
+          pexe="${pexes[0]}"
+          hearing="$COURT_BUNDLE_OUT/SYN001_Synthetic-v-Respondent_Hearing_Bundle.pdf"
+          core="$COURT_BUNDLE_OUT/SYN001_Synthetic-v-Respondent_Core_Bundle.pdf"
+          "$qexe" --check "$hearing"
+          "$qexe" --check "$core"
+          test "$("$qexe" --show-npages "$hearing")" = '109'
+          test "$("$qexe" --show-npages "$core")" = '37'
+          "$pexe" validate -mode strict "$hearing"
+          "$pexe" validate -mode strict "$core"
+          {
+            echo "runner=${{ matrix.os }}"
+            echo "qpdf_outer_sha256=$qexpected"
+            echo "qpdf_exe_sha256=$(sha256sum "$qexe" | awk '{print $1}')"
+            echo "qpdf_version=$($qexe --version | head -n 1)"
+            echo "pdfcpu_outer_sha256=$pexpected"
+            echo "pdfcpu_exe_sha256=$(sha256sum "$pexe" | awk '{print $1}')"
+            echo "pdfcpu_version=$($pexe version | head -n 1)"
+            echo "hearing_sha256=$(sha256sum "$hearing" | awk '{print $1}')"
+            echo "core_sha256=$(sha256sum "$core" | awk '{print $1}')"
+          } > "$COURT_BUNDLE_OUT/EXTERNAL_QA_RECEIPT.txt"
+          cp "$RUNNER_TEMP/Cargo.lock" "$COURT_BUNDLE_OUT/Cargo.lock.candidate"
+          cp "$RUNNER_TEMP/Cargo.lock.sha256.txt" "$COURT_BUNDLE_OUT/Cargo.lock.sha256.txt"
+
+      - name: Acquire exact qpdf/pdfcpu and externally validate output
+        shell: pwsh
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'court-pdf-tools'
+          $qdir = Join-Path $root 'qpdf'
+          $pdir = Join-Path $root 'pdfcpu'
+          New-Item -ItemType Directory -Force -Path $qdir,$pdir | Out-Null
+          $qzip = Join-Path $root 'qpdf.zip'
+          $pzip = Join-Path $root 'pdfcpu.zip'
+          $qurl = 'https://github.com/qpdf/qpdf/releases/download/v12.4.1/qpdf-12.4.1-msvc64.zip'
+          $purl = 'https://github.com/pdfcpu/pdfcpu/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip'
+          $qexpected = '3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6'
+          $pexpected = '9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6'
+          Invoke-WebRequest -UseBasicParsing -Uri $qurl -OutFile $qzip
+          Invoke-WebRequest -UseBasicParsing -Uri $purl -OutFile $pzip
+          if ((Get-FileHash -Algorithm SHA256 $qzip).Hash.ToLowerInvariant() -ne $qexpected) { throw 'qpdf outer hash mismatch' }
+          if ((Get-FileHash -Algorithm SHA256 $pzip).Hash.ToLowerInvariant() -ne $pexpected) { throw 'pdfcpu outer hash mismatch' }
+          Expand-Archive -Path $qzip -DestinationPath $qdir -Force
+          Expand-Archive -Path $pzip -DestinationPath $pdir -Force
+          $qexes = @(Get-ChildItem -Path $qdir -Filter qpdf.exe -File -Recurse)
+          $pexes = @(Get-ChildItem -Path $pdir -Filter pdfcpu.exe -File -Recurse)
+          if ($qexes.Count -ne 1) { throw "expected one qpdf.exe, found $($qexes.Count)" }
+          if ($pexes.Count -ne 1) { throw "expected one pdfcpu.exe, found $($pexes.Count)" }
+          $qexe = $qexes[0].FullName
+          $pexe = $pexes[0].FullName
+          $hearing = Join-Path $env:COURT_BUNDLE_OUT 'SYN001_Synthetic-v-Respondent_Hearing_Bundle.pdf'
+          $core = Join-Path $env:COURT_BUNDLE_OUT 'SYN001_Synthetic-v-Respondent_Core_Bundle.pdf'
+          & $qexe --check $hearing
+          if ($LASTEXITCODE -ne 0) { throw 'qpdf hearing check failed' }
+          & $qexe --check $core
+          if ($LASTEXITCODE -ne 0) { throw 'qpdf core check failed' }
+          $hn = (& $qexe --show-npages $hearing).Trim()
+          $cn = (& $qexe --show-npages $core).Trim()
+          if ($hn -ne '109') { throw "hearing page count $hn" }
+          if ($cn -ne '37') { throw "core page count $cn" }
+          & $pexe validate -mode strict $hearing
+          if ($LASTEXITCODE -ne 0) { throw 'pdfcpu hearing strict validation failed' }
+          & $pexe validate -mode strict $core
+          if ($LASTEXITCODE -ne 0) { throw 'pdfcpu core strict validation failed' }
+          $receipt = @(
+            "runner=${{ matrix.os }}",
+            "qpdf_outer_sha256=$qexpected",
+            "qpdf_exe_sha256=$((Get-FileHash -Algorithm SHA256 $qexe).Hash.ToLowerInvariant())",
+            "qpdf_version=$((& $qexe --version | Select-Object -First 1))",
+            "pdfcpu_outer_sha256=$pexpected",
+            "pdfcpu_exe_sha256=$((Get-FileHash -Algorithm SHA256 $pexe).Hash.ToLowerInvariant())",
+            "pdfcpu_version=$((& $pexe version | Select-Object -First 1))",
+            "hearing_sha256=$((Get-FileHash -Algorithm SHA256 $hearing).Hash.ToLowerInvariant())",
+            "core_sha256=$((Get-FileHash -Algorithm SHA256 $core).Hash.ToLowerInvariant())"
+          )
+          $receipt | Set-Content -Encoding ascii (Join-Path $env:COURT_BUNDLE_OUT 'EXTERNAL_QA_RECEIPT.txt')
+          Copy-Item "$env:RUNNER_TEMP\Cargo.lock" (Join-Path $env:COURT_BUNDLE_OUT 'Cargo.lock.candidate') -Force
+          Copy-Item "$env:RUNNER_TEMP\Cargo.lock.sha256.txt" (Join-Path $env:COURT_BUNDLE_OUT 'Cargo.lock.sha256.txt') -Force
+
+      - name: Upload synthetic qualification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mcr-r59-court-bundle-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ env.COURT_BUNDLE_OUT }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
