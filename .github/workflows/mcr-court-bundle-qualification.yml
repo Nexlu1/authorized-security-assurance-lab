@@ -57,8 +57,10 @@ jobs:
           Copy-Item Cargo.lock.sha256.txt "$env:RUNNER_TEMP\Cargo.lock.sha256.txt" -Force
           Get-Content Cargo.lock.sha256.txt
 
-      - name: Rust formatting
-        run: cargo fmt --check
+      - name: Canonical Rust formatting
+        run: |
+          cargo fmt
+          cargo fmt --check
 
       - name: Cargo check with generated lock
         run: cargo check --locked
@@ -137,6 +139,7 @@ jobs:
           } > "$COURT_BUNDLE_OUT/EXTERNAL_QA_RECEIPT.txt"
           cp "$RUNNER_TEMP/Cargo.lock" "$COURT_BUNDLE_OUT/Cargo.lock.candidate"
           cp "$RUNNER_TEMP/Cargo.lock.sha256.txt" "$COURT_BUNDLE_OUT/Cargo.lock.sha256.txt"
+          cp src/main.rs "$COURT_BUNDLE_OUT/main.rs.formatted"
 
       - name: Acquire exact qpdf/pdfcpu and externally validate output
         shell: pwsh
@@ -193,6 +196,7 @@ jobs:
           $receipt | Set-Content -Encoding ascii (Join-Path $env:COURT_BUNDLE_OUT 'EXTERNAL_QA_RECEIPT.txt')
           Copy-Item "$env:RUNNER_TEMP\Cargo.lock" (Join-Path $env:COURT_BUNDLE_OUT 'Cargo.lock.candidate') -Force
           Copy-Item "$env:RUNNER_TEMP\Cargo.lock.sha256.txt" (Join-Path $env:COURT_BUNDLE_OUT 'Cargo.lock.sha256.txt') -Force
+          Copy-Item src/main.rs (Join-Path $env:COURT_BUNDLE_OUT 'main.rs.formatted') -Force
 
       - name: Upload synthetic qualification evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
