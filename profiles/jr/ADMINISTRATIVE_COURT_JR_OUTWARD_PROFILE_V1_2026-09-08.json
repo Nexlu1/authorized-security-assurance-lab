@@ -1,0 +1,13 @@
+{
+  "schema":"mcr-r59-administrative-court-jr-outward-profile-v1",
+  "date":"2026-09-08",
+  "status":"PROFILE_DEFINED_NOT_LIVE_CASE_GENERATED",
+  "forum":"Administrative Court - Judicial Review",
+  "purpose":"Prepare a judicial-review pack only for an identified public-law decision/act/omission where JR is the proper route; do not use JR as a substitute merits appeal.",
+  "authority_order":["live court orders/directions","CPR Part 54 and applicable Practice Directions","current Administrative Court Judicial Review Guide","relevant statutory/alternative remedy rules","current authorities","technical controls"],
+  "activation_checks":["identify exact challenged decision/act/omission","identify defendant/interested parties","standing","promptness/limitation","alternative remedy/exhaustion","amenability/public-law issue","remedy sought","pre-action protocol position or urgency exception","permission-stage requirements"],
+  "pack_sections":["decision/act challenged and primary records","pre-action correspondence where applicable","claim/grounds and remedy sought","concise chronology","necessary evidence/witness statement","key adverse material","authorities/skeleton when required","orders/directions","hearing bundle","filing/service proof"],
+  "proportionality_controls":["concise grounds","issue-led evidence only","core bundle for extensive material","do not turn R59 into a wholesale JR bundle","separate merits complaints from reviewable public-law errors"],
+  "technical_gate":{"qualified_builder":"qualification/mcr-r59-court-bundle/CONTROL/QUALIFIED_BASELINE_2026-09-08.json","continuous_pagination":true,"hyperlinked_index":true,"bookmarks":true,"searchability":true,"qpdf":true,"pdfcpu_strict":true,"sha256_receipt":true},
+  "next_gate":"ACTIVATE_ONLY_FOR_SPECIFIC_REVIEWABLE_PUBLIC_LAW_TARGET_AFTER_ROUTE_AND_TIME_LIMIT_CHECK"
+}
