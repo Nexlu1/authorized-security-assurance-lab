@@ -1,0 +1,14 @@
+{
+  "schema":"mcr-r59-utaac-outward-profile-v1",
+  "date":"2026-09-08",
+  "status":"PROFILE_DEFINED_NOT_LIVE_CASE_GENERATED",
+  "forum":"Upper Tribunal (Administrative Appeals Chamber)",
+  "purpose":"Prepare an error-of-law appeal/review pack only after a relevant First-tier Tribunal decision and the applicable permission route exist.",
+  "authority_order":["live Upper Tribunal/First-tier Tribunal directions","current UTAAC procedure rules/practice directions/guidance","relevant statutory appeal route","current authorities","technical controls"],
+  "master_boundary":{"r59":"FROZEN_INTERNAL_MASTER","serve_wholesale":false},
+  "trigger_inputs":["First-tier Tribunal decision","statement of reasons where relevant","record of proceedings if relevant","permission application/decision","identified alleged errors of law","live deadlines/directions"],
+  "pack_sections":["decision(s) challenged","permission material","concise grounds identifying legal/procedural error","necessary factual/procedural chronology","only documents needed to determine alleged error","authorities","response/reply","hearing/participation controls","filing/service receipt"],
+  "error_of_law_firewall":["do not treat Upper Tribunal as a general factual rehearing","distinguish disagreement with findings from legally material error","identify materiality of each alleged error","do not add broad historic grievances unless legally relevant to the challenged decision"],
+  "technical_gate":{"source_immutability":true,"searchability":true,"page_receipt":true,"sha256_receipt":true,"qpdf":true,"pdfcpu_strict":true,"case_specific_directions_control":true},
+  "next_gate":"ACTIVATE_ONLY_AFTER_RELEVANT_FTT_DECISION_AND_PERMISSION_ROUTE"
+}
