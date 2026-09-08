@@ -1,0 +1,14 @@
+{
+  "schema":"mcr-r59-civil-court-outward-profile-v1",
+  "date":"2026-09-08",
+  "status":"PROFILE_DEFINED_NOT_LIVE_CASE_GENERATED",
+  "forum":"Civil courts of England and Wales",
+  "authority_order":["live court orders/directions","CPR and applicable Practice Directions","current Judiciary electronic-bundle guidance","case-specific court guide","technical qualification controls"],
+  "master_boundary":{"r59":"FROZEN_INTERNAL_MASTER","serve_wholesale":false,"use_underlying_originals":true},
+  "required_live_inputs":["case number","court","parties","statements of case/orders","live issues","hearing type/date","all current directions/deadlines"],
+  "bundle_controls":["single PDF where directed/appropriate","computer-generated sequential pagination matching PDF page order","hyperlinked index","bookmarks for significant documents/sections","searchable/OCR text","correct orientation","default view 100 percent","sensible optimisation/file size","court-compliant filename","core bundle where material is extensive"],
+  "formal_document_controls":["case summary/chronology where required","witness statements compliant with PD32","statement of truth where required","exhibits identified/cross-referenced","expert evidence only under Part 35 permission/duties","separate authorities bundle where required"],
+  "technical_gate":{"qualified_builder":"qualification/mcr-r59-court-bundle/CONTROL/QUALIFIED_BASELINE_2026-09-08.json","qpdf":true,"pdfcpu_strict":true,"source_immutability":true,"sha256_receipt":true},
+  "prohibited_shortcuts":["serve all R59","treat analytical R59 text as witness/expert evidence","ignore case-specific directions","hide adverse material","overwrite source originals"],
+  "next_gate":"LIVE_CASE_SPECIFIC_CIVIL_PROFILE_ONLY_WHEN_CAUSE_OF_ACTION_AND_DIRECTIONS_IDENTIFIED"
+}
