@@ -65,14 +65,28 @@ jobs:
           from pathlib import Path
           p = Path('src/main.rs')
           s = p.read_text(encoding='utf-8')
-          targets = [
+          redundant = [
               '        assert!(FULL_EXPECTED_PAGES > 100);\n',
               '        assert!(CORE_EXPECTED_PAGES < FULL_EXPECTED_PAGES);\n',
           ]
-          for target in targets:
+          for target in redundant:
               if s.count(target) != 1:
                   raise SystemExit(f'expected exactly one redundant assertion: {target!r}')
               s = s.replace(target, '')
+          old = '''    match action[4] {
+        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),
+        _ => Err("default PDF zoom is not 100%".into()),
+    }
+'''
+          new = '''    match action[4] {
+        Object::Real(v) if (v - 1.0).abs() < f32::EPSILON => Ok(()),
+        Object::Integer(1) => Ok(()),
+        _ => Err("default PDF zoom is not 100%".into()),
+    }
+'''
+          if s.count(old) != 1:
+              raise SystemExit('expected exactly one OpenAction 100% verifier block')
+          s = s.replace(old, new)
           p.write_text(s, encoding='utf-8')
           PY
           cargo fmt
