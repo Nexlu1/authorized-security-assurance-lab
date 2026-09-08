@@ -32,12 +32,17 @@ jobs:
           toolchain: '1.88.0'
           components: rustfmt, clippy
 
-      - name: Normalize source line endings for identical qualification semantics
+      - name: Normalize qualification text inputs for identical semantics
         shell: pwsh
         run: |
-          $path = './qualification/mcr-r59-court-bundle/src/main.rs'
-          $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
-          [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
+          $paths = @(
+            './qualification/mcr-r59-court-bundle/src/main.rs',
+            './qualification/mcr-r59-court-bundle/Invoke-CourtBundleQualification.ps1'
+          )
+          foreach ($path in $paths) {
+            $text = [IO.File]::ReadAllText($path).Replace("`r`n", "`n")
+            [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
+          }
 
       - name: Run complete synthetic court-bundle qualification
         shell: pwsh
