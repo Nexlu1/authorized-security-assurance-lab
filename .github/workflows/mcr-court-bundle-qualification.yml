@@ -44,6 +44,31 @@ jobs:
             [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
           }
 
+      - name: Correct lopdf nested outline root count
+        shell: pwsh
+        run: |
+          $path = './qualification/mcr-r59-court-bundle/src/main.rs'
+          $text = [IO.File]::ReadAllText($path)
+          $old = @'
+              if let Some(outline_id) = document.build_outline() {
+                  let catalog = document.get_object_mut(catalog_id)?.as_dict_mut()?;
+          '@
+          $new = @'
+              if let Some(outline_id) = document.build_outline() {
+                  let section_count = entries.iter().map(|entry| entry.section).collect::<HashSet<_>>().len();
+                  let outline_count = entries.len() + section_count;
+                  document
+                      .get_object_mut(outline_id)?
+                      .as_dict_mut()?
+                      .set("Count", outline_count as i64);
+                  let catalog = document.get_object_mut(catalog_id)?.as_dict_mut()?;
+          '@
+          if (([regex]::Matches($text, [regex]::Escape($old))).Count -ne 1) {
+            throw 'expected exactly one build_outline catalog block'
+          }
+          $text = $text.Replace($old, $new)
+          [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
+
       - name: Run complete synthetic court-bundle qualification
         shell: pwsh
         run: ./qualification/mcr-r59-court-bundle/Invoke-CourtBundleQualification.ps1
