@@ -1,0 +1,92 @@
+{
+  "schema": "mcr-outward-procedural-github-donors-r1",
+  "date": "2026-09-09",
+  "mission": "Use mature FOSS and official HMCTS implementation references first; custom glue only where project-specific behaviour remains.",
+  "privacy_boundary": "Synthetic/public-code only. No R59 PDFs, claimant evidence, medical material, financial material, private email or identifiers in this public repository.",
+  "donors": [
+    {
+      "repo": "hmcts/em-stitching-api",
+      "decision": "REFERENCE_AND_ADAPT_BEHAVIOUR",
+      "commit": "bdb2c306b523ad962298af9c198462d9a42017f4",
+      "license": "MIT",
+      "role": ["HMCTS bundle/stitching behaviour oracle", "table-of-contents model", "pagination model", "page-number-format model"],
+      "note": "Do not run the full HMCTS service locally just to make bundles; reuse behaviour patterns in the already-qualified lightweight builder."
+    },
+    {
+      "repo": "hmcts/sscs-case-loader",
+      "decision": "REFERENCE_ONLY",
+      "commit": "660995ee2666bec627e4363b2ac7ffa63fc4789e",
+      "license": "MIT",
+      "role": ["official SSCS case/document flow reference"],
+      "note": "Not legal authority and not a local dependency."
+    },
+    {
+      "repo": "J-F-Liu/lopdf",
+      "decision": "ADOPT_PINNED",
+      "commit": "a62854e1bbea308cd7db6e34492c0b3873711471",
+      "version": "0.45.0",
+      "license": "MIT",
+      "role": ["Rust PDF manipulation", "merge", "links", "bookmarks", "page numbering", "open action"],
+      "qualification": "Already passed Ubuntu 24.04, Windows 2022, Windows 2025 and real Windows rig in the MCR synthetic court-bundle builder."
+    },
+    {
+      "repo": "typst/typst",
+      "decision": "ADOPT_PINNED_FOR_PROCEDURAL_DOCUMENT_GENERATION",
+      "tag": "v0.15.1",
+      "commit": "9dfd3a08500b7896045f907433cf7b4b02434fad",
+      "license": "Apache-2.0",
+      "windows_x86_64_asset": "typst-x86_64-pc-windows-msvc.zip",
+      "windows_x86_64_asset_sha256": "19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736",
+      "download": "https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip",
+      "role": ["synthetic witness statement", "exhibit register", "participation request", "authorities index", "filing/service receipt"],
+      "pdf_capability": "Tagged PDF by default; supports --pdf-standard including ua-1 and PDF/A profiles.",
+      "claim_boundary": "Do not claim PDF/UA or PDF/A conformance merely because Typst can target it; independent conformance validation is required before making such a formal claim."
+    },
+    {
+      "repo": "qpdf/qpdf",
+      "decision": "ADOPT_PINNED_VALIDATOR",
+      "tag": "v12.4.1",
+      "commit": "c37f83ae468abb6cc741f43b2f6fdeb66e550ffb",
+      "license": "Apache-2.0",
+      "windows_archive": "qpdf-12.4.1-msvc64.zip",
+      "windows_archive_sha256": "3cd016cd433ef7232e42f4c13348a49cc14907a3c7278ef4f99120593126f7a6",
+      "qualified_windows_exe_sha256": "57c003e868fb66cd343fd5afb91be8c2277f56434eea8635762499731bf9f60d",
+      "role": ["independent PDF structural validation", "page counts"]
+    },
+    {
+      "repo": "pdfcpu/pdfcpu",
+      "decision": "ADOPT_PINNED_STRICT_VALIDATOR",
+      "tag": "v0.15.0",
+      "commit": "f2686555086a2e76dc19f602ea1897f6e3baae4d",
+      "license": "Apache-2.0",
+      "windows_archive": "pdfcpu_0.15.0_Windows_x86_64.zip",
+      "windows_archive_sha256": "9809a70ee60ba78252628cc9738b284fbebf22bc2616ae903fb89b807e75a8a6",
+      "qualified_windows_exe_sha256": "94cafb66b508c2eb8648dffbb17fddb74b7a117fdc38846e36f9ec6322bdd05e",
+      "role": ["strict PDF validation", "parsed PDF state inventory"]
+    }
+  ],
+  "deliberate_non_adoptions": [
+    {
+      "item": "full HMCTS em-stitching service stack",
+      "reason": "Too heavy for local private case assembly; behaviour is reusable without deploying its full service architecture."
+    },
+    {
+      "item": "third-party legal witness statement templates",
+      "reason": "Legal wording/currentness must come from official CPR/PD sources; Typst supplies rendering, not legal authority."
+    },
+    {
+      "item": "veraPDF in the default rehearsal",
+      "reason": "Not needed unless a formal PDF/A or PDF/UA conformance claim is enabled."
+    },
+    {
+      "item": "new PDF framework",
+      "reason": "The existing lopdf builder is already reproducibly qualified."
+    }
+  ],
+  "storage_policy": {
+    "C": "NO_INTENTIONAL_PROJECT_WRITES",
+    "E": "tools_and_persistent_donor_assets",
+    "F": "workspace_build_cache_temp",
+    "G": "results_archive_when_available"
+  }
+}
