@@ -15,6 +15,8 @@
 
 #outline(title: [Contents])
 
+#pagebreak()
+
 = Witness Statement
 
 *Court:* Synthetic Civil Court  \
@@ -32,6 +34,8 @@
 
 *STATEMENT OF TRUTH — SIGNING GATE NOT ACTIVATED IN THIS SYNTHETIC REHEARSAL.*
 
+#pagebreak()
+
 = Exhibit Register
 
 #table(
@@ -44,6 +48,8 @@
   [SYN-A3], [Synthetic adverse note], [Tests adverse-material visibility],
 )
 
+#pagebreak()
+
 = Participation / Adjustments Request
 
 *Barrier:* Synthetic communication-processing barrier.  \
@@ -53,6 +59,8 @@
 *Fallback:* Short breaks and written confirmation of disputed points.
 
 This is a rehearsal template only. No diagnosis or entitlement to a particular measure is asserted.
+
+#pagebreak()
 
 = Authorities / Currentness Index
 
@@ -66,6 +74,8 @@ This is a rehearsal template only. No diagnosis or entitlement to a particular m
   [3], [PD1A], [Participation/vulnerability control],
   [4], [Judiciary e-bundle guidance], [Bundle-format control],
 )
+
+#pagebreak()
 
 = Filing / Service Receipt
 
