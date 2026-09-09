@@ -1,6 +1,6 @@
 # MCR outward procedural rehearsal — synthetic only
 
-This directory is the public/synthetic GitHub control point for MCR outward procedural tooling.
+This directory is the synthetic integration checkpoint for MCR outward procedural tooling.
 
 ## Purpose
 
@@ -21,9 +21,20 @@ Exact versions, commits, licences and hashes are in `GITHUB_DONOR_MANIFEST_R1.js
 
 This public directory must never contain R59 PDFs, claimant evidence, private correspondence, medical/financial material or live case identifiers.
 
+## Operating model
+
+- Work local-first and batch-first.
+- Perform substantive engineering with OpenCode and local Git before GitHub administration.
+- Use `Invoke-OutwardProceduralTrancheR2.ps1` as the local executable gate.
+- Use GitHub as a donor, provenance and integration checkpoint.
+- Treat hosted Actions as optional supporting evidence, not current authority.
+- Do not use paid hosted CI.
+- Create one meaningful integration PR only after a coherent local PASS.
+- Do not create issues, branches or PRs for ordinary next steps.
+
 ## Local execution
 
-Use OpenCode + GPT-5.6 Sol on the Windows rig with `OPENCODE_GITHUB_FREEZE_AND_REHEARSAL_MISSION.txt`.
+Run `Invoke-OutwardProceduralTrancheR2.ps1` from a local-only `local/*` Git branch.
 
 Storage policy:
 - C: no intentional project writes.
@@ -40,6 +51,4 @@ Storage policy:
 5. No R59/private evidence access.
 6. No intentional project writes to C:.
 
-## Local R2 tranche
-
-Run `Invoke-OutwardProceduralTrancheR2.ps1` from a local-only `local/*` Git branch. It builds the synthetic procedural set and qualified hearing/core derivatives, validates every PDF with qpdf and pdfcpu strict mode with configuration disabled, and writes the final receipt and ZIP to G: when available.
+The R2 gate builds the synthetic procedural set and qualified hearing/core derivatives, validates every PDF with qpdf and pdfcpu strict mode with configuration disabled, and writes the final receipt and ZIP to G: when available.
