@@ -1,0 +1,16 @@
+[package]
+name = "mcr-court-bundle-qualification"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+
+[dependencies]
+lopdf = { git = "https://github.com/J-F-Liu/lopdf", rev = "a62854e1bbea308cd7db6e34492c0b3873711471", default-features = false }
+
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+panic = "abort"
