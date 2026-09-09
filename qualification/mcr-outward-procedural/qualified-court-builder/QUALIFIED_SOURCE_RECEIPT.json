@@ -1,0 +1,19 @@
+{
+  "schema": "mcr-qualified-court-builder-source-r1",
+  "successful_github_actions_run": 34249162506,
+  "qualified_baseline_commit": "0d5af45b407211d7e30c61b5f56aa80e3371bd22",
+  "real_rig_pass_date": "2026-09-09",
+  "rust": "1.88",
+  "source": {
+    "main_rs_sha256": "e369cd07d421e579ef65d843c11f0d04e093dbe652ddeea3f43923ab13eed875",
+    "cargo_lock_sha256": "b4ecd4f22926a6e92d5400e23a2ed5729e75d26c124d1d1ba4fb9bb5fa6af36d",
+    "cargo_toml_sha256": "ec7ef4857b0ed709d842f89574cefb99d548990000a121399d27e071c0725c6a"
+  },
+  "expected_outputs": {
+    "hearing_sha256": "f7022f3271cd1b566d4bebfe06a79733496cbae58caa28ae866b46d3cc88133b",
+    "core_sha256": "e0334d0b8ae43dd4366908f448f72326ccf51a35e21e3f8c4fb3201a1a83db31"
+  },
+  "lopdf_commit": "a62854e1bbea308cd7db6e34492c0b3873711471",
+  "hmcts_em_stitching_reference_commit": "bdb2c306b523ad962298af9c198462d9a42017f4",
+  "privacy_boundary": "Synthetic public source only; no R59 or live claimant evidence."
+}
