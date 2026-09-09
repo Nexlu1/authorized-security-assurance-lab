@@ -1,0 +1,19 @@
+{
+  "schema": "mcr-outward-procedural-adverse-gate-r2",
+  "synthetic_only": true,
+  "r59_accessed": false,
+  "live_evidence_used": false,
+  "signed_statement_of_truth": false,
+  "filing_or_service_claimed": false,
+  "adverse_material_identified": true,
+  "adverse_material_included_in_index": true,
+  "information_and_belief_source_identified": true,
+  "required_document_families": [
+    "witness_statement",
+    "exhibit_and_index_material",
+    "participation_and_adjustment_request",
+    "authorities_sheet",
+    "filing_and_service_receipt",
+    "hearing_and_core_bundle_derivative"
+  ]
+}

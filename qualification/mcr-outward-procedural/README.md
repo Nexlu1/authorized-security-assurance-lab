@@ -39,3 +39,7 @@ Storage policy:
 4. pdfcpu strict validation passes.
 5. No R59/private evidence access.
 6. No intentional project writes to C:.
+
+## Local R2 tranche
+
+Run `Invoke-OutwardProceduralTrancheR2.ps1` from a local-only `local/*` Git branch. It builds the synthetic procedural set and qualified hearing/core derivatives, validates every PDF with qpdf and pdfcpu strict mode with configuration disabled, and writes the final receipt and ZIP to G: when available.

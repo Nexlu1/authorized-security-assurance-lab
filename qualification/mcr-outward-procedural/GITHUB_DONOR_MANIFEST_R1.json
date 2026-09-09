@@ -37,6 +37,7 @@
       "license": "Apache-2.0",
       "windows_x86_64_asset": "typst-x86_64-pc-windows-msvc.zip",
       "windows_x86_64_asset_sha256": "19ce3551153c2fe7ee9fa2f95208310c8f4d3209fedb699e0333faf8913f6736",
+      "qualified_windows_exe_sha256": "081217a463adb006f8894b44227fe4b9c9e91fc85f5463d5948e8370db9bb31e",
       "download": "https://github.com/typst/typst/releases/download/v0.15.1/typst-x86_64-pc-windows-msvc.zip",
       "role": ["synthetic witness statement", "exhibit register", "participation request", "authorities index", "filing/service receipt"],
       "pdf_capability": "Tagged PDF by default; supports --pdf-standard including ua-1 and PDF/A profiles.",
@@ -83,6 +84,17 @@
       "reason": "The existing lopdf builder is already reproducibly qualified."
     }
   ],
+  "local_r2_validation_tools": {
+    "poppler": {
+      "version": "26.02.0",
+      "pdftotext_exe_sha256": "c7392e92727abbb54c07662268eef7348e4edd1cd741c264e20f76e757c0b467",
+      "pdfinfo_exe_sha256": "34040ff62bef73d6847a7b443457ac7fe216eb331bfbeadec62ae555618b2aae"
+    },
+    "llvm_mingw": {
+      "version": "20260826-ucrt-x86_64",
+      "dlltool_exe_sha256": "e8b0919bbd53a341b07439d9ca2839197a15b9aa68c74843e6aa3de15cbfb3a7"
+    }
+  },
   "storage_policy": {
     "C": "NO_INTENTIONAL_PROJECT_WRITES",
     "E": "tools_and_persistent_donor_assets",
