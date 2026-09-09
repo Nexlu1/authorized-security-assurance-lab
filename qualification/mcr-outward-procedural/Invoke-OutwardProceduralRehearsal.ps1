@@ -83,7 +83,9 @@ $template = Join-Path $PackageRoot 'synthetic_procedural_pack.typ'
 $pdf = Join-Path $out 'synthetic_procedural_pack.pdf'
 Invoke-Checked { & $typst compile $template $pdf --pdf-standard 1.7 } 'Typst compile'
 Invoke-Checked { & $qpdf --check $pdf } 'qpdf check'
-Invoke-Checked { & $pdfcpu validate --mode strict $pdf } 'pdfcpu strict validation'
+# Validation-only use does not need pdfcpu's persistent user config. Disable it explicitly
+# so pdfcpu neither reads nor creates %APPDATA%\pdfcpu\config.yml on C:.
+Invoke-Checked { & $pdfcpu --conf disable validate --mode strict $pdf } 'pdfcpu strict validation (config disabled)'
 $pages = (& $qpdf --show-npages $pdf).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'qpdf page count failed' }
 if ([int]$pages -lt 4) { throw "Synthetic procedural pack unexpectedly short: $pages pages" }
@@ -92,11 +94,11 @@ $receipt = [ordered]@{
     schema = 'mcr-outward-procedural-rehearsal-r1'
     status = 'PASS'
     run = $run
-    storage = [ordered]@{ tools = $ToolsRoot; work = $work; results = $ResultsRoot; c_drive = 'NO_INTENTIONAL_PROJECT_WRITES' }
+    storage = [ordered]@{ tools = $ToolsRoot; work = $work; results = $ResultsRoot; c_drive = 'NO_INTENTIONAL_PROJECT_WRITES'; pdfcpu_config = 'DISABLED' }
     github_donors = [ordered]@{
         typst = [ordered]@{ version='0.15.1'; tag_commit='9dfd3a08500b7896045f907433cf7b4b02434fad'; archive_sha256=$typstArchiveSha; exe_sha256=(Sha256 $typst) }
         qpdf = [ordered]@{ version='12.4.1'; tag_commit='c37f83ae468abb6cc741f43b2f6fdeb66e550ffb'; archive_sha256=$qpdfArchiveSha; exe_sha256=(Sha256 $qpdf) }
-        pdfcpu = [ordered]@{ version='0.15.0'; tag_commit='f2686555086a2e76dc19f602ea1897f6e3baae4d'; archive_sha256=$pdfcpuArchiveSha; exe_sha256=(Sha256 $pdfcpu) }
+        pdfcpu = [ordered]@{ version='0.15.0'; tag_commit='f2686555086a2e76dc19f602ea1897f6e3baae4d'; archive_sha256=$pdfcpuArchiveSha; exe_sha256=(Sha256 $pdfcpu); config='DISABLED' }
         hmcts_em_stitching_reference = 'bdb2c306b523ad962298af9c198462d9a42017f4'
         hmcts_sscs_case_loader_reference = '660995ee2666bec627e4363b2ac7ffa63fc4789e'
         lopdf_qualified_commit = 'a62854e1bbea308cd7db6e34492c0b3873711471'
@@ -107,6 +109,7 @@ $receipt = [ordered]@{
         sha256 = (Sha256 $pdf)
         qpdf = 'PASS'
         pdfcpu_strict = 'PASS'
+        pdfcpu_config = 'DISABLED'
         statement_of_truth_signed = $false
         live_case_data = $false
         r59_accessed = $false
@@ -121,6 +124,7 @@ $zipSha = Sha256 $zip
 Set-Content -Encoding ASCII -Path "$zip.sha256.txt" -Value "$zipSha  $([IO.Path]::GetFileName($zip))"
 
 Write-Host 'OUTWARD PROCEDURAL LAYER SYNTHETIC REHEARSAL: PASS'
+Write-Host 'PDFCPU CONFIG: DISABLED'
 Write-Host "PDF: $pdf"
 Write-Host "PDF SHA-256: $($receipt.output.sha256)"
 Write-Host "Result ZIP: $zip"
